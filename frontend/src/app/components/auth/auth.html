@@ -1,4 +1,3 @@
-<!-- src/app/components/auth/auth.component.html -->
 <div class="auth-container">
   <!-- Header -->
   <header class="header">
@@ -26,7 +25,7 @@
       <div class="card-header">
         <h2>{{ isLoginMode() ? 'Accedi a NOTA BENE' : 'Crea il tuo account' }}</h2>
         <p class="card-subtitle">
-          {{ isLoginMode() ? 'Benvenuto! Accedi per gestire le tue note.' : 'Compila tutti i campi per creare il tuo account personale' }}
+          {{ isLoginMode() ? 'Benvenuto! Accedi per gestire le tue note.' : 'Compila i campi per creare il tuo account personale (solo Username e Password sono obbligatori)' }}
         </p>
       </div>
 
@@ -52,6 +51,14 @@
 
       <!-- Login Form -->
       @if (isLoginMode()) {
+        <div class="message error-message">
+          <div class="message-content">
+            <span class="icon">⚠️</span>
+            <strong>Login non ancora implementato.</strong><br>
+            Per ora puoi solo registrarti (UC1 - Registrazione). Il login sarà disponibile con UC10 - Effettua Login.
+          </div>
+        </div>
+        
         <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="auth-form">
           <div class="form-group">
             <label for="loginUsername">Username</label>
@@ -62,16 +69,6 @@
               class="form-input"
               [class.error]="loginUsername?.invalid && loginUsername?.touched"
               placeholder="Inserisci il tuo username">
-            @if (loginUsername?.invalid && loginUsername?.touched) {
-              <div class="field-error">
-                @if (loginUsername?.errors?.['required']) {
-                  <span>Username è obbligatorio</span>
-                }
-                @if (loginUsername?.errors?.['minlength']) {
-                  <span>Username deve avere almeno 3 caratteri</span>
-                }
-              </div>
-            }
           </div>
 
           <div class="form-group">
@@ -83,25 +80,10 @@
               class="form-input"
               [class.error]="loginPassword?.invalid && loginPassword?.touched"
               placeholder="Inserisci la tua password">
-            @if (loginPassword?.invalid && loginPassword?.touched) {
-              <div class="field-error">
-                @if (loginPassword?.errors?.['required']) {
-                  <span>Password è obbligatoria</span>
-                }
-                @if (loginPassword?.errors?.['minlength']) {
-                  <span>Password deve avere almeno 6 caratteri</span>
-                }
-              </div>
-            }
           </div>
 
-          <button type="submit" class="submit-btn" [disabled]="isLoading()">
-            @if (!isLoading()) {
-              <span>🚀 Accedi</span>
-            }
-            @if (isLoading()) {
-              <span class="loading">⏳ Accesso in corso...</span>
-            }
+          <button type="submit" class="submit-btn" disabled>
+            <span>🚧 Login non implementato</span>
           </button>
         </form>
       }
@@ -117,13 +99,30 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="registerUsername">Username *</label>
-                <input
-                  id="registerUsername"
-                  type="text"
-                  formControlName="username"
-                  class="form-input"
-                  [class.error]="registerUsername?.invalid && registerUsername?.touched"
-                  placeholder="Scegli un username unico">
+                <div class="input-container">
+                  <input
+                    id="registerUsername"
+                    type="text"
+                    formControlName="username"
+                    class="form-input"
+                    [class.error]="(registerUsername?.invalid && registerUsername?.touched) || usernameAvailable() === false"
+                    [class.success]="usernameAvailable() === true"
+                    placeholder="Scegli un username unico">
+                  
+                  <!-- Indicatori validazione username -->
+                  <div class="input-feedback">
+                    @if (usernameChecking()) {
+                      <span class="spinner">🔄</span>
+                    }
+                    @if (usernameAvailable() === true) {
+                      <span class="text-success">✅</span>
+                    }
+                    @if (usernameAvailable() === false) {
+                      <span class="text-danger">❌</span>
+                    }
+                  </div>
+                </div>
+                
                 @if (registerUsername?.invalid && registerUsername?.touched) {
                   <div class="field-error">
                     @if (registerUsername?.errors?.['required']) {
@@ -132,27 +131,67 @@
                     @if (registerUsername?.errors?.['minlength']) {
                       <span>Username deve avere almeno 3 caratteri</span>
                     }
+                    @if (registerUsername?.errors?.['maxlength']) {
+                      <span>Username deve essere massimo 50 caratteri</span>
+                    }
+                  </div>
+                }
+                @if (usernameAvailable() === false) {
+                  <div class="field-error">
+                    <span>Username già in uso</span>
+                  </div>
+                }
+                @if (usernameAvailable() === true) {
+                  <div class="field-success">
+                    <span>Username disponibile</span>
                   </div>
                 }
               </div>
 
               <div class="form-group">
-                <label for="registerEmail">Email *</label>
-                <input
-                  id="registerEmail"
-                  type="email"
-                  formControlName="email"
-                  class="form-input"
-                  [class.error]="registerEmail?.invalid && registerEmail?.touched"
-                  placeholder="nome@esempio.com">
+                <label for="registerEmail">Email (opzionale)</label>
+                <div class="input-container">
+                  <input
+                    id="registerEmail"
+                    type="email"
+                    formControlName="email"
+                    class="form-input"
+                    [class.error]="(registerEmail?.invalid && registerEmail?.touched) || emailAvailable() === false"
+                    [class.success]="emailAvailable() === true && registerEmail?.value"
+                    placeholder="nome@esempio.com">
+                  
+                  <!-- Indicatori validazione email -->
+                  <div class="input-feedback">
+                    @if (emailChecking()) {
+                      <span class="spinner">🔄</span>
+                    }
+                    @if (emailAvailable() === true && registerEmail?.value) {
+                      <span class="text-success">✅</span>
+                    }
+                    @if (emailAvailable() === false) {
+                      <span class="text-danger">❌</span>
+                    }
+                  </div>
+                </div>
+                
                 @if (registerEmail?.invalid && registerEmail?.touched) {
                   <div class="field-error">
-                    @if (registerEmail?.errors?.['required']) {
-                      <span>Email è obbligatoria</span>
-                    }
                     @if (registerEmail?.errors?.['email']) {
                       <span>Inserisci un'email valida</span>
                     }
+                    @if (registerEmail?.errors?.['maxlength']) {
+                      <span>Email deve essere massimo 150 caratteri</span>
+                    }
+                  </div>
+                }
+                @if (emailAvailable() === false) {
+                  <div class="field-error">
+                    <span>Email già in uso</span>
+                  </div>
+                }
+                @if (emailAvailable() === true && registerEmail?.value) {
+                  <div class="field-success">
+                    <span>Email disponibile</span>
                   </div>
                 }
               </div>
@@ -207,11 +246,11 @@
 
           <!-- Sezione Dati Personali -->
           <div class="form-section">
-            <h3 class="section-title">👤 Dati Personali</h3>
+            <h3 class="section-title">👤 Dati Personali <em>(opzionali)</em></h3>
             
             <div class="form-row">
               <div class="form-group">
-                <label for="registerNome">Nome *</label>
+                <label for="registerNome">Nome</label>
                 <input
                   id="registerNome"
                   type="text"
@@ -221,18 +260,15 @@
                   placeholder="Il tuo nome">
                 @if (registerNome?.invalid && registerNome?.touched) {
                   <div class="field-error">
-                    @if (registerNome?.errors?.['required']) {
-                      <span>Nome è obbligatorio</span>
-                    }
-                    @if (registerNome?.errors?.['minlength']) {
-                      <span>Nome deve avere almeno 2 caratteri</span>
+                    @if (registerNome?.errors?.['maxlength']) {
+                      <span>Nome deve essere massimo 100 caratteri</span>
                     }
                   </div>
                 }
               </div>
 
               <div class="form-group">
-                <label for="registerCognome">Cognome *</label>
+                <label for="registerCognome">Cognome</label>
                 <input
                   id="registerCognome"
                   type="text"
@@ -242,11 +278,8 @@
                   placeholder="Il tuo cognome">
                 @if (registerCognome?.invalid && registerCognome?.touched) {
                   <div class="field-error">
-                    @if (registerCognome?.errors?.['required']) {
-                      <span>Cognome è obbligatorio</span>
-                    }
-                    @if (registerCognome?.errors?.['minlength']) {
-                      <span>Cognome deve avere almeno 2 caratteri</span>
+                    @if (registerCognome?.errors?.['maxlength']) {
+                      <span>Cognome deve essere massimo 100 caratteri</span>
                     }
                   </div>
                 }
@@ -255,53 +288,36 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label for="registerSesso">Sesso *</label>
+                <label for="registerSesso">Sesso</label>
                 <select
                   id="registerSesso"
                   formControlName="sesso"
-                  class="form-input form-select"
-                  [class.error]="registerSesso?.invalid && registerSesso?.touched">
+                  class="form-input form-select">
                   <option value="">Seleziona sesso</option>
                   <option value="M">Maschio</option>
                   <option value="F">Femmina</option>
-                  <option value="A">Altro</option>
-                  <option value="N">Preferisco non specificare</option>
+                  <option value="ALTRO">Altro</option>
                 </select>
-                @if (registerSesso?.invalid && registerSesso?.touched) {
-                  <div class="field-error">
-                    @if (registerSesso?.errors?.['required']) {
-                      <span>Selezione del sesso è obbligatoria</span>
-                    }
-                  </div>
-                }
               </div>
 
               <div class="form-group">
-                <label for="registerDataNascita">Data di Nascita *</label>
+                <label for="registerDataNascita">Data di Nascita</label>
                 <input
                   id="registerDataNascita"
                   type="date"
                   formControlName="dataNascita"
-                  class="form-input"
-                  [class.error]="registerDataNascita?.invalid && registerDataNascita?.touched">
-                @if (registerDataNascita?.invalid && registerDataNascita?.touched) {
-                  <div class="field-error">
-                    @if (registerDataNascita?.errors?.['required']) {
-                      <span>Data di nascita è obbligatoria</span>
-                    }
-                  </div>
-                }
+                  class="form-input">
               </div>
             </div>
           </div>
 
           <!-- Sezione Contatti -->
           <div class="form-section">
-            <h3 class="section-title">📞 Informazioni di Contatto</h3>
+            <h3 class="section-title">📞 Informazioni di Contatto <em>(opzionali)</em></h3>
             
             <div class="form-row">
               <div class="form-group">
-                <label for="registerTelefono">Numero di Telefono *</label>
+                <label for="registerTelefono">Numero di Telefono</label>
                 <input
                   id="registerTelefono"
                   type="tel"
@@ -311,9 +327,6 @@
                   placeholder="+39 123 456 7890">
                 @if (registerTelefono?.invalid && registerTelefono?.touched) {
                   <div class="field-error">
-                    @if (registerTelefono?.errors?.['required']) {
-                      <span>Numero di telefono è obbligatorio</span>
-                    }
                     @if (registerTelefono?.errors?.['pattern']) {
                       <span>Inserisci un numero di telefono valido</span>
                     }
@@ -322,7 +335,7 @@
               </div>
 
               <div class="form-group">
-                <label for="registerCitta">Città *</label>
+                <label for="registerCitta">Città</label>
                 <input
                   id="registerCitta"
                   type="text"
@@ -332,11 +345,8 @@
                   placeholder="La tua città">
                 @if (registerCitta?.invalid && registerCitta?.touched) {
                   <div class="field-error">
-                    @if (registerCitta?.errors?.['required']) {
-                      <span>Città è obbligatoria</span>
-                    }
-                    @if (registerCitta?.errors?.['minlength']) {
-                      <span>Città deve avere almeno 2 caratteri</span>
+                    @if (registerCitta?.errors?.['maxlength']) {
+                      <span>Città deve essere massimo 100 caratteri</span>
                     }
                   </div>
                 }
@@ -383,7 +393,10 @@
             </div>
           </div>
 
-          <button type="submit" class="submit-btn" [disabled]="isLoading()">
+          <button 
+            type="submit" 
+            class="submit-btn" 
+            [disabled]="isLoading() || usernameAvailable() === false || emailAvailable() === false">
             @if (!isLoading()) {
               <span>✨ Crea Account</span>
             }

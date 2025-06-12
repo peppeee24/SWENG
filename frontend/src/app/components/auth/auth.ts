@@ -1,9 +1,9 @@
-
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, RegisterRequest, LoginRequest } from '../../services/auth';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-auth',
@@ -17,49 +17,133 @@ export class AuthComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  
   isLoginMode = signal(true);
   isLoading = signal(false);
   errorMessage = signal('');
   successMessage = signal('');
+  
+
+  usernameChecking = signal(false);
+  usernameAvailable = signal<boolean | null>(null);
+  emailChecking = signal(false);
+  emailAvailable = signal<boolean | null>(null);
 
   loginForm: FormGroup;
   registerForm: FormGroup;
 
   constructor() {
+
     this.loginForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
 
     this.registerForm = this.fb.group({
-      // Dati di accesso
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      email: ['', [Validators.required, Validators.email]],
+      username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      email: ['', [Validators.email, Validators.maxLength(150)]], 
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
       
-      // Dati personali
-      nome: ['', [Validators.required, Validators.minLength(2)]],
-      cognome: ['', [Validators.required, Validators.minLength(2)]],
-      sesso: ['', [Validators.required]],
-      dataNascita: ['', [Validators.required]],
+      nome: ['', [Validators.maxLength(100)]],
+      cognome: ['', [Validators.maxLength(100)]],
+      sesso: [''],  
+      dataNascita: [''],
       
-      // Contatti
-      telefono: ['', [Validators.required, Validators.pattern(/^[0-9+\-\s()]+$/)]],
-      citta: ['', [Validators.required, Validators.minLength(2)]],
-      
-      // Privacy
+      telefono: ['', [Validators.pattern(/^[\+]?[0-9\s\-\(\)]{8,20}$/)]],
+      citta: ['', [Validators.maxLength(100)]],
+
       accettaTermini: [false, [Validators.requiredTrue]],
       accettaPrivacy: [false, [Validators.requiredTrue]]
     }, { validators: this.passwordMatchValidator });
   }
 
   ngOnInit(): void {
-    // Se l'utente è già loggato, reindirizza alla home
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/dashboard']);
     }
+    
+    this.setupUsernameValidation();
+    this.setupEmailValidation();
+    
+    this.testBackendConnection();
+  }
+
+  private testBackendConnection(): void {
+    this.authService.healthCheck().subscribe({
+      next: (response) => {
+        console.log('Backend SWENG connesso:', response);
+      },
+      error: (error) => {
+        console.error('Backend SWENG non raggiungibile:', error);
+        this.errorMessage.set('Backend non raggiungibile. Verifica che sia avviato su http://localhost:8080');
+      }
+    });
+  }
+
+  private setupUsernameValidation(): void {
+    this.registerForm.get('username')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(username => {
+        if (username && username.length >= 3 && this.registerForm.get('username')?.valid) {
+          this.checkUsernameAvailability(username);
+        } else {
+          this.usernameAvailable.set(null);
+        }
+      });
+  }
+
+  private setupEmailValidation(): void {
+    this.registerForm.get('email')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(email => {
+        if (email && email.length > 0 && this.registerForm.get('email')?.valid) {
+          this.checkEmailAvailability(email);
+        } else {
+          this.emailAvailable.set(null);
+        }
+      });
+  }
+
+  private checkUsernameAvailability(username: string): void {
+    this.usernameChecking.set(true);
+    this.usernameAvailable.set(null);
+    
+    this.authService.checkUsernameAvailability(username).subscribe({
+      next: (response) => {
+        this.usernameAvailable.set(response.available);
+        this.usernameChecking.set(false);
+        console.log('Username check:', response);
+      },
+      error: (error) => {
+        console.error('Errore verifica username:', error);
+        this.usernameChecking.set(false);
+        this.usernameAvailable.set(null);
+      }
+    });
+  }
+
+  private checkEmailAvailability(email: string): void {
+    this.emailChecking.set(true);
+    this.emailAvailable.set(null);
+    
+    this.authService.checkEmailAvailability(email).subscribe({
+      next: (response) => {
+        this.emailAvailable.set(response.available);
+        this.emailChecking.set(false);
+        console.log('Email check:', response);
+      },
+      error: (error) => {
+        console.error('Errore verifica email:', error);
+        this.emailChecking.set(false);
+        this.emailAvailable.set(null);
+      }
+    });
   }
 
   passwordMatchValidator(form: FormGroup) {
@@ -79,85 +163,87 @@ export class AuthComponent implements OnInit {
     this.resetForms();
   }
 
+
   resetForms(): void {
     this.loginForm.reset();
     this.registerForm.reset();
+    this.usernameAvailable.set(null);
+    this.emailAvailable.set(null);
   }
+
 
   onLogin(): void {
     if (this.loginForm.valid) {
       this.isLoading.set(true);
       this.errorMessage.set('');
 
-      const loginRequest: LoginRequest = {
-        username: this.loginForm.value.username,
-        password: this.loginForm.value.password
-      };
-
-      this.authService.login(loginRequest).subscribe({
-        next: (response) => {
-          this.isLoading.set(false);
-          this.successMessage.set('Login effettuato con successo!');
-          setTimeout(() => {
-            this.router.navigate(['/dashboard']);
-          }, 1000);
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          this.errorMessage.set(this.handleError(error));
-        }
-      });
+      setTimeout(() => {
+        this.isLoading.set(false);
+        this.errorMessage.set('Login non ancora implementato.');
+      }, 1000);
     } else {
       this.markFormGroupTouched(this.loginForm);
     }
   }
 
+
   onRegister(): void {
-    if (this.registerForm.valid) {
+    if (this.registerForm.valid && this.usernameAvailable() !== false && this.emailAvailable() !== false) {
       this.isLoading.set(true);
       this.errorMessage.set('');
 
+      const formValue = this.registerForm.value;
       const registerRequest: RegisterRequest = {
-        username: this.registerForm.value.username,
-        email: this.registerForm.value.email,
-        password: this.registerForm.value.password,
-        nome: this.registerForm.value.nome,
-        cognome: this.registerForm.value.cognome,
-        sesso: this.registerForm.value.sesso,
-        telefono: this.registerForm.value.telefono,
-        citta: this.registerForm.value.citta,
-        dataNascita: this.registerForm.value.dataNascita
+        username: formValue.username,
+        password: formValue.password,
+        nome: formValue.nome || undefined,
+        cognome: formValue.cognome || undefined,
+        email: formValue.email || undefined,
+        sesso: formValue.sesso || undefined,
+        numeroTelefono: formValue.telefono || undefined,
+        citta: formValue.citta || undefined,
+        dataNascita: formValue.dataNascita || undefined
       };
+
+      Object.keys(registerRequest).forEach(key => {
+        if (registerRequest[key as keyof RegisterRequest] === undefined) {
+          delete registerRequest[key as keyof RegisterRequest];
+        }
+      });
+
+      console.log('🚀 Invio registrazione:', registerRequest);
 
       this.authService.register(registerRequest).subscribe({
         next: (response) => {
           this.isLoading.set(false);
-          this.successMessage.set('Registrazione completata! Benvenuto in NOTA BENE!');
-          setTimeout(() => {
-            this.router.navigate(['/dashboard']);
-          }, 1500);
+          if (response.success) {
+            this.successMessage.set(`Registrazione completata! Benvenuto ${response.username || formValue.username}!`);
+            console.log('Registrazione riuscita:', response);
+            
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']);
+            }, 2000);
+          } else {
+            this.errorMessage.set(response.message || 'Errore durante la registrazione');
+          }
         },
         error: (error) => {
           this.isLoading.set(false);
-          this.errorMessage.set(this.handleError(error));
+          this.errorMessage.set(error.message || 'Errore durante la registrazione');
+          console.error('Errore registrazione:', error);
         }
       });
     } else {
       this.markFormGroupTouched(this.registerForm);
+      
+      if (this.usernameAvailable() === false) {
+        this.errorMessage.set('Username non disponibile. Scegline un altro.');
+      } else if (this.emailAvailable() === false) {
+        this.errorMessage.set('Email già in uso. Usa un\'altra email.');
+      } else {
+        this.errorMessage.set('Compila tutti i campi obbligatori correttamente.');
+      }
     }
-  }
-
-  private handleError(error: any): string {
-    if (error.status === 400) {
-      return 'Dati non validi. Controlla username e password.';
-    } else if (error.status === 401) {
-      return 'Credenziali non corrette.';
-    } else if (error.status === 409) {
-      return 'Username già esistente. Scegli un altro username.';
-    } else if (error.status === 0) {
-      return 'Impossibile connettersi al server. Verifica che il backend sia attivo.';
-    }
-    return 'Si è verificato un errore. Riprova più tardi.';
   }
 
   private markFormGroupTouched(formGroup: FormGroup): void {
@@ -167,7 +253,7 @@ export class AuthComponent implements OnInit {
     });
   }
 
-  // Getters per validazione form
+  // Getters per form login
   get loginUsername() { return this.loginForm.get('username'); }
   get loginPassword() { return this.loginForm.get('password'); }
   
