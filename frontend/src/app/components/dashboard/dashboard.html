@@ -1,0 +1,132 @@
+
+<div class="dashboard-container">
+  <!-- Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>📝 NOTA BENE</h1>
+        @if (currentUser()) {
+          <p class="welcome-text">Benvenuto, {{ currentUser()?.username }}!</p>
+        }
+      </div>
+      <nav class="nav-actions">
+        <button class="logout-btn" (click)="onLogout()">
+          🚪 Logout
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="dashboard-content">
+      <!-- Welcome Section -->
+      <section class="welcome-section">
+        <div class="welcome-card">
+          <h2>🎉 Benvenuto in NOTA BENE!</h2>
+          <p>La tua dashboard per gestire note e collaborazioni è pronta. Inizia a creare le tue prime note!</p>
+          <div class="quick-actions">
+            <button class="action-btn primary">
+              ➕ Crea la tua prima nota
+            </button>
+            <button class="action-btn secondary">
+              📂 Organizza in cartelle
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-content">
+              <h3>0</h3>
+              <p>Note create</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+              <h3>0</h3>
+              <p>Note condivise</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-content">
+              <h3>0</h3>
+              <p>Tag utilizzati</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📁</div>
+            <div class="stat-content">
+              <h3>0</h3>
+              <p>Cartelle create</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="activity-section">
+        <h3>📋 Attività Recente</h3>
+        <div class="activity-card">
+          <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <h4>Nessuna attività ancora</h4>
+            <p>Le tue note e collaborazioni appariranno qui una volta che inizierai a utilizzare NOTA BENE.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="features-overview">
+        <h3>🚀 Cosa puoi fare con NOTA BENE</h3>
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">✍️</span>
+              <h4>Crea Note Veloci</h4>
+            </div>
+            <p>Scrivi note di massimo 280 caratteri per catturare rapidamente le tue idee</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">🤝</span>
+              <h4>Collabora in Tempo Reale</h4>
+            </div>
+            <p>Condividi le tue note con permessi di lettura o scrittura per collaborare con altri</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">🗂️</span>
+              <h4>Organizza Intelligentemente</h4>
+            </div>
+            <p>Usa tag e cartelle per organizzare le tue note e ritrovarle facilmente</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">🔄</span>
+              <h4>Traccia le Modifiche</h4>
+            </div>
+            <p>Sistema di versionamento automatico per non perdere mai una modifica importante</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">🔍</span>
+              <h4>Cerca Rapidamente</h4>
+            </div>
+            <p>Trova le tue note utilizzando parole chiave, tag, date o filtri avanzati</p>
+          </div>
+          <div class="feature-item">
+            <div class="feature-header">
+              <span class="feature-icon">📱</span>
+              <h4>Accesso Ovunque</h4>
+            </div>
+            <p>Le tue note sono sempre sincronizzate e accessibili da qualsiasi dispositivo</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
