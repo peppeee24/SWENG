@@ -1,7 +1,10 @@
 package tech.ipim.sweng.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 
 public class RegistrationRequest {
 
@@ -13,6 +16,29 @@ public class RegistrationRequest {
     @Size(min = 6, message = "Password deve essere almeno 6 caratteri")
     private String password;
 
+    // Nuovi campi opzionali per la registrazione
+    @Size(max = 100, message = "Nome deve essere massimo 100 caratteri")
+    private String nome;
+
+    @Size(max = 100, message = "Cognome deve essere massimo 100 caratteri")
+    private String cognome;
+
+    @Email(message = "Email deve essere valida")
+    @Size(max = 150, message = "Email deve essere massimo 150 caratteri")
+    private String email;
+
+    @Pattern(regexp = "^(M|F|ALTRO)$", message = "Sesso deve essere M, F o ALTRO")
+    private String sesso;
+
+    @Pattern(regexp = "^[\\+]?[0-9\\s\\-\\(\\)]{8,20}$", message = "Numero di telefono non valido")
+    private String numeroTelefono;
+
+    @Size(max = 100, message = "Città deve essere massimo 100 caratteri")
+    private String citta;
+
+    private LocalDate dataNascita;
+
+    // Costruttori
     public RegistrationRequest() {}
 
     public RegistrationRequest(String username, String password) {
@@ -20,6 +46,7 @@ public class RegistrationRequest {
         this.password = password;
     }
 
+    // Getters e Setters esistenti
     public String getUsername() {
         return username;
     }
@@ -36,10 +63,71 @@ public class RegistrationRequest {
         this.password = password;
     }
 
+    // Nuovi Getters e Setters
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public String getCognome() {
+        return cognome;
+    }
+
+    public void setCognome(String cognome) {
+        this.cognome = cognome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSesso() {
+        return sesso;
+    }
+
+    public void setSesso(String sesso) {
+        this.sesso = sesso;
+    }
+
+    public String getNumeroTelefono() {
+        return numeroTelefono;
+    }
+
+    public void setNumeroTelefono(String numeroTelefono) {
+        this.numeroTelefono = numeroTelefono;
+    }
+
+    public String getCitta() {
+        return citta;
+    }
+
+    public void setCitta(String citta) {
+        this.citta = citta;
+    }
+
+    public LocalDate getDataNascita() {
+        return dataNascita;
+    }
+
+    public void setDataNascita(LocalDate dataNascita) {
+        this.dataNascita = dataNascita;
+    }
+
     @Override
     public String toString() {
         return "RegistrationRequest{" +
                 "username='" + username + '\'' +
+                ", nome='" + nome + '\'' +
+                ", cognome='" + cognome + '\'' +
+                ", email='" + email + '\'' +
+                ", citta='" + citta + '\'' +
                 '}';
     }
 }
