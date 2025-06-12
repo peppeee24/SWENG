@@ -1,0 +1,437 @@
+<!-- src/app/components/auth/auth.component.html -->
+<div class="auth-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>📝 NOTA BENE</h1>
+        <p class="tagline">Le tue note, condivise e organizzate</p>
+      </div>
+      <nav class="nav-buttons">
+        <button 
+          class="nav-btn" 
+          [class.active]="!isLoginMode()"
+          (click)="switchMode()"
+          type="button">
+          {{ isLoginMode() ? 'Registrati' : 'Accedi' }}
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="auth-card" [class.expanded]="!isLoginMode()">
+      <!-- Card Header -->
+      <div class="card-header">
+        <h2>{{ isLoginMode() ? 'Accedi a NOTA BENE' : 'Crea il tuo account' }}</h2>
+        <p class="card-subtitle">
+          {{ isLoginMode() ? 'Benvenuto! Accedi per gestire le tue note.' : 'Compila tutti i campi per creare il tuo account personale' }}
+        </p>
+      </div>
+
+      <!-- Messaggio Successo -->
+      @if (successMessage()) {
+        <div class="message success-message">
+          <div class="message-content">
+            <span class="icon">✅</span>
+            {{ successMessage() }}
+          </div>
+        </div>
+      }
+
+      <!-- Messaggio Errore -->
+      @if (errorMessage()) {
+        <div class="message error-message">
+          <div class="message-content">
+            <span class="icon">❌</span>
+            {{ errorMessage() }}
+          </div>
+        </div>
+      }
+
+      <!-- Login Form -->
+      @if (isLoginMode()) {
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="auth-form">
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+            <input
+              id="loginUsername"
+              type="text"
+              formControlName="username"
+              class="form-input"
+              [class.error]="loginUsername?.invalid && loginUsername?.touched"
+              placeholder="Inserisci il tuo username">
+            @if (loginUsername?.invalid && loginUsername?.touched) {
+              <div class="field-error">
+                @if (loginUsername?.errors?.['required']) {
+                  <span>Username è obbligatorio</span>
+                }
+                @if (loginUsername?.errors?.['minlength']) {
+                  <span>Username deve avere almeno 3 caratteri</span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input
+              id="loginPassword"
+              type="password"
+              formControlName="password"
+              class="form-input"
+              [class.error]="loginPassword?.invalid && loginPassword?.touched"
+              placeholder="Inserisci la tua password">
+            @if (loginPassword?.invalid && loginPassword?.touched) {
+              <div class="field-error">
+                @if (loginPassword?.errors?.['required']) {
+                  <span>Password è obbligatoria</span>
+                }
+                @if (loginPassword?.errors?.['minlength']) {
+                  <span>Password deve avere almeno 6 caratteri</span>
+                }
+              </div>
+            }
+          </div>
+
+          <button type="submit" class="submit-btn" [disabled]="isLoading()">
+            @if (!isLoading()) {
+              <span>🚀 Accedi</span>
+            }
+            @if (isLoading()) {
+              <span class="loading">⏳ Accesso in corso...</span>
+            }
+          </button>
+        </form>
+      }
+
+      <!-- Form Registrazione -->
+      @if (!isLoginMode()) {
+        <form [formGroup]="registerForm" (ngSubmit)="onRegister()" class="auth-form register-form">
+          
+          <!-- Sezione Dati di Accesso -->
+          <div class="form-section">
+            <h3 class="section-title">🔐 Dati di Accesso</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="registerUsername">Username *</label>
+                <input
+                  id="registerUsername"
+                  type="text"
+                  formControlName="username"
+                  class="form-input"
+                  [class.error]="registerUsername?.invalid && registerUsername?.touched"
+                  placeholder="Scegli un username unico">
+                @if (registerUsername?.invalid && registerUsername?.touched) {
+                  <div class="field-error">
+                    @if (registerUsername?.errors?.['required']) {
+                      <span>Username è obbligatorio</span>
+                    }
+                    @if (registerUsername?.errors?.['minlength']) {
+                      <span>Username deve avere almeno 3 caratteri</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="registerEmail">Email *</label>
+                <input
+                  id="registerEmail"
+                  type="email"
+                  formControlName="email"
+                  class="form-input"
+                  [class.error]="registerEmail?.invalid && registerEmail?.touched"
+                  placeholder="nome@esempio.com">
+                @if (registerEmail?.invalid && registerEmail?.touched) {
+                  <div class="field-error">
+                    @if (registerEmail?.errors?.['required']) {
+                      <span>Email è obbligatoria</span>
+                    }
+                    @if (registerEmail?.errors?.['email']) {
+                      <span>Inserisci un'email valida</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="registerPassword">Password *</label>
+                <input
+                  id="registerPassword"
+                  type="password"
+                  formControlName="password"
+                  class="form-input"
+                  [class.error]="registerPassword?.invalid && registerPassword?.touched"
+                  placeholder="Almeno 6 caratteri">
+                @if (registerPassword?.invalid && registerPassword?.touched) {
+                  <div class="field-error">
+                    @if (registerPassword?.errors?.['required']) {
+                      <span>Password è obbligatoria</span>
+                    }
+                    @if (registerPassword?.errors?.['minlength']) {
+                      <span>Password deve avere almeno 6 caratteri</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="confirmPassword">Conferma Password *</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  formControlName="confirmPassword"
+                  class="form-input"
+                  [class.error]="(registerConfirmPassword?.invalid && registerConfirmPassword?.touched) || registerForm.errors?.['passwordMismatch']"
+                  placeholder="Ripeti la password">
+                @if (registerConfirmPassword?.invalid && registerConfirmPassword?.touched) {
+                  <div class="field-error">
+                    @if (registerConfirmPassword?.errors?.['required']) {
+                      <span>Conferma password è obbligatoria</span>
+                    }
+                  </div>
+                }
+                @if (registerForm.errors?.['passwordMismatch'] && registerConfirmPassword?.touched) {
+                  <div class="field-error">
+                    <span>Le password non corrispondono</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Sezione Dati Personali -->
+          <div class="form-section">
+            <h3 class="section-title">👤 Dati Personali</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="registerNome">Nome *</label>
+                <input
+                  id="registerNome"
+                  type="text"
+                  formControlName="nome"
+                  class="form-input"
+                  [class.error]="registerNome?.invalid && registerNome?.touched"
+                  placeholder="Il tuo nome">
+                @if (registerNome?.invalid && registerNome?.touched) {
+                  <div class="field-error">
+                    @if (registerNome?.errors?.['required']) {
+                      <span>Nome è obbligatorio</span>
+                    }
+                    @if (registerNome?.errors?.['minlength']) {
+                      <span>Nome deve avere almeno 2 caratteri</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="registerCognome">Cognome *</label>
+                <input
+                  id="registerCognome"
+                  type="text"
+                  formControlName="cognome"
+                  class="form-input"
+                  [class.error]="registerCognome?.invalid && registerCognome?.touched"
+                  placeholder="Il tuo cognome">
+                @if (registerCognome?.invalid && registerCognome?.touched) {
+                  <div class="field-error">
+                    @if (registerCognome?.errors?.['required']) {
+                      <span>Cognome è obbligatorio</span>
+                    }
+                    @if (registerCognome?.errors?.['minlength']) {
+                      <span>Cognome deve avere almeno 2 caratteri</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="registerSesso">Sesso *</label>
+                <select
+                  id="registerSesso"
+                  formControlName="sesso"
+                  class="form-input form-select"
+                  [class.error]="registerSesso?.invalid && registerSesso?.touched">
+                  <option value="">Seleziona sesso</option>
+                  <option value="M">Maschio</option>
+                  <option value="F">Femmina</option>
+                  <option value="A">Altro</option>
+                  <option value="N">Preferisco non specificare</option>
+                </select>
+                @if (registerSesso?.invalid && registerSesso?.touched) {
+                  <div class="field-error">
+                    @if (registerSesso?.errors?.['required']) {
+                      <span>Selezione del sesso è obbligatoria</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="registerDataNascita">Data di Nascita *</label>
+                <input
+                  id="registerDataNascita"
+                  type="date"
+                  formControlName="dataNascita"
+                  class="form-input"
+                  [class.error]="registerDataNascita?.invalid && registerDataNascita?.touched">
+                @if (registerDataNascita?.invalid && registerDataNascita?.touched) {
+                  <div class="field-error">
+                    @if (registerDataNascita?.errors?.['required']) {
+                      <span>Data di nascita è obbligatoria</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Sezione Contatti -->
+          <div class="form-section">
+            <h3 class="section-title">📞 Informazioni di Contatto</h3>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="registerTelefono">Numero di Telefono *</label>
+                <input
+                  id="registerTelefono"
+                  type="tel"
+                  formControlName="telefono"
+                  class="form-input"
+                  [class.error]="registerTelefono?.invalid && registerTelefono?.touched"
+                  placeholder="+39 123 456 7890">
+                @if (registerTelefono?.invalid && registerTelefono?.touched) {
+                  <div class="field-error">
+                    @if (registerTelefono?.errors?.['required']) {
+                      <span>Numero di telefono è obbligatorio</span>
+                    }
+                    @if (registerTelefono?.errors?.['pattern']) {
+                      <span>Inserisci un numero di telefono valido</span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label for="registerCitta">Città *</label>
+                <input
+                  id="registerCitta"
+                  type="text"
+                  formControlName="citta"
+                  class="form-input"
+                  [class.error]="registerCitta?.invalid && registerCitta?.touched"
+                  placeholder="La tua città">
+                @if (registerCitta?.invalid && registerCitta?.touched) {
+                  <div class="field-error">
+                    @if (registerCitta?.errors?.['required']) {
+                      <span>Città è obbligatoria</span>
+                    }
+                    @if (registerCitta?.errors?.['minlength']) {
+                      <span>Città deve avere almeno 2 caratteri</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Sezione Privacy -->
+          <div class="form-section">
+            <h3 class="section-title">📋 Termini e Privacy</h3>
+            
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input
+                  id="accettaTermini"
+                  type="checkbox"
+                  formControlName="accettaTermini"
+                  class="form-checkbox">
+                <label for="accettaTermini" class="checkbox-label">
+                  Accetto i <a href="#" class="link">Termini e Condizioni</a> *
+                </label>
+                @if (registerAccettaTermini?.invalid && registerAccettaTermini?.touched) {
+                  <div class="field-error">
+                    <span>Devi accettare i Termini e Condizioni</span>
+                  </div>
+                }
+              </div>
+
+              <div class="checkbox-item">
+                <input
+                  id="accettaPrivacy"
+                  type="checkbox"
+                  formControlName="accettaPrivacy"
+                  class="form-checkbox">
+                <label for="accettaPrivacy" class="checkbox-label">
+                  Accetto l'<a href="#" class="link">Informativa sulla Privacy</a> *
+                </label>
+                @if (registerAccettaPrivacy?.invalid && registerAccettaPrivacy?.touched) {
+                  <div class="field-error">
+                    <span>Devi accettare l'Informativa sulla Privacy</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" [disabled]="isLoading()">
+            @if (!isLoading()) {
+              <span>✨ Crea Account</span>
+            }
+            @if (isLoading()) {
+              <span class="loading">⏳ Creazione account in corso...</span>
+            }
+          </button>
+        </form>
+      }
+
+      <!-- Switch Mode -->
+      <div class="card-footer">
+        <p>
+          {{ isLoginMode() ? 'Non hai un account?' : 'Hai già un account?' }}
+          <button class="link-btn" (click)="switchMode()" type="button">
+            {{ isLoginMode() ? 'Registrati qui' : 'Accedi qui' }}
+          </button>
+        </p>
+      </div>
+    </div>
+
+    <!-- Features Section (solo in modalità login) -->
+    @if (isLoginMode()) {
+      <div class="features-section">
+        <h3>🌟 Perché scegliere NOTA BENE?</h3>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📝</div>
+            <h4>Note Veloci</h4>
+            <p>Crea note di massimo 280 caratteri, perfette per idee rapide</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">👥</div>
+            <h4>Condivisione</h4>
+            <p>Condividi le tue note con permessi di lettura o scrittura</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏷️</div>
+            <h4>Organizzazione</h4>
+            <p>Organizza con tag e cartelle per ritrovare tutto facilmente</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <h4>Versionamento</h4>
+            <p>Traccia ogni modifica e ripristina versioni precedenti</p>
+          </div>
+        </div>
+      </div>
+    }
+  </main>
+</div>

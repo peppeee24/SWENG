@@ -1,13 +1,20 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Header } from "../header/header";
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Header],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  standalone: true,
+  imports: [RouterOutlet],
+  template: `
+    <router-outlet></router-outlet>
+  `,
+  styles: [`
+    :host {
+      display: block;
+      height: 100vh;
+    }
+  `]
 })
-export class App {
-  protected title = 'SWENG';
+export class AppComponent {
+  title = 'nota-bene-frontend';
 }
