@@ -27,14 +27,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                AntPathRequestMatcher.antMatcher("/api/auth/**"),
-                                AntPathRequestMatcher.antMatcher("/h2-console/**")
+                                AntPathRequestMatcher.antMatcher("/api/auth/**")
                         ).permitAll()
                         .anyRequest().authenticated()
-                )
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.disable())
-                ); // Per H2 console
+                );
 
         return http.build();
     }

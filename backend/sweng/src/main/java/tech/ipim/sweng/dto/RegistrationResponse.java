@@ -1,5 +1,6 @@
 package tech.ipim.sweng.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class RegistrationResponse {
@@ -8,7 +9,13 @@ public class RegistrationResponse {
     private String message;
     private Long userId;
     private String username;
+    private String nome;
+    private String cognome;
+    private String email;
+    private String citta;
+    private LocalDate dataNascita;
     private LocalDateTime createdAt;
+
 
     public RegistrationResponse() {}
 
@@ -26,8 +33,15 @@ public class RegistrationResponse {
     }
 
     // Factory methods per creare risposte standard
-    public static RegistrationResponse success(Long userId, String username, LocalDateTime createdAt) {
-        return new RegistrationResponse(true, "Registrazione completata con successo", userId, username, createdAt);
+    public static RegistrationResponse success(Long userId, String username, String nome, String cognome,
+                                               String email, String citta, LocalDate dataNascita, LocalDateTime createdAt) {
+        RegistrationResponse response = new RegistrationResponse(true, "Registrazione completata con successo", userId, username, createdAt);
+        response.setNome(nome);
+        response.setCognome(cognome);
+        response.setEmail(email);
+        response.setCitta(citta);
+        response.setDataNascita(dataNascita);
+        return response;
     }
 
     public static RegistrationResponse error(String message) {
@@ -72,5 +86,45 @@ public class RegistrationResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public String getCognome() {
+        return cognome;
+    }
+
+    public void setCognome(String cognome) {
+        this.cognome = cognome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getCitta() {
+        return citta;
+    }
+
+    public void setCitta(String citta) {
+        this.citta = citta;
+    }
+
+    public LocalDate getDataNascita() {
+        return dataNascita;
+    }
+
+    public void setDataNascita(LocalDate dataNascita) {
+        this.dataNascita = dataNascita;
     }
 }

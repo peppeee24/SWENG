@@ -1,8 +1,11 @@
 package tech.ipim.sweng.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,6 +25,34 @@ public class User {
     @NotBlank(message = "Password è obbligatoria")
     @Size(min = 6, message = "Password deve essere almeno 6 caratteri")
     private String password;
+
+    @Column(name = "nome")
+    @Size(max = 100, message = "Nome deve essere massimo 100 caratteri")
+    private String nome;
+
+    @Column(name = "cognome")
+    @Size(max = 100, message = "Cognome deve essere massimo 100 caratteri")
+    private String cognome;
+
+    @Column(name = "email", unique = true)
+    @Email(message = "Email deve essere valida")
+    @Size(max = 150, message = "Email deve essere massimo 150 caratteri")
+    private String email;
+
+    @Column(name = "sesso")
+    @Pattern(regexp = "^(M|F|ALTRO)$", message = "Sesso deve essere M, F o ALTRO")
+    private String sesso;
+
+    @Column(name = "numero_telefono")
+    @Pattern(regexp = "^[\\+]?[0-9\\s\\-\\(\\)]{8,20}$", message = "Numero di telefono non valido")
+    private String numeroTelefono;
+
+    @Column(name = "citta")
+    @Size(max = 100, message = "Città deve essere massimo 100 caratteri")
+    private String citta;
+
+    @Column(name = "data_nascita")
+    private LocalDate dataNascita;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -80,6 +111,62 @@ public class User {
         this.updatedAt = updatedAt;
     }
 
+    public String getNome() {
+        return nome;
+    }
+
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public String getCognome() {
+        return cognome;
+    }
+
+    public void setCognome(String cognome) {
+        this.cognome = cognome;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSesso() {
+        return sesso;
+    }
+
+    public void setSesso(String sesso) {
+        this.sesso = sesso;
+    }
+
+    public String getNumeroTelefono() {
+        return numeroTelefono;
+    }
+
+    public void setNumeroTelefono(String numeroTelefono) {
+        this.numeroTelefono = numeroTelefono;
+    }
+
+    public String getCitta() {
+        return citta;
+    }
+
+    public void setCitta(String citta) {
+        this.citta = citta;
+    }
+
+    public LocalDate getDataNascita() {
+        return dataNascita;
+    }
+
+    public void setDataNascita(LocalDate dataNascita) {
+        this.dataNascita = dataNascita;
+    }
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
@@ -90,6 +177,10 @@ public class User {
         return "User{" +
                 "id=" + id +
                 ", username='" + username + '\'' +
+                ", nome='" + nome + '\'' +
+                ", cognome='" + cognome + '\'' +
+                ", email='" + email + '\'' +
+                ", citta='" + citta + '\'' +
                 ", createdAt=" + createdAt +
                 '}';
     }

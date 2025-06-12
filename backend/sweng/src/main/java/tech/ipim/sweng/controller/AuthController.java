@@ -28,6 +28,28 @@ public class AuthController
     }
 
     /**
+     * Endpoint per verificare la disponibilità di un'email
+     * GET /api/auth/check-email?email=test@example.com
+     */
+    @GetMapping("/check-email")
+    public ResponseEntity<Map<String, Object>> checkEmailAvailability(@RequestParam String email) {
+
+        if (email == null || email.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "available", false,
+                    "message", "Email non può essere vuota"
+            ));
+        }
+
+        boolean available = userService.isEmailAvailable(email);
+
+        return ResponseEntity.ok(Map.of(
+                "available", available,
+                "message", available ? "Email disponibile" : "Email già in uso"
+        ));
+    }
+
+    /**
      * Endpoint per la registrazione di un nuovo utente
      * POST /api/auth/register
      */
