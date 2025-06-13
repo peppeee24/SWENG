@@ -18,7 +18,6 @@ export interface User {
   password?: string;
 }
 
-
 export interface RegisterRequest {
   username: string;
   password: string;
@@ -48,13 +47,21 @@ export interface RegistrationResponse {
 export interface AvailabilityCheck {
   available: boolean;
   message: string;
-  field: string;
+  field?: string;
   value?: string;
 }
 
 export interface LoginRequest {
   username: string;
   password: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  user?: User;
+  loginTime?: string;
 }
 
 export interface AuthResponse {
@@ -71,17 +78,22 @@ export class AuthService {
   
   currentUser = signal<User | null>(null);
   isAuthenticated = signal<boolean>(false);
+  currentToken = signal<string | null>(null);
 
   constructor() {
     const userData = localStorage.getItem('currentUser');
-    if (userData) {
+    const token = localStorage.getItem('authToken');
+    
+    if (userData && token) {
       try {
         const user = JSON.parse(userData);
         this.currentUser.set(user);
+        this.currentToken.set(token);
         this.isAuthenticated.set(true);
+        console.log('Sessione utente recuperata:', user);
       } catch (error) {
         console.error('Errore parsing userData:', error);
-        localStorage.removeItem('currentUser');
+        this.clearSession();
       }
     }
   }
@@ -106,8 +118,23 @@ export class AuthService {
               numeroTelefono: request.numeroTelefono
             };
             
-            // Salva user info per sessioni future
             this.setUserSession(user);
+          }
+        }),
+        catchError(this.handleError.bind(this))
+      );
+  }
+
+  login(request: LoginRequest): Observable<LoginResponse> {
+    console.log('Tentativo login per:', request.username);
+    
+    return this.http.post<LoginResponse>(`${this.API_URL}/login`, request)
+      .pipe(
+        tap(response => {
+          console.log('Risposta login:', response);
+          if (response.success && response.token && response.user) {
+            this.setAuthenticatedSession(response.token, response.user);
+            console.log('Login completato con successo!');
           }
         }),
         catchError(this.handleError.bind(this))
@@ -128,10 +155,6 @@ export class AuthService {
       );
   }
 
-  login(request: LoginRequest): Observable<AuthResponse>{
-    return throwError(() => new Error('Login non ancora implementato.'));
-  }
-
   healthCheck(): Observable<any> {
     return this.http.get(`${this.API_URL}/health`)
       .pipe(
@@ -140,29 +163,45 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('currentUser');
-    this.currentUser.set(null);
-    this.isAuthenticated.set(false);
-    console.log('👋 Logout effettuato');
+    this.clearSession();
+    console.log('Logout effettuato');
   }
 
   isLoggedIn(): boolean {
-    return this.isAuthenticated();
+    return this.isAuthenticated() && this.currentToken() !== null;
   }
-
 
   getCurrentUser(): User | null {
     return this.currentUser();
   }
 
+  getToken(): string | null {
+    return this.currentToken();
+  }
+
+  private setAuthenticatedSession(token: string, user: User): void {
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    this.currentToken.set(token);
+    this.currentUser.set(user);
+    this.isAuthenticated.set(true);
+    console.log('Sessione autenticata salvata:', { user: user.username, hasToken: !!token });
+  }
 
   private setUserSession(user: User): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUser.set(user);
     this.isAuthenticated.set(true);
-    console.log('Sessione utente salvata:', user);
+    console.log('Sessione utente salvata (senza token):', user);
   }
 
+  private clearSession(): void {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('authToken');
+    this.currentUser.set(null);
+    this.currentToken.set(null);
+    this.isAuthenticated.set(false);
+  }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'Si è verificato un errore sconosciuto';
@@ -174,6 +213,8 @@ export class AuthService {
     } else {
       if (error.status === 0) {
         errorMessage = 'Impossibile connettersi al server. Verifica che il backend SWENG sia avviato su http://localhost:8080';
+      } else if (error.status === 401) {
+        errorMessage = 'Username o password non corretti';
       } else if (error.status === 409) {
         if (error.error && error.error.message) {
           errorMessage = error.error.message;

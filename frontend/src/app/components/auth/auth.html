@@ -51,14 +51,6 @@
 
       <!-- Login Form -->
       @if (isLoginMode()) {
-        <div class="message error-message">
-          <div class="message-content">
-            <span class="icon">⚠️</span>
-            <strong>Login non ancora implementato.</strong><br>
-            Per ora puoi solo registrarti (UC1 - Registrazione). Il login sarà disponibile con UC10 - Effettua Login.
-          </div>
-        </div>
-        
         <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="auth-form">
           <div class="form-group">
             <label for="loginUsername">Username</label>
@@ -69,6 +61,16 @@
               class="form-input"
               [class.error]="loginUsername?.invalid && loginUsername?.touched"
               placeholder="Inserisci il tuo username">
+            @if (loginUsername?.invalid && loginUsername?.touched) {
+              <div class="field-error">
+                @if (loginUsername?.errors?.['required']) {
+                  <span>Username è obbligatorio</span>
+                }
+                @if (loginUsername?.errors?.['minlength']) {
+                  <span>Username deve avere almeno 3 caratteri</span>
+                }
+              </div>
+            }
           </div>
 
           <div class="form-group">
@@ -80,10 +82,28 @@
               class="form-input"
               [class.error]="loginPassword?.invalid && loginPassword?.touched"
               placeholder="Inserisci la tua password">
+            @if (loginPassword?.invalid && loginPassword?.touched) {
+              <div class="field-error">
+                @if (loginPassword?.errors?.['required']) {
+                  <span>Password è obbligatoria</span>
+                }
+                @if (loginPassword?.errors?.['minlength']) {
+                  <span>Password deve avere almeno 6 caratteri</span>
+                }
+              </div>
+            }
           </div>
 
-          <button type="submit" class="submit-btn" disabled>
-            <span>🚧 Login non implementato</span>
+          <button 
+            type="submit" 
+            class="submit-btn" 
+            [disabled]="isLoading() || loginForm.invalid">
+            @if (!isLoading()) {
+              <span>🔐 Accedi</span>
+            }
+            @if (isLoading()) {
+              <span class="loading">⏳ Accesso in corso...</span>
+            }
           </button>
         </form>
       }

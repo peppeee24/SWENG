@@ -22,7 +22,6 @@ export class AuthComponent implements OnInit {
   errorMessage = signal('');
   successMessage = signal('');
   
-
   usernameChecking = signal(false);
   usernameAvailable = signal<boolean | null>(null);
   emailChecking = signal(false);
@@ -32,7 +31,6 @@ export class AuthComponent implements OnInit {
   registerForm: FormGroup;
 
   constructor() {
-
     this.loginForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]]
@@ -163,7 +161,6 @@ export class AuthComponent implements OnInit {
     this.resetForms();
   }
 
-
   resetForms(): void {
     this.loginForm.reset();
     this.registerForm.reset();
@@ -171,21 +168,44 @@ export class AuthComponent implements OnInit {
     this.emailAvailable.set(null);
   }
 
-
   onLogin(): void {
     if (this.loginForm.valid) {
       this.isLoading.set(true);
       this.errorMessage.set('');
+      this.successMessage.set('');
 
-      setTimeout(() => {
-        this.isLoading.set(false);
-        this.errorMessage.set('Login non ancora implementato.');
-      }, 1000);
+      const loginRequest: LoginRequest = {
+        username: this.loginForm.value.username,
+        password: this.loginForm.value.password
+      };
+
+      console.log('Tentativo login per:', loginRequest.username);
+
+      this.authService.login(loginRequest).subscribe({
+        next: (response) => {
+          this.isLoading.set(false);
+          if (response.success) {
+            this.successMessage.set(`Bentornato ${response.user?.username || loginRequest.username}! Redirecting...`);
+            console.log('Login riuscito:', response);
+            
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']);
+            }, 1000);
+          } else {
+            this.errorMessage.set(response.message || 'Errore durante il login');
+          }
+        },
+        error: (error) => {
+          this.isLoading.set(false);
+          this.errorMessage.set(error.message || 'Errore durante il login');
+          console.error('Errore login:', error);
+        }
+      });
     } else {
       this.markFormGroupTouched(this.loginForm);
+      this.errorMessage.set('Compila tutti i campi correttamente.');
     }
   }
-
 
   onRegister(): void {
     if (this.registerForm.valid && this.usernameAvailable() !== false && this.emailAvailable() !== false) {
@@ -211,17 +231,21 @@ export class AuthComponent implements OnInit {
         }
       });
 
-      console.log('🚀 Invio registrazione:', registerRequest);
+      console.log('Invio registrazione:', registerRequest);
 
       this.authService.register(registerRequest).subscribe({
         next: (response) => {
           this.isLoading.set(false);
           if (response.success) {
-            this.successMessage.set(`Registrazione completata! Benvenuto ${response.username || formValue.username}!`);
+            this.successMessage.set(`Registrazione completata! Benvenuto ${response.username || formValue.username}! Ora puoi accedere.`);
             console.log('Registrazione riuscita:', response);
             
             setTimeout(() => {
-              this.router.navigate(['/dashboard']);
+              this.isLoginMode.set(true);
+              this.successMessage.set('Ora effettua il login con le tue credenziali.');
+              this.loginForm.patchValue({
+                username: registerRequest.username
+              });
             }, 2000);
           } else {
             this.errorMessage.set(response.message || 'Errore durante la registrazione');
@@ -253,11 +277,9 @@ export class AuthComponent implements OnInit {
     });
   }
 
-  // Getters per form login
   get loginUsername() { return this.loginForm.get('username'); }
   get loginPassword() { return this.loginForm.get('password'); }
   
-  // Getters per form registrazione
   get registerUsername() { return this.registerForm.get('username'); }
   get registerEmail() { return this.registerForm.get('email'); }
   get registerPassword() { return this.registerForm.get('password'); }
