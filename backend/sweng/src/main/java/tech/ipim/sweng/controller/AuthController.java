@@ -1,22 +1,38 @@
 package tech.ipim.sweng.controller;
 
-import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+import tech.ipim.sweng.dto.LoginRequest;
+import tech.ipim.sweng.dto.LoginResponse;
 import tech.ipim.sweng.dto.RegistrationRequest;
 import tech.ipim.sweng.dto.RegistrationResponse;
 import tech.ipim.sweng.exception.UserAlreadyExistsException;
 import tech.ipim.sweng.service.UserService;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:4200") // Per collegarlo ad Angular
+@CrossOrigin(
+    origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, 
+    allowedHeaders = "*",
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+    allowCredentials = "true"
+)
+
 public class AuthController
 {
 
@@ -81,6 +97,60 @@ public class AuthController
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     RegistrationResponse.error("Errore interno del server")
+            );
+        }
+    }
+
+    /**
+     * Endpoint per il login di un utente
+     * POST /api/auth/login
+     * 
+     * @param request Dati di login (username e password)
+     * @param bindingResult Risultati della validazione
+     * @return ResponseEntity con JWT token e dati utente o errori
+     */
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest request, 
+                                      BindingResult bindingResult) {
+        
+        System.out.println("POST /api/auth/login ricevuto");
+        System.out.println("Tentativo login per: " + request.getUsername());
+        
+        // Gestione errori di validazione dei campi
+        if (bindingResult.hasErrors()) {
+            System.out.println("Errori di validazione login: " + bindingResult.getAllErrors());
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors().forEach(error -> 
+                errors.put(error.getField(), error.getDefaultMessage())
+            );
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Errori di validazione");
+            errorResponse.put("errors", errors);
+            
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+        
+        try {
+            // Tenta l'autenticazione
+            LoginResponse response = userService.authenticateUser(request);
+            System.out.println("Login completato per: " + request.getUsername());
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            // Credenziali non valide
+            System.out.println("Login fallito per: " + request.getUsername() + " - " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                LoginResponse.error("Username o password non corretti")
+            );
+            
+        } catch (Exception e) {
+            // Errore generico del server
+            System.err.println("Errore durante il login: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                LoginResponse.error("Errore interno del server durante il login")
             );
         }
     }

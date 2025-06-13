@@ -4,11 +4,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import tech.ipim.sweng.dto.LoginRequest;
+import tech.ipim.sweng.dto.LoginResponse;
 import tech.ipim.sweng.dto.RegistrationRequest;
 import tech.ipim.sweng.dto.RegistrationResponse;
+import tech.ipim.sweng.dto.UserDto;
 import tech.ipim.sweng.exception.UserAlreadyExistsException;
 import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.UserRepository;
+import tech.ipim.sweng.util.JwtUtil;
+
 
 @Service
 @Transactional
@@ -16,11 +22,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final JwtUtil jwtUtil;
+    
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -105,4 +113,62 @@ public class UserService {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
     }
+
+    /**
+     * Valida un JWT token e restituisce l'utente associato
+     * @param token il JWT token da validare
+     * @return l'utente se il token è valido
+     */
+    @Transactional(readOnly = true)
+    public User validateTokenAndGetUser(String token) {
+        try {
+            if (!jwtUtil.isTokenValid(token)) {
+                return null;
+            }
+            
+            String username = jwtUtil.extractUsername(token);
+            User user = findByUsername(username);
+            
+            if (user != null && jwtUtil.validateToken(token, user)) {
+                return user;
+            }
+            
+            return null;
+        } catch (Exception e) {
+            System.err.println("Errore validazione token: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Autentica un utente (login)
+     * @param request i dati di login
+     * @return la risposta del login con token JWT
+     * @throws RuntimeException se le credenziali non sono valide
+     */
+    public LoginResponse authenticateUser(LoginRequest request) {
+        System.out.println("Tentativo login per username: " + request.getUsername());
+        
+        // Cerca l'utente per username
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Credenziali non valide"));
+        
+        // Verifica la password
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            System.out.println("Password non corretta per utente: " + request.getUsername());
+            throw new RuntimeException("Credenziali non valide");
+        }
+        
+        System.out.println("Login riuscito per utente: " + user.getUsername());
+        
+        // Genera JWT token
+        String token = jwtUtil.generateToken(user);
+        
+        // Crea UserDto (senza password)
+        UserDto userDto = UserDto.fromUser(user);
+        
+        // Crea e restituisce la risposta di successo
+        return LoginResponse.success(token, userDto);
+    }
 }
+
