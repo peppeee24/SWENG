@@ -16,15 +16,37 @@ export class DashboardComponent implements OnInit {
 
   currentUser = computed(() => this.authService.currentUser());
   isAuthenticated = computed(() => this.authService.isAuthenticated());
+  hasToken = computed(() => !!this.authService.getToken());
+
+  displayName = computed(() => {
+    const user = this.currentUser();
+    if (!user) return 'Utente';
+    
+    if (user.nome && user.cognome) {
+      return `${user.nome} ${user.cognome}`;
+    } else if (user.nome) {
+      return user.nome;
+    } else {
+      return user.username;
+    }
+  });
 
   ngOnInit(): void {
-    // Redirect if not authenticated
+    console.log('Dashboard: Inizializzazione...');
+    console.log('isAuthenticated:', this.isAuthenticated());
+    console.log('hasToken:', this.hasToken());
+    console.log('currentUser:', this.currentUser());
+
     if (!this.isAuthenticated()) {
+      console.log('Dashboard: Utente non autenticato, redirect al login');
       this.router.navigate(['/auth']);
+    } else {
+      console.log('Dashboard: Utente autenticato, caricamento dashboard');
     }
   }
 
   onLogout(): void {
+    console.log('Dashboard: Logout richiesto');
     this.authService.logout();
     this.router.navigate(['/auth']);
   }
