@@ -166,9 +166,7 @@ class NoteServiceTest {
 
     @Test
     void shouldDuplicateNote() {
-        // Mock findById (primo controllo nel service)
         when(noteRepository.findById(1L)).thenReturn(Optional.of(testNote));
-        // Mock findByUsername per l'autore
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
         
         Note duplicatedNote = new Note("Test Note (Copia)", "Test content", testUser);
