@@ -1,0 +1,274 @@
+.note-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border-color: #cbd5e0;
+}
+
+.note-card.can-edit:hover {
+  border-color: #667eea;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+}
+
+/* Header */
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.note-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+  flex: 1;
+  word-break: break-word;
+}
+
+.note-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.permission-indicator {
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.note-card:hover .action-buttons {
+  opacity: 1;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.duplicate-btn:hover {
+  background: rgba(66, 153, 225, 0.1);
+}
+
+.edit-btn:hover {
+  background: rgba(56, 178, 172, 0.1);
+}
+
+.delete-btn:hover {
+  background: rgba(245, 101, 101, 0.1);
+}
+
+/* Content */
+.note-content {
+  margin-bottom: 1rem;
+}
+
+.note-text {
+  margin: 0;
+  color: #4a5568;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Tags e Cartelle */
+.note-tags,
+.note-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tag,
+.folder {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
+  color: #2d3748;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tag {
+  background: linear-gradient(135deg, #fed7d7, #feb2b2);
+  color: #742a2a;
+}
+
+.folder {
+  background: linear-gradient(135deg, #bee3f8, #90cdf4);
+  color: #2a4365;
+}
+
+/* Footer */
+.note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f7fafc;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.owner-badge {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.note-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.created-date,
+.modified-date {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.modified-date {
+  color: #38b2ac;
+  font-weight: 500;
+}
+
+/* Character Count */
+.character-count {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.char-bar {
+  flex: 1;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.char-fill {
+  height: 100%;
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.char-fill.warning {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+}
+
+.char-fill.danger {
+  background: linear-gradient(135deg, #f56565, #e53e3e);
+}
+
+.char-text {
+  font-size: 0.7rem;
+  color: #718096;
+  font-weight: 500;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .note-card {
+    padding: 1rem;
+  }
+
+  .note-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .note-actions {
+    justify-content: space-between;
+  }
+
+  .action-buttons {
+    opacity: 1;
+  }
+
+  .note-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .note-dates {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .note-tags,
+  .note-folders {
+    gap: 0.25rem;
+  }
+
+  .tag,
+  .folder {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+  }
+}

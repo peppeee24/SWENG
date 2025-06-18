@@ -56,13 +56,15 @@ export class AuthComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Se l'utente è già loggato, reindirizza alle note
     if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/dashboard']);
+      console.log('Utente già autenticato, redirect alle note');
+      this.router.navigate(['/notes']);
+      return;
     }
     
     this.setupUsernameValidation();
     this.setupEmailValidation();
-    
     this.testBackendConnection();
   }
 
@@ -185,11 +187,11 @@ export class AuthComponent implements OnInit {
         next: (response) => {
           this.isLoading.set(false);
           if (response.success) {
-            this.successMessage.set(`Bentornato ${response.user?.username || loginRequest.username}! Redirecting...`);
-            console.log('Login riuscito:', response);
+            this.successMessage.set(`Bentornato ${response.user?.username || loginRequest.username}! Reindirizzamento...`);
+            console.log('Login riuscito, redirect alle note:', response);
             
             setTimeout(() => {
-              this.router.navigate(['/dashboard']);
+              this.router.navigate(['/notes']);
             }, 1000);
           } else {
             this.errorMessage.set(response.message || 'Errore durante il login');
