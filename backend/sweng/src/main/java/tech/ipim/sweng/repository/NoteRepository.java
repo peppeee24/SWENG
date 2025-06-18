@@ -32,9 +32,9 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
      * Trova una nota per ID se l'utente ha accesso
      */
     @Query("SELECT n FROM Note n WHERE n.id = :noteId AND (" +
-           "n.autore.username = :username OR " +
-           "(:username MEMBER OF n.permessiLettura) OR " +
-           "(:username MEMBER OF n.permessiScrittura))")
+       "n.autore.username = :username OR " +
+       "(:username MEMBER OF n.permessiLettura) OR " +
+       "(:username MEMBER OF n.permessiScrittura))")
     Optional<Note> findAccessibleNoteById(@Param("noteId") Long noteId, @Param("username") String username);
 
     /**
