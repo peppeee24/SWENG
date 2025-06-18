@@ -1,0 +1,224 @@
+@if (isVisible) {
+  <div class="modal-overlay" (click)="onCancel()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        @if (isEditMode()) {
+          <h2>✏️ Modifica Nota</h2>
+        } @else {
+          <h2>📝 Crea Nuova Nota</h2>
+        }
+        <button class="close-btn" (click)="onCancel()" type="button" aria-label="Chiudi">✕</button>
+      </div>
+
+      <form [formGroup]="noteForm" (ngSubmit)="onSubmit()" class="note-form">
+        <!-- Titolo -->
+        <div class="form-group">
+          <label for="titolo">Titolo *</label>
+          <input
+            id="titolo"
+            type="text"
+            formControlName="titolo"
+            class="form-input"
+            [class.error]="titolo?.invalid && titolo?.touched"
+            placeholder="Inserisci il titolo della nota"
+            maxlength="100"
+            autocomplete="off">
+          
+          @if (titolo?.invalid && titolo?.touched) {
+            <div class="field-error">
+              @if (titolo?.errors?.['required']) {
+                <span>Il titolo è obbligatorio</span>
+              }
+              @if (titolo?.errors?.['maxlength']) {
+                <span>Il titolo deve essere massimo 100 caratteri</span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Contenuto -->
+        <div class="form-group">
+          <label for="contenuto">Contenuto *</label>
+          <textarea
+            id="contenuto"
+            formControlName="contenuto"
+            class="form-textarea"
+            [class.error]="contenuto?.invalid && contenuto?.touched"
+            placeholder="Scrivi qui il contenuto della nota (max 280 caratteri)"
+            rows="6"
+            maxlength="280">
+          </textarea>
+          
+          <!-- Character counter -->
+          <div class="character-counter">
+            <div class="char-bar">
+              <div 
+                class="char-fill" 
+                [style.width.%]="getCharacterWidth()"
+                [class]="getCharacterProgressClass()">
+              </div>
+            </div>
+            <span class="char-count" [class]="getCharacterProgressClass()">
+              {{ getCharacterDisplay() }}
+            </span>
+          </div>
+
+          @if (contenuto?.invalid && contenuto?.touched) {
+            <div class="field-error">
+              @if (contenuto?.errors?.['required']) {
+                <span>Il contenuto è obbligatorio</span>
+              }
+              @if (contenuto?.errors?.['maxlength']) {
+                <span>Il contenuto deve essere massimo 280 caratteri</span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Tags -->
+        <div class="form-group">
+          <label for="tags">🏷️ Tags</label>
+          <div class="tag-input-container">
+            <input
+              type="text"
+              [value]="getTagInputValue()"
+              (input)="onTagInputChange($event)"
+              (keydown)="onTagInputKeyDown($event)"
+              class="form-input tag-input"
+              placeholder="Aggiungi tag (premi Invio per aggiungere)"
+              maxlength="50"
+              autocomplete="off">
+            <button 
+              type="button" 
+              class="add-btn" 
+              (click)="addTag()"
+              [disabled]="!canAddTag()"
+              aria-label="Aggiungi tag">
+              +
+            </button>
+          </div>
+
+          <!-- Tag suggestions -->
+          @if (shouldShowTagSuggestions()) {
+            <div class="suggestions">
+              @for (tag of getFilteredTagSuggestions(); track tag) {
+                <button 
+                  type="button" 
+                  class="suggestion-item"
+                  (click)="addTagFromSuggestion(tag)"
+                  tabindex="0">
+                  🏷️ {{ tag }}
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Selected tags -->
+          @if (hasSelectedTags()) {
+            <div class="selected-items">
+              @for (tag of getSelectedTags(); track tag) {
+                <span class="selected-tag">
+                  🏷️ {{ tag }}
+                  <button 
+                    type="button" 
+                    class="remove-btn" 
+                    (click)="removeTag(tag)"
+                    [attr.aria-label]="'Rimuovi tag: ' + tag">
+                    ×
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Cartelle -->
+        <div class="form-group">
+          <label for="cartelle">📁 Cartelle</label>
+          <div class="tag-input-container">
+            <input
+              type="text"
+              [value]="getCartellaInputValue()"
+              (input)="onCartellaInputChange($event)"
+              (keydown)="onCartellaInputKeyDown($event)"
+              class="form-input tag-input"
+              placeholder="Aggiungi cartella (premi Invio per aggiungere)"
+              maxlength="50"
+              autocomplete="off">
+            <button 
+              type="button" 
+              class="add-btn" 
+              (click)="addCartella()"
+              [disabled]="!canAddCartella()"
+              aria-label="Aggiungi cartella">
+              +
+            </button>
+          </div>
+
+          <!-- Cartella suggestions -->
+          @if (shouldShowCartelleSuggestions()) {
+            <div class="suggestions">
+              @for (cartella of getFilteredCartelleSuggestions(); track cartella) {
+                <button 
+                  type="button" 
+                  class="suggestion-item"
+                  (click)="addCartellaFromSuggestion(cartella)"
+                  tabindex="0">
+                  📁 {{ cartella }}
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Selected cartelle -->
+          @if (hasSelectedCartelle()) {
+            <div class="selected-items">
+              @for (cartella of getSelectedCartelle(); track cartella) {
+                <span class="selected-folder">
+                  📁 {{ cartella }}
+                  <button 
+                    type="button" 
+                    class="remove-btn" 
+                    (click)="removeCartella(cartella)"
+                    [attr.aria-label]="'Rimuovi cartella: ' + cartella">
+                    ×
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn-secondary" 
+            (click)="onCancel()"
+            [disabled]="isLoading">
+            Annulla
+          </button>
+          
+          <button 
+            type="submit" 
+            class="btn-primary" 
+            [disabled]="noteForm.invalid || isLoading">
+            @if (isLoading) {
+              @if (isEditMode()) {
+                <span class="loading">⏳ Aggiornamento...</span>
+              } @else {
+                <span class="loading">⏳ Salvataggio...</span>
+              }
+            } @else {
+              @if (isEditMode()) {
+                <span>✏️ Aggiorna Nota</span>
+              } @else {
+                <span>📝 Crea Nota</span>
+              }
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

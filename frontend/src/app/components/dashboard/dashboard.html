@@ -25,10 +25,10 @@
           <h2>🎉 Benvenuto in NOTA BENE!</h2>
           <p>La tua dashboard per gestire note e collaborazioni è pronta. Inizia a creare le tue prime note!</p>
           <div class="quick-actions">
-            <button class="action-btn primary">
-              ➕ Crea la tua prima nota
+            <button class="action-btn primary" (click)="goToNotes()">
+              📝 Vai alle tue note
             </button>
-            <button class="action-btn secondary">
+            <button class="action-btn secondary" (click)="goToNotes()">
               📂 Organizza in cartelle
             </button>
           </div>
@@ -75,6 +75,9 @@
             <div class="empty-icon">📝</div>
             <h4>Nessuna attività ancora</h4>
             <p>Le tue note e collaborazioni appariranno qui una volta che inizierai a utilizzare NOTA BENE.</p>
+            <button class="action-btn primary" (click)="goToNotes()">
+              ➕ Inizia ora
+            </button>
           </div>
         </div>
       </section>

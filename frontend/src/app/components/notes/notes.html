@@ -1,0 +1,218 @@
+<div class="notes-container">
+  <!-- Header -->
+  <header class="notes-header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>📝 NOTA BENE</h1>
+        @if (currentUser()) {
+          <p class="welcome-text">Ciao, {{ displayName() }}!</p>
+        }
+      </div>
+      <nav class="nav-actions">
+        <button class="stats-btn" (click)="toggleStats()">
+          📊 {{ showStats() ? 'Nascondi' : 'Mostra' }} Statistiche
+        </button>
+        <button class="logout-btn" (click)="onLogout()">
+          🚪 Logout
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Stats Panel -->
+  @if (showStats() && userStats()) {
+    <section class="stats-panel">
+      <div class="stats-content">
+        <h3>📊 Le tue statistiche</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-value">{{ userStats()!.noteCreate }}</span>
+            <span class="stat-label">Note create</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ userStats()!.noteCondivise }}</span>
+            <span class="stat-label">Note condivise</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ userStats()!.tagUtilizzati }}</span>
+            <span class="stat-label">Tag utilizzati</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ userStats()!.cartelleCreate }}</span>
+            <span class="stat-label">Cartelle create</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <!-- Create Button -->
+      <button class="create-btn" (click)="showCreateForm()">
+        ➕ Crea Nota
+      </button>
+
+      <!-- Filter Buttons -->
+      <div class="filter-buttons">
+        <button 
+          [class]="getFilterButtonClass('all')"
+          (click)="onFilterChange('all')">
+          📋 Tutte
+        </button>
+        <button 
+          [class]="getFilterButtonClass('own')"
+          (click)="onFilterChange('own')">
+          📝 Mie Note
+        </button>
+        <button 
+          [class]="getFilterButtonClass('shared')"
+          (click)="onFilterChange('shared')">
+          👥 Condivise
+        </button>
+      </div>
+
+      <!-- Search Form -->
+      <form [formGroup]="searchForm" (ngSubmit)="onSearch()" class="search-form">
+        <input
+          type="text"
+          formControlName="query"
+          placeholder="🔍 Cerca note, tag, cartelle..."
+          class="search-input">
+        <button type="submit" class="search-btn">Cerca</button>
+      </form>
+    </div>
+
+    <!-- Tags and Folders Filters -->
+    @if (userStats() && (userStats()!.allTags.length > 0 || userStats()!.allCartelle.length > 0)) {
+      <div class="quick-filters">
+        <!-- Tags -->
+        @if (userStats()!.allTags.length > 0) {
+          <div class="filter-section">
+            <h4>🏷️ Tags</h4>
+            <div class="filter-chips">
+              @for (tag of userStats()!.allTags; track tag) {
+                <button 
+                  class="filter-chip"
+                  [class.active]="selectedTag() === tag"
+                  (click)="onTagFilter(tag)">
+                  {{ tag }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Cartelle -->
+        @if (userStats()!.allCartelle.length > 0) {
+          <div class="filter-section">
+            <h4>📁 Cartelle</h4>
+            <div class="filter-chips">
+              @for (cartella of userStats()!.allCartelle; track cartella) {
+                <button 
+                  class="filter-chip"
+                  [class.active]="selectedCartella() === cartella"
+                  (click)="onCartellaFilter(cartella)">
+                  {{ cartella }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Clear Filters -->
+        @if (hasActiveFilters()) {
+          <button class="clear-filters-btn" (click)="clearFilters()">
+            ✕ Pulisci filtri
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Active Filter Info -->
+    @if (selectedTag() || selectedCartella() || searchQuery()) {
+      <div class="active-filter-info">
+        @if (selectedTag()) {
+          <span class="filter-info">Filtro per tag: <strong>{{ selectedTag() }}</strong></span>
+        }
+        @if (selectedCartella()) {
+          <span class="filter-info">Filtro per cartella: <strong>{{ selectedCartella() }}</strong></span>
+        }
+        @if (searchQuery()) {
+          <span class="filter-info">Ricerca: <strong>{{ searchQuery() }}</strong></span>
+        }
+      </div>
+    }
+
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="error-message">
+        ❌ {{ error() }}
+        <button class="retry-btn" (click)="loadNotes()">Riprova</button>
+      </div>
+    }
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="loading-spinner">⏳</div>
+        <p>Caricamento note...</p>
+      </div>
+    }
+
+    <!-- Notes Grid -->
+    @if (!isLoading() && !error()) {
+      @if (filteredNotes().length > 0) {
+        <div class="notes-grid">
+          @for (note of filteredNotes(); track note.id) {
+            <app-note-card
+              [note]="note"
+              [currentUsername]="currentUsername()"
+              (edit)="showEditForm($event)"
+              (delete)="onNoteDelete($event)"
+              (duplicate)="onNoteDuplicate($event)"
+              (view)="onNoteView($event)">
+            </app-note-card>
+          }
+        </div>
+
+        <!-- Notes Count -->
+        <div class="notes-count">
+          Mostrate {{ filteredNotes().length }} di {{ notes().length }} note
+        </div>
+      } @else {
+        <!-- Empty State -->
+        <div class="empty-state">
+          @if (notes().length === 0) {
+            <div class="empty-icon">📝</div>
+            <h3>Nessuna nota ancora</h3>
+            <p>Inizia creando la tua prima nota per organizzare i tuoi pensieri!</p>
+            <button class="create-first-btn" (click)="showCreateForm()">
+              ✨ Crea la prima nota
+            </button>
+          } @else {
+            <div class="empty-icon">🔍</div>
+            <h3>Nessun risultato</h3>
+            <p>Non abbiamo trovato note che corrispondono ai tuoi criteri di ricerca.</p>
+            <button class="clear-search-btn" (click)="clearFilters()">
+              🔄 Pulisci filtri
+            </button>
+          }
+        </div>
+      }
+    }
+  </main>
+
+  <!-- Note Form Modal -->
+  <app-note-form
+    [note]="selectedNote()"
+    [isVisible]="showNoteForm()"
+    [allTags]="allTags()"
+    [allCartelle]="allCartelle()"
+    [isLoading]="isLoading()"
+    (save)="onNoteSave($event)"
+    (cancel)="hideNoteForm()">
+  </app-note-form>
+</div>

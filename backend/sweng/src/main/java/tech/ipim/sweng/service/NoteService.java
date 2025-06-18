@@ -10,6 +10,7 @@ import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -137,22 +138,45 @@ public class NoteService {
      * Duplica una nota
      */
     public NoteDto duplicateNote(Long noteId, String username) {
-        Note originalNote = noteRepository.findAccessibleNoteById(noteId, username)
-                .orElseThrow(() -> new RuntimeException("Nota non trovata o non accessibile"));
+        System.out.println("Tentativo duplicazione nota ID: " + noteId + " per utente: " + username);
+        
+        // Prima prova a cercare la nota normalmente
+        Optional<Note> noteOpt = noteRepository.findById(noteId);
+        if (!noteOpt.isPresent()) {
+            System.out.println("Nota con ID " + noteId + " non esiste nel database");
+            throw new RuntimeException("Nota non trovata nel database");
+        }
+        
+        Note originalNote = noteOpt.get();
+        System.out.println("Nota trovata: " + originalNote.getTitolo() + " di " + originalNote.getAutore().getUsername());
+        
+        // Verifica se l'utente ha accesso alla nota
+        if (!originalNote.haPermessoLettura(username)) {
+            System.out.println("Utente " + username + " non ha accesso alla nota " + noteId);
+            throw new RuntimeException("Non hai i permessi per duplicare questa nota");
+        }
 
         User autore = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
+        // Crea la nota duplicata
         Note duplicatedNote = new Note(
                 originalNote.getTitolo() + " (Copia)",
                 originalNote.getContenuto(),
                 autore
         );
-        duplicatedNote.setTags(originalNote.getTags());
-        duplicatedNote.setCartelle(originalNote.getCartelle());
+        
+        // Copia tags e cartelle se presenti
+        if (originalNote.getTags() != null && !originalNote.getTags().isEmpty()) {
+            duplicatedNote.setTags(new HashSet<>(originalNote.getTags()));
+        }
+        
+        if (originalNote.getCartelle() != null && !originalNote.getCartelle().isEmpty()) {
+            duplicatedNote.setCartelle(new HashSet<>(originalNote.getCartelle()));
+        }
 
         Note savedNote = noteRepository.save(duplicatedNote);
-        System.out.println("Nota duplicata: " + originalNote.getId() + " -> " + savedNote.getId());
+        System.out.println("Nota duplicata con successo: " + originalNote.getId() + " -> " + savedNote.getId());
         
         return NoteDto.fromNote(savedNote, username);
     }

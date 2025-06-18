@@ -11,7 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 import tech.ipim.sweng.dto.CreateNoteRequest;
 import tech.ipim.sweng.dto.LoginRequest;
 import tech.ipim.sweng.dto.LoginResponse;
@@ -22,6 +24,7 @@ import tech.ipim.sweng.service.UserService;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -32,6 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NoteIntegrationTest {
 
     @Autowired
+    private WebApplicationContext webApplicationContext;
+
     private MockMvc mockMvc;
 
     @Autowired
@@ -51,6 +56,12 @@ class NoteIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        // Configura MockMvc con il contesto di sicurezza
+        this.mockMvc = MockMvcBuilders
+                .webAppContextSetup(webApplicationContext)
+                .apply(springSecurity())
+                .build();
+
         // Crea e salva un utente di test
         testUser = new User("testuser", passwordEncoder.encode("password123"));
         testUser.setEmail("test@example.com");

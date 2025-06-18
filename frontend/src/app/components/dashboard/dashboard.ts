@@ -50,4 +50,9 @@ export class DashboardComponent implements OnInit {
     this.authService.logout();
     this.router.navigate(['/auth']);
   }
+
+  goToNotes(): void {
+    console.log('Dashboard: Navigazione verso le note');
+    this.router.navigate(['/notes']);
+  }
 }

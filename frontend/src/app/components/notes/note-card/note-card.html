@@ -1,0 +1,98 @@
+<div class="note-card" [class.can-edit]="note.canEdit" (click)="onView()">
+  <!-- Header della nota -->
+  <div class="note-header">
+    <h3 class="note-title">{{ note.titolo }}</h3>
+    <div class="note-actions">
+      <span class="permission-indicator" [title]="getPermissionText()">
+        {{ getPermissionIcon() }}
+      </span>
+      
+      <div class="action-buttons" (click)="$event.stopPropagation()">
+        <!-- Duplica -->
+        <button 
+          class="action-btn duplicate-btn" 
+          (click)="onDuplicate()"
+          title="Duplica nota">
+          📋
+        </button>
+        
+        <!-- Modifica (solo se ha permessi) -->
+        @if (note.canEdit) {
+          <button 
+            class="action-btn edit-btn" 
+            (click)="onEdit()"
+            title="Modifica nota">
+            ✏️
+          </button>
+        }
+        
+        <!-- Elimina (solo se proprietario) -->
+        @if (note.canDelete) {
+          <button 
+            class="action-btn delete-btn" 
+            (click)="onDelete()"
+            title="Elimina nota">
+            🗑️
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenuto della nota -->
+  <div class="note-content">
+    <p class="note-text">{{ note.contenuto }}</p>
+  </div>
+
+  <!-- Tags -->
+  @if (note.tags && note.tags.length > 0) {
+    <div class="note-tags">
+      @for (tag of note.tags; track tag) {
+        <span class="tag">🏷️ {{ tag }}</span>
+      }
+    </div>
+  }
+
+  <!-- Cartelle -->
+  @if (note.cartelle && note.cartelle.length > 0) {
+    <div class="note-folders">
+      @for (cartella of note.cartelle; track cartella) {
+        <span class="folder">📁 {{ cartella }}</span>
+      }
+    </div>
+  }
+
+  <!-- Footer con metadati -->
+  <div class="note-footer">
+    <div class="note-meta">
+      <span class="author">👤 {{ note.autore }}</span>
+      @if (isOwner()) {
+        <span class="owner-badge">Tua</span>
+      }
+    </div>
+    
+    <div class="note-dates">
+      @if (note.dataModifica !== note.dataCreazione) {
+        <span class="modified-date" [title]="'Modificata: ' + formatDate(note.dataModifica)">
+          ✏️ {{ getRelativeTime(note.dataModifica) }}
+        </span>
+      }
+      <span class="created-date" [title]="'Creata: ' + formatDate(note.dataCreazione)">
+        📅 {{ getRelativeTime(note.dataCreazione) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Indicatore di caratteri -->
+  <div class="character-count">
+    <div class="char-bar">
+      <div 
+        class="char-fill" 
+        [style.width.%]="(note.contenuto.length / 280) * 100"
+        [class.warning]="note.contenuto.length > 224"
+        [class.danger]="note.contenuto.length > 252">
+      </div>
+    </div>
+    <span class="char-text">{{ note.contenuto.length }}/280</span>
+  </div>
+</div>
