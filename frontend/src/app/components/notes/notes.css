@@ -444,6 +444,23 @@
   box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
 
+.cartelle-btn {
+  background: linear-gradient(135deg, #38b2ac, #319795);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.cartelle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(56, 178, 172, 0.3);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .notes-grid {

@@ -18,7 +18,7 @@ import { NoteFormComponent } from './note-form/note-form';
 export class NotesComponent implements OnInit {
   private notesService = inject(NotesService);
   private authService = inject(AuthService);
-  private router = inject(Router);
+  router = inject(Router);
   private fb = inject(FormBuilder);
 
   // Signals from services

@@ -9,6 +9,9 @@
         }
       </div>
       <nav class="nav-actions">
+        <button class="cartelle-btn" (click)="router.navigate(['/cartelle'])">
+          📁 Cartelle
+        </button>
         <button class="stats-btn" (click)="toggleStats()">
           📊 {{ showStats() ? 'Nascondi' : 'Mostra' }} Statistiche
         </button>
