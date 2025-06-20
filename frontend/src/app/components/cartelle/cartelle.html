@@ -1,0 +1,239 @@
+<div class="cartelle-container">
+  <!-- Header -->
+  <header class="cartelle-header">
+    <div class="header-content">
+      <div class="logo">
+        <h1>📁 CARTELLE</h1>
+        @if (currentUser()) {
+          <p class="welcome-text">Organizza le tue note, {{ displayName() }}!</p>
+        }
+      </div>
+      <nav class="nav-actions">
+        <button class="notes-btn" (click)="router.navigate(['/notes'])">
+          📝 Vai alle Note
+        </button>
+        <button class="logout-btn" (click)="onLogout()">
+          🚪 Logout
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <button class="create-btn" (click)="showCreateForm()">
+        ➕ Crea Cartella
+      </button>
+      
+      <div class="info-text">
+        Organizza le tue note creando cartelle tematiche
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="error-message">
+        ❌ {{ error() }}
+        <button class="retry-btn" (click)="loadCartelle()">Riprova</button>
+      </div>
+    }
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="loading-spinner">⏳</div>
+        <p>Caricamento cartelle...</p>
+      </div>
+    }
+
+    <!-- Cartelle Grid -->
+    @if (!isLoading() && !error()) {
+      @if (cartelle().length > 0) {
+        <div class="cartelle-grid">
+          @for (cartella of cartelle(); track cartella.id) {
+            <div class="cartella-card" [style.border-left-color]="cartella.colore">
+              <!-- Header della cartella -->
+              <div class="cartella-header">
+                <div class="cartella-info">
+                  <h3 class="cartella-nome">📁 {{ cartella.nome }}</h3>
+                  @if (cartella.descrizione) {
+                    <p class="cartella-descrizione">{{ cartella.descrizione }}</p>
+                  }
+                </div>
+                
+                <div class="cartella-actions">
+                  <button 
+                    class="action-btn view-btn" 
+                    (click)="viewCartellaNotes(cartella)"
+                    title="Visualizza note">
+                    👁️
+                  </button>
+                  <button 
+                    class="action-btn edit-btn" 
+                    (click)="showEditForm(cartella)"
+                    title="Modifica cartella">
+                    ✏️
+                  </button>
+                  <button 
+                    class="action-btn delete-btn" 
+                    (click)="onCartellaDelete(cartella.id)"
+                    title="Elimina cartella">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Stats della cartella -->
+              <div class="cartella-stats">
+                <div class="stat-item">
+                  <span class="stat-icon">📝</span>
+                  <span class="stat-value">{{ cartella.numeroNote }}</span>
+                  <span class="stat-label">{{ cartella.numeroNote === 1 ? 'nota' : 'note' }}</span>
+                </div>
+              </div>
+
+              <!-- Footer con date -->
+              <div class="cartella-footer">
+                <div class="cartella-dates">
+                  <span class="created-date" title="Creata il {{ cartella.dataCreazione | date:'dd/MM/yyyy HH:mm' }}">
+                    📅 {{ cartella.dataCreazione | date:'dd/MM/yyyy' }}
+                  </span>
+                  @if (cartella.dataModifica !== cartella.dataCreazione) {
+                    <span class="modified-date" title="Modificata il {{ cartella.dataModifica | date:'dd/MM/yyyy HH:mm' }}">
+                      ✏️ {{ cartella.dataModifica | date:'dd/MM/yyyy' }}
+                    </span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Cartelle Count -->
+        <div class="cartelle-count">
+          Mostrate {{ cartelle().length }} {{ cartelle().length === 1 ? 'cartella' : 'cartelle' }}
+        </div>
+      } @else {
+        <!-- Empty State -->
+        <div class="empty-state">
+          <div class="empty-icon">📁</div>
+          <h3>Nessuna cartella ancora</h3>
+          <p>Crea la tua prima cartella per organizzare meglio le tue note!</p>
+          <button class="create-first-btn" (click)="showCreateForm()">
+            ✨ Crea la prima cartella
+          </button>
+        </div>
+      }
+    }
+  </main>
+
+  <!-- Cartella Form Modal -->
+  @if (showCartellaForm()) {
+    <div class="modal-overlay" (click)="hideCartellaForm()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          @if (isEditMode()) {
+            <h2>✏️ Modifica Cartella</h2>
+          } @else {
+            <h2>📁 Crea Nuova Cartella</h2>
+          }
+          <button class="close-btn" (click)="hideCartellaForm()" type="button">✕</button>
+        </div>
+
+        <form [formGroup]="cartellaForm" (ngSubmit)="onCartellaSave()" class="cartella-form">
+          <!-- Nome -->
+          <div class="form-group">
+            <label for="nome">Nome Cartella *</label>
+            <input
+              id="nome"
+              type="text"
+              formControlName="nome"
+              class="form-input"
+              [class.error]="nome?.invalid && nome?.touched"
+              placeholder="Inserisci il nome della cartella"
+              maxlength="100">
+            
+            @if (nome?.invalid && nome?.touched) {
+              <div class="field-error">
+                @if (nome?.errors?.['required']) {
+                  <span>Il nome è obbligatorio</span>
+                }
+                @if (nome?.errors?.['maxlength']) {
+                  <span>Il nome deve essere massimo 100 caratteri</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Descrizione -->
+          <div class="form-group">
+            <label for="descrizione">Descrizione (opzionale)</label>
+            <textarea
+              id="descrizione"
+              formControlName="descrizione"
+              class="form-textarea"
+              [class.error]="descrizione?.invalid && descrizione?.touched"
+              placeholder="Descrivi brevemente il contenuto di questa cartella"
+              rows="3"
+              maxlength="500">
+            </textarea>
+            
+            @if (descrizione?.invalid && descrizione?.touched) {
+              <div class="field-error">
+                @if (descrizione?.errors?.['maxlength']) {
+                  <span>La descrizione deve essere massimo 500 caratteri</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Colore -->
+          <div class="form-group">
+            <label for="colore">Colore</label>
+            <div class="color-input-container">
+              <input
+                id="colore"
+                type="color"
+                formControlName="colore"
+                class="form-color-input">
+              <span class="color-preview" [style.background-color]="colore?.value"></span>
+              <span class="color-label">{{ colore?.value }}</span>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button 
+              type="button" 
+              class="btn-secondary" 
+              (click)="hideCartellaForm()"
+              [disabled]="isLoading()">
+              Annulla
+            </button>
+            
+            <button 
+              type="submit" 
+              class="btn-primary" 
+              [disabled]="cartellaForm.invalid || isLoading()">
+              @if (isLoading()) {
+                @if (isEditMode()) {
+                  <span class="loading">⏳ Aggiornamento...</span>
+                } @else {
+                  <span class="loading">⏳ Creazione...</span>
+                }
+              } @else {
+                @if (isEditMode()) {
+                  <span>✏️ Aggiorna Cartella</span>
+                } @else {
+                  <span>📁 Crea Cartella</span>
+                }
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

@@ -1,9 +1,12 @@
+// notes.component.ts - Versione corretta completa
+
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { NotesService } from '../../services/notes';
 import { AuthService } from '../../services/auth';
+import { CartelleService } from '../../services/cartelle';
 import { Note, CreateNoteRequest, UpdateNoteRequest, UserStats } from '../../models/note.model';
 import { NoteCardComponent } from './note-card/note-card';
 import { NoteFormComponent } from './note-form/note-form';
@@ -18,16 +21,16 @@ import { NoteFormComponent } from './note-form/note-form';
 export class NotesComponent implements OnInit {
   private notesService = inject(NotesService);
   private authService = inject(AuthService);
-  private router = inject(Router);
+  private cartelleService = inject(CartelleService);
+  private route = inject(ActivatedRoute);
+  router = inject(Router);
   private fb = inject(FormBuilder);
 
-  // Signals from services
   notes = computed(() => this.notesService.notes());
   isLoading = computed(() => this.notesService.isLoading());
   error = computed(() => this.notesService.error());
   currentUser = computed(() => this.authService.currentUser());
 
-  // Local signals
   showNoteForm = signal(false);
   selectedNote = signal<Note | null>(null);
   currentFilter = signal<'all' | 'own' | 'shared'>('all');
@@ -37,10 +40,8 @@ export class NotesComponent implements OnInit {
   userStats = signal<UserStats | null>(null);
   showStats = signal(false);
 
-  // Search form
   searchForm: FormGroup;
 
-  // Computed values
   displayName = computed(() => {
     const user = this.currentUser();
     if (!user) return 'Utente';
@@ -57,19 +58,7 @@ export class NotesComponent implements OnInit {
   currentUsername = computed(() => this.currentUser()?.username || '');
 
   filteredNotes = computed(() => {
-    let filtered = this.notes();
-    
-    const search = this.searchQuery().toLowerCase();
-    if (search) {
-      filtered = filtered.filter(note => 
-        note.titolo.toLowerCase().includes(search) ||
-        note.contenuto.toLowerCase().includes(search) ||
-        note.tags.some(tag => tag.toLowerCase().includes(search)) ||
-        note.cartelle.some(cartella => cartella.toLowerCase().includes(search))
-      );
-    }
-    
-    return filtered;
+    return this.notes();
   });
 
   allTags = computed(() => {
@@ -87,7 +76,6 @@ export class NotesComponent implements OnInit {
       query: ['']
     });
 
-    // Monitor search changes
     this.searchForm.get('query')?.valueChanges.subscribe(value => {
       this.searchQuery.set(value || '');
     });
@@ -99,8 +87,83 @@ export class NotesComponent implements OnInit {
       return;
     }
 
+    // Carica note e statistiche
     this.loadNotes();
     this.loadUserStats();
+    this.loadCartelle();
+
+    // Gestisci query parameters per filtri automatici
+    this.handleQueryParams();
+  }
+
+  // Metodo per gestire i query parameters
+  private handleQueryParams(): void {
+    this.route.queryParams.subscribe(params => {
+      // Se c'è un parametro cartella e autoFilter è true
+      if (params['cartella'] && params['autoFilter'] === 'true') {
+        const cartellaNome = params['cartella'];
+        console.log('Filtro automatico per cartella:', cartellaNome);
+        
+        // Applica il filtro per cartella
+        this.applyCartellaFilter(cartellaNome);
+        
+        // Rimuovi il parametro autoFilter dall'URL
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { cartella: cartellaNome },
+          queryParamsHandling: 'merge'
+        });
+      }
+      // Se c'è solo il parametro cartella (senza autoFilter), mantieni il filtro
+      else if (params['cartella']) {
+        const cartellaNome = params['cartella'];
+        this.selectedCartella.set(cartellaNome);
+      }
+      // Gestisci altri parametri
+      else if (params['tag']) {
+        const tagNome = params['tag'];
+        this.selectedTag.set(tagNome);
+      }
+      else if (params['search']) {
+        const searchQuery = params['search'];
+        this.searchQuery.set(searchQuery);
+        this.searchForm.patchValue({ query: searchQuery });
+      }
+    });
+  }
+
+  // Metodo separato per applicare il filtro cartella
+  private applyCartellaFilter(cartellaNome: string): void {
+    // Reset altri filtri
+    this.selectedTag.set(null);
+    this.searchQuery.set('');
+    this.searchForm.patchValue({ query: '' });
+    
+    // Imposta il filtro per cartella
+    this.selectedCartella.set(cartellaNome);
+    
+    // Carica le note filtrate dal backend
+    this.notesService.getNotesByCartella(cartellaNome).subscribe({
+      next: () => {
+        console.log(`Note filtrate per cartella "${cartellaNome}" caricate`);
+      },
+      error: (error) => {
+        console.error('Errore filtro per cartella:', error);
+        // In caso di errore, mostra tutte le note
+        this.loadNotes();
+      }
+    });
+  }
+
+  private loadCartelle(): void {
+    this.cartelleService.getAllCartelle().subscribe({
+      next: () => {
+        console.log('Cartelle caricate nel componente notes');
+      },
+      error: (error) => {
+        console.error('Errore caricamento cartelle:', error);
+      }
+    });
   }
 
   loadNotes(): void {
@@ -134,6 +197,13 @@ export class NotesComponent implements OnInit {
   }
 
   onTagFilter(tag: string): void {
+    // Aggiorna l'URL con il nuovo filtro
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tag: tag },
+      queryParamsHandling: 'merge'
+    });
+    
     this.selectedTag.set(tag);
     this.selectedCartella.set(null);
     this.searchQuery.set('');
@@ -147,21 +217,26 @@ export class NotesComponent implements OnInit {
   }
 
   onCartellaFilter(cartella: string): void {
-    this.selectedCartella.set(cartella);
-    this.selectedTag.set(null);
-    this.searchQuery.set('');
-    this.searchForm.patchValue({ query: '' });
-    
-    this.notesService.getNotesByCartella(cartella).subscribe({
-      error: (error) => {
-        console.error('Errore filtro per cartella:', error);
-      }
+    // Aggiorna l'URL con il nuovo filtro
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { cartella: cartella },
+      queryParamsHandling: 'merge'
     });
+    
+    this.applyCartellaFilter(cartella);
   }
 
   onSearch(): void {
     const query = this.searchQuery().trim();
     if (query) {
+      // Aggiorna l'URL con la ricerca
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { search: query },
+        queryParamsHandling: 'merge'
+      });
+      
       this.selectedTag.set(null);
       this.selectedCartella.set(null);
       
@@ -171,7 +246,7 @@ export class NotesComponent implements OnInit {
         }
       });
     } else {
-      this.loadNotes();
+      this.clearFilters();
     }
   }
 
@@ -180,6 +255,20 @@ export class NotesComponent implements OnInit {
     this.selectedCartella.set(null);
     this.searchQuery.set('');
     this.searchForm.reset();
+    
+    // Rimuovi query parameters dall'URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      queryParamsHandling: 'replace'
+    });
+    
+    // Ricarica tutte le note
+    this.loadNotes();
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.selectedTag() || this.selectedCartella() || this.searchQuery());
   }
 
   showCreateForm(): void {
@@ -206,7 +295,7 @@ export class NotesComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.hideNoteForm();
-            this.loadUserStats(); // Refresh stats
+            this.loadUserStats();
           }
         },
         error: (error) => {
@@ -219,7 +308,7 @@ export class NotesComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.hideNoteForm();
-            this.loadUserStats(); // Refresh stats
+            this.loadUserStats();
           }
         },
         error: (error) => {
@@ -233,7 +322,7 @@ export class NotesComponent implements OnInit {
     this.notesService.deleteNote(noteId).subscribe({
       next: (response) => {
         if (response.success) {
-          this.loadUserStats(); // Refresh stats
+          this.loadUserStats();
         }
       },
       error: (error) => {
@@ -243,54 +332,19 @@ export class NotesComponent implements OnInit {
   }
 
   onNoteDuplicate(noteId: number): void {
-    console.log('Duplicazione richiesta per nota ID:', noteId);
-    console.log('Utente corrente:', this.currentUsername());
-    
-    // Verifica che l'ID sia valido
-    if (!noteId || noteId <= 0) {
-        console.error('ID nota non valido:', noteId);
-        return;
-    }
-    
-    // Trova la nota nella lista locale per debug
-    const noteToProcess = this.notes().find(n => n.id === noteId);
-    if (noteToProcess) {
-        console.log('Nota da duplicare:', {
-            id: noteToProcess.id,
-            titolo: noteToProcess.titolo,
-            autore: noteToProcess.autore,
-            canEdit: noteToProcess.canEdit,
-            tipoPermesso: noteToProcess.tipoPermesso
-        });
-    } else {
-        console.error('Nota non trovata nella lista locale con ID:', noteId);
-        return;
-    }
-    
     this.notesService.duplicateNote(noteId).subscribe({
-        next: (response) => {
-            console.log('Risposta duplicazione:', response);
-            if (response.success) {
-                console.log('Nota duplicata con successo');
-                this.loadUserStats(); // Refresh stats
-            } else {
-                console.error('Duplicazione fallita:', response.message);
-            }
-        },
-        error: (error) => {
-            console.error('Errore duplicazione nota:', error);
-            console.error('Dettagli errore:', {
-                message: error.message,
-                status: error.status,
-                noteId: noteId,
-                username: this.currentUsername()
-            });
+      next: (response) => {
+        if (response.success) {
+          this.loadUserStats();
         }
+      },
+      error: (error) => {
+        console.error('Errore duplicazione nota:', error);
+      }
     });
-}
+  }
 
   onNoteView(note: Note): void {
-    // For now, just show edit form if user can edit
     if (note.canEdit) {
       this.showEditForm(note);
     }
@@ -308,11 +362,5 @@ export class NotesComponent implements OnInit {
 
   getFilterButtonClass(filter: 'all' | 'own' | 'shared'): string {
     return this.currentFilter() === filter ? 'filter-btn active' : 'filter-btn';
-  }
-
-  hasActiveFilters(): boolean {
-    return this.selectedTag() !== null || 
-           this.selectedCartella() !== null || 
-           this.searchQuery().trim() !== '';
   }
 }

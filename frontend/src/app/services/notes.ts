@@ -196,7 +196,7 @@ export class NotesService {
         this.isLoading.set(false);
         if (response.success) {
           this.notes.set(response.notes);
-          console.log(`Trovate ${response.count} note per tag: ${tag}`);
+          console.log(`Recuperate ${response.count} note per tag: ${tag}`);
         }
       }),
       catchError(this.handleError.bind(this))
@@ -204,22 +204,23 @@ export class NotesService {
   }
 
   getNotesByCartella(cartella: string): Observable<NotesListResponse> {
-    this.isLoading.set(true);
-    this.error.set(null);
+  this.isLoading.set(true);
+  this.error.set(null);
 
-    return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
-      headers: this.getHeaders()
-    }).pipe(
-      tap(response => {
-        this.isLoading.set(false);
-        if (response.success) {
-          this.notes.set(response.notes);
-          console.log(`Trovate ${response.count} note per cartella: ${cartella}`);
-        }
-      }),
-      catchError(this.handleError.bind(this))
-    );
-  }
+  return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
+    headers: this.getHeaders()
+  }).pipe(
+    tap(response => {
+      this.isLoading.set(false);
+      if (response.success) {
+        this.notes.set(response.notes);
+        console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
+      }
+    }),
+    catchError(this.handleError.bind(this))
+  );
+}
+
 
   getUserStats(): Observable<{success: boolean, stats: UserStats}> {
     this.isLoading.set(true);
@@ -280,4 +281,5 @@ export class NotesService {
     this.error.set(errorMessage);
     return throwError(() => new Error(errorMessage));
   }
+  
 }

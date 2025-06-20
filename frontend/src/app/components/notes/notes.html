@@ -9,6 +9,9 @@
         }
       </div>
       <nav class="nav-actions">
+        <button class="cartelle-btn" (click)="router.navigate(['/cartelle'])">
+          📁 Cartelle
+        </button>
         <button class="stats-btn" (click)="toggleStats()">
           📊 {{ showStats() ? 'Nascondi' : 'Mostra' }} Statistiche
         </button>
@@ -133,19 +136,51 @@
 
     <!-- Active Filter Info -->
     @if (selectedTag() || selectedCartella() || searchQuery()) {
-      <div class="active-filter-info">
-        @if (selectedTag()) {
-          <span class="filter-info">Filtro per tag: <strong>{{ selectedTag() }}</strong></span>
-        }
-        @if (selectedCartella()) {
-          <span class="filter-info">Filtro per cartella: <strong>{{ selectedCartella() }}</strong></span>
-        }
-        @if (searchQuery()) {
-          <span class="filter-info">Ricerca: <strong>{{ searchQuery() }}</strong></span>
-        }
-      </div>
-    }
-
+    <div class="active-filter-info">
+      @if (selectedCartella()) {
+        <div class="filter-info cartella-filter">
+          <span class="filter-icon">📁</span>
+          <span class="filter-text">
+            Visualizzando note della cartella: <strong>{{ selectedCartella() }}</strong>
+          </span>
+          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
+            ✕
+          </button>
+        </div>
+      }
+      @if (selectedTag()) {
+        <div class="filter-info tag-filter">
+          <span class="filter-icon">🏷️</span>
+          <span class="filter-text">
+            Filtro per tag: <strong>{{ selectedTag() }}</strong>
+          </span>
+          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
+            ✕
+          </button>
+        </div>
+      }
+      @if (searchQuery()) {
+        <div class="filter-info search-filter">
+          <span class="filter-icon">🔍</span>
+          <span class="filter-text">
+            Ricerca: <strong>{{ searchQuery() }}</strong>
+          </span>
+          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
+            ✕
+          </button>
+        </div>
+      }
+      
+      <!-- Pulsante per tornare alle cartelle se filtro attivo -->
+      @if (selectedCartella()) {
+        <div class="navigation-helper">
+          <button class="back-to-cartelle-btn" (click)="router.navigate(['/cartelle'])">
+            ← Torna alle Cartelle
+          </button>
+        </div>
+      }
+    </div>
+  }
     <!-- Error Message -->
     @if (error()) {
       <div class="error-message">

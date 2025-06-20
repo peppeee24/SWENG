@@ -1,0 +1,157 @@
+<div class="cartella-notes-container">
+  <!-- Header -->
+  <header class="cartella-notes-header">
+    <div class="header-content">
+      <div class="header-info">
+        <div class="breadcrumb">
+          <button class="breadcrumb-link" (click)="goBack()">📁 Cartelle</button>
+          <span class="breadcrumb-separator">></span>
+          <span class="current-cartella">{{ cartellaNome() }}</span>
+        </div>
+        
+        <div class="cartella-title">
+          <h1>📁 {{ cartellaNome() }}</h1>
+          @if (cartellaInfo()) {
+            <div class="cartella-details">
+              @if (cartellaInfo()!.descrizione) {
+                <p class="cartella-description">{{ cartellaInfo()!.descrizione }}</p>
+              }
+              <div class="cartella-stats">
+                <span class="stat-item">
+                  📝 {{ filteredNotes().length }} {{ filteredNotes().length === 1 ? 'nota' : 'note' }}
+                </span>
+                @if (searchQuery()) {
+                  <span class="search-info">
+                    ({{ notes().length }} totali)
+                  </span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <nav class="header-actions">
+        <button class="btn-secondary" (click)="goToAllNotes()">
+          📝 Tutte le Note
+        </button>
+        <button class="btn-secondary" (click)="goBack()">
+          ← Torna alle Cartelle
+        </button>
+        <button class="logout-btn" (click)="onLogout()">
+          🚪 Logout
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <button class="create-btn" (click)="showCreateForm()">
+        ➕ Nuova Nota in {{ cartellaNome() }}
+      </button>
+      
+      <!-- Search -->
+      <div class="search-section">
+        <form [formGroup]="searchForm" class="search-form">
+          <div class="search-input-container">
+            <input
+              type="text"
+              formControlName="query"
+              class="search-input"
+              placeholder="Cerca nelle note di questa cartella..."
+              [disabled]="isLoading()">
+            @if (searchQuery()) {
+              <button 
+                type="button" 
+                class="clear-search-btn"
+                (click)="clearSearch()"
+                title="Pulisci ricerca">
+                ✕
+              </button>
+            }
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Search Info -->
+    @if (searchQuery()) {
+      <div class="search-info-bar">
+        <span class="search-text">
+          🔍 Ricerca: <strong>{{ searchQuery() }}</strong> 
+          ({{ filteredNotes().length }} di {{ notes().length }} note)
+        </span>
+        <button class="clear-search-link" (click)="clearSearch()">
+          Pulisci ricerca
+        </button>
+      </div>
+    }
+
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="error-message">
+        ❌ {{ error() }}
+        <button class="retry-btn" (click)="loadNotesForCartella()">Riprova</button>
+      </div>
+    }
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="loading-spinner">⏳</div>
+        <p>Caricamento note della cartella...</p>
+      </div>
+    }
+
+    <!-- Notes Grid -->
+    @if (!isLoading() && !error()) {
+      @if (filteredNotes().length > 0) {
+        <div class="notes-grid">
+          @for (note of filteredNotes(); track note.id) {
+            <app-note-card
+              [note]="note"
+              [currentUsername]="currentUser()?.username || ''"
+              (edit)="showEditForm($event)"
+              (delete)="onNoteDelete($event)"
+              (duplicate)="onNoteDuplicate($event)"
+              (view)="onNoteView($event)">
+            </app-note-card>
+          }
+        </div>
+      } @else {
+        <!-- Empty State -->
+        <div class="empty-state">
+          @if (notes().length === 0) {
+            <div class="empty-icon">📝</div>
+            <h3>Nessuna nota in questa cartella</h3>
+            <p>Inizia creando la prima nota per la cartella "{{ cartellaNome() }}"!</p>
+            <button class="create-first-btn" (click)="showCreateForm()">
+              ✨ Crea la prima nota
+            </button>
+          } @else {
+            <div class="empty-icon">🔍</div>
+            <h3>Nessun risultato</h3>
+            <p>Non abbiamo trovato note che corrispondono alla tua ricerca in questa cartella.</p>
+            <button class="clear-search-btn" (click)="clearSearch()">
+              🔄 Pulisci ricerca
+            </button>
+          }
+        </div>
+      }
+    }
+  </main>
+
+  <!-- Note Form Modal -->
+  <app-note-form
+    [note]="selectedNote()"
+    [isVisible]="showNoteForm()"
+    [allTags]="[]"
+    [allCartelle]="[cartellaNome()]"
+    [isLoading]="isLoading()"
+    (save)="onNoteSave($event)"
+    (cancel)="hideNoteForm()">
+  </app-note-form>
+</div>
