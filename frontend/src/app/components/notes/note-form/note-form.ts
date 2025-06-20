@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChange
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Note, CreateNoteRequest, UpdateNoteRequest } from '../../../models/note.model';
+import { CartelleService } from '../../../services/cartelle';
 
 @Component({
   selector: 'app-note-form',
@@ -12,6 +13,7 @@ import { Note, CreateNoteRequest, UpdateNoteRequest } from '../../../models/note
 })
 export class NoteFormComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
+  private cartelleService = inject(CartelleService);
 
   @Input() note: Note | null = null;
   @Input() isVisible = false;
@@ -30,10 +32,13 @@ export class NoteFormComponent implements OnInit, OnChanges {
   maxCharacters = 280;
   
   tagInputValue = signal('');
-  cartellaInputValue = signal('');
+  showCartelleDropdown = signal(false);
   
   selectedTags = signal<string[]>([]);
   selectedCartelle = signal<string[]>([]);
+  
+  // Cartelle disponibili dal servizio
+  availableCartelle = computed(() => this.cartelleService.cartelle());
 
   constructor() {
     this.noteForm = this.fb.group({
@@ -51,6 +56,8 @@ export class NoteFormComponent implements OnInit, OnChanges {
     if (this.note) {
       this.loadNoteData();
     }
+    // Carica le cartelle all'inizializzazione
+    this.loadCartelle();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -67,6 +74,17 @@ export class NoteFormComponent implements OnInit, OnChanges {
         this.resetForm();
       }
     }
+  }
+
+  private loadCartelle(): void {
+    this.cartelleService.getAllCartelle().subscribe({
+      next: () => {
+        console.log('Cartelle caricate per il form');
+      },
+      error: (error) => {
+        console.error('Errore caricamento cartelle:', error);
+      }
+    });
   }
 
   private loadNoteData(): void {
@@ -89,7 +107,7 @@ export class NoteFormComponent implements OnInit, OnChanges {
     this.selectedCartelle.set([]);
     this.characterCount.set(0);
     this.tagInputValue.set('');
-    this.cartellaInputValue.set('');
+    this.showCartelleDropdown.set(false);
   }
 
   // Helper methods per template (per evitare errori di parsing)
@@ -103,10 +121,6 @@ export class NoteFormComponent implements OnInit, OnChanges {
 
   getTagInputValue(): string {
     return this.tagInputValue();
-  }
-
-  getCartellaInputValue(): string {
-    return this.cartellaInputValue();
   }
 
   getSelectedTags(): string[] {
@@ -125,22 +139,28 @@ export class NoteFormComponent implements OnInit, OnChanges {
     return this.selectedCartelle().length > 0;
   }
 
-  canAddTag(): boolean {
-    return this.tagInputValue().trim().length > 0;
+  // Cartelle dropdown methods
+  toggleCartelleDropdown(): void {
+    this.showCartelleDropdown.update(show => !show);
   }
 
-  canAddCartella(): boolean {
-    return this.cartellaInputValue().trim().length > 0;
+  selectCartella(cartellaId: number, cartellaNome: string): void {
+    if (!this.selectedCartelle().includes(cartellaNome)) {
+      this.selectedCartelle.update(cartelle => [...cartelle, cartellaNome]);
+    }
+    this.showCartelleDropdown.set(false);
   }
 
-  shouldShowTagSuggestions(): boolean {
-    return this.tagInputValue().length > 0 && this.getFilteredTagSuggestions().length > 0;
+  removeCartella(cartella: string): void {
+    this.selectedCartelle.update(cartelle => cartelle.filter(c => c !== cartella));
   }
 
-  shouldShowCartelleSuggestions(): boolean {
-    return this.cartellaInputValue().length > 0 && this.getFilteredCartelleSuggestions().length > 0;
+  getUnselectedCartelle() {
+    const selected = this.selectedCartelle();
+    return this.availableCartelle().filter(cartella => !selected.includes(cartella.nome));
   }
 
+  // Tag methods
   onTagInputChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.tagInputValue.set(target.value);
@@ -166,6 +186,13 @@ export class NoteFormComponent implements OnInit, OnChanges {
     }
   }
 
+  canAddTag(): boolean {
+    const tagValue = this.tagInputValue().trim();
+    return tagValue.length > 0 && 
+           !this.selectedTags().includes(tagValue) && 
+           tagValue.length <= 50;
+  }
+
   removeTag(tag: string): void {
     this.selectedTags.update(tags => tags.filter(t => t !== tag));
   }
@@ -177,40 +204,8 @@ export class NoteFormComponent implements OnInit, OnChanges {
     }
   }
 
-  onCartellaInputChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.cartellaInputValue.set(target.value);
-  }
-
-  onCartellaInputKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      this.addCartella();
-    }
-    // Aggiunge supporto per backspace quando input è vuoto
-    if (event.key === 'Backspace' && !this.cartellaInputValue() && this.selectedCartelle().length > 0) {
-      const cartelle = this.selectedCartelle();
-      this.selectedCartelle.set(cartelle.slice(0, -1));
-    }
-  }
-
-  addCartella(): void {
-    const cartellaValue = this.cartellaInputValue().trim();
-    if (cartellaValue && !this.selectedCartelle().includes(cartellaValue) && cartellaValue.length <= 50) {
-      this.selectedCartelle.update(cartelle => [...cartelle, cartellaValue]);
-      this.cartellaInputValue.set('');
-    }
-  }
-
-  removeCartella(cartella: string): void {
-    this.selectedCartelle.update(cartelle => cartelle.filter(c => c !== cartella));
-  }
-
-  addCartellaFromSuggestion(cartella: string): void {
-    if (!this.selectedCartelle().includes(cartella)) {
-      this.selectedCartelle.update(cartelle => [...cartelle, cartella]);
-      this.cartellaInputValue.set('');
-    }
+  shouldShowTagSuggestions(): boolean {
+    return this.tagInputValue().length > 0 && this.getFilteredTagSuggestions().length > 0;
   }
 
   getFilteredTagSuggestions(): string[] {
@@ -225,31 +220,10 @@ export class NoteFormComponent implements OnInit, OnChanges {
       .slice(0, 5);
   }
 
-  getFilteredCartelleSuggestions(): string[] {
-    const input = this.cartellaInputValue().toLowerCase();
-    if (!input) return [];
-    
-    return this.allCartelle
-      .filter(cartella => 
-        cartella.toLowerCase().includes(input) && 
-        !this.selectedCartelle().includes(cartella)
-      )
-      .slice(0, 5);
-  }
-
-  getCharacterProgressClass(): string {
-    const count = this.characterCount();
-    const percentage = (count / this.maxCharacters) * 100;
-    
-    if (percentage >= 90) return 'danger';
-    if (percentage >= 80) return 'warning';
-    return 'normal';
-  }
-
+  // Form submission
   onSubmit(): void {
     if (this.noteForm.valid) {
       const formValue = this.noteForm.value;
-      
       const noteData = {
         titolo: formValue.titolo.trim(),
         contenuto: formValue.contenuto.trim(),
@@ -257,34 +231,11 @@ export class NoteFormComponent implements OnInit, OnChanges {
         cartelle: this.selectedCartelle()
       };
 
-      // Se è in modalità edit, aggiungi l'ID
-      if (this.isEditMode() && this.note) {
-        const updateData: UpdateNoteRequest = {
-          id: this.note.id,
-          ...noteData
-        };
-        this.save.emit(updateData);
-      } else {
-        this.save.emit(noteData as CreateNoteRequest);
-      }
-    } else {
-      this.markFormGroupTouched();
+      this.save.emit(noteData);
     }
   }
 
   onCancel(): void {
-    this.resetForm();
     this.cancel.emit();
   }
-
-  private markFormGroupTouched(): void {
-    Object.keys(this.noteForm.controls).forEach(key => {
-      const control = this.noteForm.get(key);
-      control?.markAsTouched();
-    });
-  }
-
-  // Getters per template
-  get titolo() { return this.noteForm.get('titolo'); }
-  get contenuto() { return this.noteForm.get('contenuto'); }
 }

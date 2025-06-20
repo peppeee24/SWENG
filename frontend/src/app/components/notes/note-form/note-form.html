@@ -1,3 +1,4 @@
+<!-- note-form.html -->
 @if (isVisible) {
   <div class="modal-overlay" (click)="onCancel()">
     <div class="modal-content" (click)="$event.stopPropagation()">
@@ -7,29 +8,35 @@
         } @else {
           <h2>📝 Crea Nuova Nota</h2>
         }
-        <button class="close-btn" (click)="onCancel()" type="button" aria-label="Chiudi">✕</button>
+        <button 
+          class="close-btn" 
+          (click)="onCancel()" 
+          type="button"
+          [disabled]="isLoading">
+          ✕
+        </button>
       </div>
 
       <form [formGroup]="noteForm" (ngSubmit)="onSubmit()" class="note-form">
         <!-- Titolo -->
         <div class="form-group">
-          <label for="titolo">Titolo *</label>
+          <label for="titolo">📝 Titolo *</label>
           <input
             id="titolo"
             type="text"
             formControlName="titolo"
             class="form-input"
-            [class.error]="titolo?.invalid && titolo?.touched"
+            [class.error]="noteForm.get('titolo')?.invalid && noteForm.get('titolo')?.touched"
             placeholder="Inserisci il titolo della nota"
             maxlength="100"
-            autocomplete="off">
+            [disabled]="isLoading">
           
-          @if (titolo?.invalid && titolo?.touched) {
+          @if (noteForm.get('titolo')?.invalid && noteForm.get('titolo')?.touched) {
             <div class="field-error">
-              @if (titolo?.errors?.['required']) {
+              @if (noteForm.get('titolo')?.errors?.['required']) {
                 <span>Il titolo è obbligatorio</span>
               }
-              @if (titolo?.errors?.['maxlength']) {
+              @if (noteForm.get('titolo')?.errors?.['maxlength']) {
                 <span>Il titolo deve essere massimo 100 caratteri</span>
               }
             </div>
@@ -38,37 +45,41 @@
 
         <!-- Contenuto -->
         <div class="form-group">
-          <label for="contenuto">Contenuto *</label>
+          <label for="contenuto">💬 Contenuto *</label>
           <textarea
             id="contenuto"
             formControlName="contenuto"
             class="form-textarea"
-            [class.error]="contenuto?.invalid && contenuto?.touched"
-            placeholder="Scrivi qui il contenuto della nota (max 280 caratteri)"
-            rows="6"
-            maxlength="280">
+            [class.error]="noteForm.get('contenuto')?.invalid && noteForm.get('contenuto')?.touched"
+            placeholder="Scrivi qui il contenuto della tua nota (massimo 280 caratteri)"
+            rows="4"
+            maxlength="280"
+            [disabled]="isLoading">
           </textarea>
           
           <!-- Character counter -->
           <div class="character-counter">
-            <div class="char-bar">
+            <div class="character-progress">
               <div 
-                class="char-fill" 
+                class="progress-bar" 
                 [style.width.%]="getCharacterWidth()"
-                [class]="getCharacterProgressClass()">
+                [class.warning]="characterCount() > 200"
+                [class.danger]="characterCount() >= 280">
               </div>
             </div>
-            <span class="char-count" [class]="getCharacterProgressClass()">
+            <span class="character-count" 
+                  [class.warning]="characterCount() > 200"
+                  [class.danger]="characterCount() >= 280">
               {{ getCharacterDisplay() }}
             </span>
           </div>
-
-          @if (contenuto?.invalid && contenuto?.touched) {
+          
+          @if (noteForm.get('contenuto')?.invalid && noteForm.get('contenuto')?.touched) {
             <div class="field-error">
-              @if (contenuto?.errors?.['required']) {
+              @if (noteForm.get('contenuto')?.errors?.['required']) {
                 <span>Il contenuto è obbligatorio</span>
               }
-              @if (contenuto?.errors?.['maxlength']) {
+              @if (noteForm.get('contenuto')?.errors?.['maxlength']) {
                 <span>Il contenuto deve essere massimo 280 caratteri</span>
               }
             </div>
@@ -77,7 +88,7 @@
 
         <!-- Tags -->
         <div class="form-group">
-          <label for="tags">🏷️ Tags</label>
+          <label for="tags">🏷️ Tag</label>
           <div class="tag-input-container">
             <input
               type="text"
@@ -87,12 +98,13 @@
               class="form-input tag-input"
               placeholder="Aggiungi tag (premi Invio per aggiungere)"
               maxlength="50"
-              autocomplete="off">
+              autocomplete="off"
+              [disabled]="isLoading">
             <button 
               type="button" 
               class="add-btn" 
               (click)="addTag()"
-              [disabled]="!canAddTag()"
+              [disabled]="!canAddTag() || isLoading"
               aria-label="Aggiungi tag">
               +
             </button>
@@ -106,7 +118,8 @@
                   type="button" 
                   class="suggestion-item"
                   (click)="addTagFromSuggestion(tag)"
-                  tabindex="0">
+                  tabindex="0"
+                  [disabled]="isLoading">
                   🏷️ {{ tag }}
                 </button>
               }
@@ -123,7 +136,8 @@
                     type="button" 
                     class="remove-btn" 
                     (click)="removeTag(tag)"
-                    [attr.aria-label]="'Rimuovi tag: ' + tag">
+                    [attr.aria-label]="'Rimuovi tag: ' + tag"
+                    [disabled]="isLoading">
                     ×
                   </button>
                 </span>
@@ -132,41 +146,60 @@
           }
         </div>
 
-        <!-- Cartelle -->
+        <!-- Cartelle con Dropdown -->
         <div class="form-group">
-          <label for="cartelle">📁 Cartelle</label>
-          <div class="tag-input-container">
-            <input
-              type="text"
-              [value]="getCartellaInputValue()"
-              (input)="onCartellaInputChange($event)"
-              (keydown)="onCartellaInputKeyDown($event)"
-              class="form-input tag-input"
-              placeholder="Aggiungi cartella (premi Invio per aggiungere)"
-              maxlength="50"
-              autocomplete="off">
+          <label for="cartelle">📁 Cartelle (opzionale)</label>
+          
+          <!-- Dropdown per selezionare cartelle -->
+          <div class="dropdown-container">
             <button 
               type="button" 
-              class="add-btn" 
-              (click)="addCartella()"
-              [disabled]="!canAddCartella()"
-              aria-label="Aggiungi cartella">
-              +
+              class="dropdown-trigger"
+              (click)="toggleCartelleDropdown()"
+              [disabled]="isLoading || availableCartelle().length === 0"
+              [class.disabled]="availableCartelle().length === 0">
+              @if (availableCartelle().length === 0) {
+                <span>📁 Nessuna cartella disponibile</span>
+              } @else {
+                <span>📁 Seleziona cartella</span>
+              }
+              <span class="dropdown-arrow" [class.open]="showCartelleDropdown()">▼</span>
             </button>
+
+            @if (showCartelleDropdown() && availableCartelle().length > 0) {
+              <div class="dropdown-menu">
+                @if (getUnselectedCartelle().length === 0) {
+                  <div class="dropdown-item disabled">
+                    <span>Tutte le cartelle sono già selezionate</span>
+                  </div>
+                } @else {
+                  @for (cartella of getUnselectedCartelle(); track cartella.id) {
+                    <button
+                      type="button"
+                      class="dropdown-item"
+                      (click)="selectCartella(cartella.id, cartella.nome)"
+                      [disabled]="isLoading">
+                      <span class="cartella-info">
+                        <span class="cartella-nome">📁 {{ cartella.nome }}</span>
+                        @if (cartella.descrizione) {
+                          <span class="cartella-desc">{{ cartella.descrizione }}</span>
+                        }
+                        <span class="cartella-count">({{ cartella.numeroNote }} note)</span>
+                      </span>
+                    </button>
+                  }
+                }
+              </div>
+            }
           </div>
 
-          <!-- Cartella suggestions -->
-          @if (shouldShowCartelleSuggestions()) {
-            <div class="suggestions">
-              @for (cartella of getFilteredCartelleSuggestions(); track cartella) {
-                <button 
-                  type="button" 
-                  class="suggestion-item"
-                  (click)="addCartellaFromSuggestion(cartella)"
-                  tabindex="0">
-                  📁 {{ cartella }}
-                </button>
-              }
+          <!-- Messaggio informativo se non ci sono cartelle -->
+          @if (availableCartelle().length === 0) {
+            <div class="info-message">
+              <span>💡 Non hai ancora cartelle create.</span>
+              <a href="/cartelle" target="_blank" class="create-cartella-link">
+                Crea la tua prima cartella
+              </a>
             </div>
           }
 
@@ -180,7 +213,8 @@
                     type="button" 
                     class="remove-btn" 
                     (click)="removeCartella(cartella)"
-                    [attr.aria-label]="'Rimuovi cartella: ' + cartella">
+                    [attr.aria-label]="'Rimuovi cartella: ' + cartella"
+                    [disabled]="isLoading">
                     ×
                   </button>
                 </span>
