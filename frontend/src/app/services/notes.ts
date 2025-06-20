@@ -213,7 +213,7 @@ export class NotesService {
     tap(response => {
       this.isLoading.set(false);
       if (response.success) {
-        
+        this.notes.set(response.notes);
         console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
       }
     }),
