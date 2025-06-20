@@ -164,14 +164,10 @@ export class CartelleComponent implements OnInit {
     }
   }
 
-  viewCartellaNotes(cartella: Cartella): void {
-  // Naviga alle note con query parameters per filtrare per cartella
-  this.router.navigate(['/notes'], { 
-    queryParams: { 
-      cartella: cartella.nome,
-      autoFilter: 'true' // Flag per attivare automaticamente il filtro
-    } 
-  });
+ viewCartellaNotes(cartella: Cartella): void {
+  // Naviga alla nuova pagina dedicata per le note della cartella
+  const encodedNome = encodeURIComponent(cartella.nome);
+  this.router.navigate(['/cartelle', encodedNome, 'notes']);
 }
 
   onLogout(): void {

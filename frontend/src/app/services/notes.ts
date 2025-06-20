@@ -204,22 +204,22 @@ export class NotesService {
   }
 
   getNotesByCartella(cartella: string): Observable<NotesListResponse> {
-    this.isLoading.set(true);
-    this.error.set(null);
+  this.isLoading.set(true);
+  this.error.set(null);
 
-    return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
-      headers: this.getHeaders()
-    }).pipe(
-      tap(response => {
-        this.isLoading.set(false);
-        if (response.success) {
-          this.notes.set(response.notes);
-          console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
-        }
-      }),
-      catchError(this.handleError.bind(this))
-    );
-  }
+  return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
+    headers: this.getHeaders()
+  }).pipe(
+    tap(response => {
+      this.isLoading.set(false);
+      if (response.success) {
+        
+        console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
+      }
+    }),
+    catchError(this.handleError.bind(this))
+  );
+}
 
 
   getUserStats(): Observable<{success: boolean, stats: UserStats}> {
