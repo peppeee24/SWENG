@@ -6,12 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 import tech.ipim.sweng.dto.CreateCartellaRequest;
 import tech.ipim.sweng.dto.LoginRequest;
 import tech.ipim.sweng.dto.LoginResponse;
@@ -21,17 +24,17 @@ import tech.ipim.sweng.repository.UserRepository;
 import tech.ipim.sweng.service.UserService;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureWebMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class CartellaIntegrationTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebApplicationContext webApplicationContext;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -45,17 +48,27 @@ class CartellaIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @LocalServerPort
+    private int port;
+
+    private MockMvc mockMvc;
     private String authToken;
     private User testUser;
 
     @BeforeEach
     void setUp() throws Exception {
-    
+        // Configura MockMvc con il contesto web e la sicurezza
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(webApplicationContext)
+                .apply(springSecurity())
+                .build();
+
+        // Crea utente di test
         testUser = new User("testuser", passwordEncoder.encode("password123"));
         testUser.setEmail("test@example.com");
         testUser = userRepository.save(testUser);
 
-    
+        // Ottieni token di autenticazione
         LoginRequest loginRequest = new LoginRequest("testuser", "password123");
         LoginResponse loginResponse = userService.authenticateUser(loginRequest);
         authToken = "Bearer " + loginResponse.getToken();
@@ -64,13 +77,13 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldCreateAndRetrieveCartella() throws Exception {
-    
+        // Crea una nuova cartella
         CreateCartellaRequest createRequest = new CreateCartellaRequest();
         createRequest.setNome("Cartella Test");
         createRequest.setDescrizione("Descrizione cartella test");
         createRequest.setColore("#ff6b6b");
 
-      
+        // Esegui la richiesta di creazione
         String createResponse = mockMvc.perform(post("/api/cartelle")
                 .header("Authorization", authToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -84,10 +97,10 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.cartella.numeroNote").value(0))
                 .andReturn().getResponse().getContentAsString();
 
-        
+        // Estrai l'ID della cartella creata
         Long cartellaId = objectMapper.readTree(createResponse).get("cartella").get("id").asLong();
 
-        
+        // Verifica che la cartella possa essere recuperata
         mockMvc.perform(get("/api/cartelle/" + cartellaId)
                 .header("Authorization", authToken))
                 .andExpect(status().isOk())
@@ -99,7 +112,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldCreateMultipleCartelleAndRetrieveAll() throws Exception {
-        
+        // Crea prima cartella
         CreateCartellaRequest cartella1 = new CreateCartellaRequest();
         cartella1.setNome("Lavoro");
         cartella1.setDescrizione("Cartella per note di lavoro");
@@ -110,7 +123,7 @@ class CartellaIntegrationTest {
         cartella2.setDescrizione("Cartella per note personali");
         cartella2.setColore("#38b2ac");
 
-        
+        // Crea entrambe le cartelle
         mockMvc.perform(post("/api/cartelle")
                 .header("Authorization", authToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -123,7 +136,7 @@ class CartellaIntegrationTest {
                 .content(objectMapper.writeValueAsString(cartella2)))
                 .andExpect(status().isCreated());
 
-        
+        // Verifica che entrambe le cartelle vengano recuperate
         mockMvc.perform(get("/api/cartelle")
                 .header("Authorization", authToken))
                 .andExpect(status().isOk())
@@ -136,7 +149,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldUpdateCartellaSuccessfully() throws Exception {
-       
+        // Crea cartella iniziale
         CreateCartellaRequest createRequest = new CreateCartellaRequest();
         createRequest.setNome("Cartella Originale");
         createRequest.setDescrizione("Descrizione originale");
@@ -151,7 +164,7 @@ class CartellaIntegrationTest {
 
         Long cartellaId = objectMapper.readTree(createResponse).get("cartella").get("id").asLong();
 
-        
+        // Aggiorna la cartella
         UpdateCartellaRequest updateRequest = new UpdateCartellaRequest();
         updateRequest.setNome("Cartella Aggiornata");
         updateRequest.setDescrizione("Descrizione aggiornata");
@@ -167,7 +180,7 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.cartella.descrizione").value("Descrizione aggiornata"))
                 .andExpect(jsonPath("$.cartella.colore").value("#4ecdc4"));
 
-    
+        // Verifica che l'aggiornamento sia persistito
         mockMvc.perform(get("/api/cartelle/" + cartellaId)
                 .header("Authorization", authToken))
                 .andExpect(status().isOk())
@@ -177,7 +190,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldDeleteEmptyCartellaSuccessfully() throws Exception {
-        
+        // Crea cartella da eliminare
         CreateCartellaRequest createRequest = new CreateCartellaRequest();
         createRequest.setNome("Cartella da Eliminare");
         createRequest.setDescrizione("Questa cartella sarà eliminata");
@@ -191,14 +204,14 @@ class CartellaIntegrationTest {
 
         Long cartellaId = objectMapper.readTree(createResponse).get("cartella").get("id").asLong();
 
-        
+        // Elimina la cartella
         mockMvc.perform(delete("/api/cartelle/" + cartellaId)
                 .header("Authorization", authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Cartella eliminata con successo"));
 
-        
+        // Verifica che la cartella non esista più
         mockMvc.perform(get("/api/cartelle/" + cartellaId)
                 .header("Authorization", authToken))
                 .andExpect(status().isNotFound());
@@ -207,7 +220,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldPreventDuplicateCartellaNames() throws Exception {
-        
+        // Crea prima cartella
         CreateCartellaRequest createRequest = new CreateCartellaRequest();
         createRequest.setNome("Cartella Unica");
         createRequest.setDescrizione("Prima cartella");
@@ -218,12 +231,12 @@ class CartellaIntegrationTest {
                 .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated());
 
-        
+        // Tenta di creare cartella con stesso nome
         CreateCartellaRequest duplicateRequest = new CreateCartellaRequest();
         duplicateRequest.setNome("Cartella Unica");
         duplicateRequest.setDescrizione("Seconda cartella (dovrebbe fallire)");
 
-       
+        // Verifica che la creazione fallisca
         mockMvc.perform(post("/api/cartelle")
                 .header("Authorization", authToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -236,7 +249,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldGetCartelleStatsAfterCreatingCartelle() throws Exception {
-        
+        // Crea multiple cartelle
         String[] nomiCartelle = {"Lavoro", "Personale", "Studio"};
         
         for (String nome : nomiCartelle) {
@@ -251,7 +264,7 @@ class CartellaIntegrationTest {
                     .andExpect(status().isCreated());
         }
 
-        
+        // Verifica le statistiche
         mockMvc.perform(get("/api/cartelle/stats")
                 .header("Authorization", authToken))
                 .andExpect(status().isOk())
@@ -263,26 +276,26 @@ class CartellaIntegrationTest {
 
     @Test
     void shouldRejectRequestWithoutAuthentication() throws Exception {
-       
+        // Tenta di creare cartella senza autenticazione
         CreateCartellaRequest request = new CreateCartellaRequest();
         request.setNome("Cartella Non Autorizzata");
         request.setDescrizione("Questa dovrebbe fallire");
 
-        
+        // Verifica che la richiesta venga rifiutata
         mockMvc.perform(post("/api/cartelle")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden()); 
+                .andExpect(status().isForbidden()); // O isUnauthorized() a seconda della configurazione
     }
 
     @Test
     void shouldRejectInvalidCartellaData() throws Exception {
-
+        // Crea richiesta con dati non validi
         CreateCartellaRequest invalidRequest = new CreateCartellaRequest();
-        invalidRequest.setNome(""); 
+        invalidRequest.setNome(""); // Nome vuoto
         invalidRequest.setDescrizione("a".repeat(501)); // Descrizione troppo lunga
 
-       
+        // Verifica che la validazione fallisca
         mockMvc.perform(post("/api/cartelle")
                 .header("Authorization", authToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -295,7 +308,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldAllowSameCartellaNameForDifferentUsers() throws Exception {
-       
+        // Crea secondo utente
         User secondUser = new User("seconduser", passwordEncoder.encode("password456"));
         secondUser.setEmail("second@example.com");
         secondUser = userRepository.save(secondUser);
@@ -304,7 +317,7 @@ class CartellaIntegrationTest {
         LoginResponse secondLoginResponse = userService.authenticateUser(secondLoginRequest);
         String secondAuthToken = "Bearer " + secondLoginResponse.getToken();
 
-        
+        // Crea cartella per primo utente
         CreateCartellaRequest request1 = new CreateCartellaRequest();
         request1.setNome("Cartella Condivisa");
         request1.setDescrizione("Cartella del primo utente");
@@ -315,12 +328,12 @@ class CartellaIntegrationTest {
                 .content(objectMapper.writeValueAsString(request1)))
                 .andExpect(status().isCreated());
 
-        
+        // Crea cartella con stesso nome per secondo utente
         CreateCartellaRequest request2 = new CreateCartellaRequest();
         request2.setNome("Cartella Condivisa");
         request2.setDescrizione("Cartella del secondo utente");
 
-        
+        // Verifica che sia consentito
         mockMvc.perform(post("/api/cartelle")
                 .header("Authorization", secondAuthToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -332,7 +345,7 @@ class CartellaIntegrationTest {
     @Test
     @Transactional
     void shouldNotAllowAccessToOtherUsersCartelle() throws Exception {
-
+        // Crea secondo utente
         User secondUser = new User("seconduser", passwordEncoder.encode("password456"));
         secondUser.setEmail("second@example.com");
         secondUser = userRepository.save(secondUser);
@@ -354,7 +367,7 @@ class CartellaIntegrationTest {
 
         Long cartellaId = objectMapper.readTree(createResponse).get("cartella").get("id").asLong();
 
-        
+        // Verifica che il primo utente non possa accedere alla cartella del secondo
         mockMvc.perform(get("/api/cartelle/" + cartellaId)
                 .header("Authorization", authToken))
                 .andExpect(status().isNotFound());
