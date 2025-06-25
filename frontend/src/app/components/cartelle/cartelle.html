@@ -26,7 +26,7 @@
       <button class="create-btn" (click)="showCreateForm()">
         ➕ Crea Cartella
       </button>
-      
+
       <div class="info-text">
         Organizza le tue note creando cartelle tematiche
       </div>
@@ -62,22 +62,22 @@
                     <p class="cartella-descrizione">{{ cartella.descrizione }}</p>
                   }
                 </div>
-                
+
                 <div class="cartella-actions">
-                  <button 
-                    class="action-btn view-btn" 
+                  <button
+                    class="action-btn view-btn"
                     (click)="viewCartellaNotes(cartella)"
                     title="Visualizza note">
                     👁️
                   </button>
-                  <button 
-                    class="action-btn edit-btn" 
+                  <button
+                    class="action-btn edit-btn"
                     (click)="showEditForm(cartella)"
                     title="Modifica cartella">
                     ✏️
                   </button>
-                  <button 
-                    class="action-btn delete-btn" 
+                  <button
+                    class="action-btn delete-btn"
                     (click)="onCartellaDelete(cartella.id)"
                     title="Elimina cartella">
                     🗑️
@@ -152,9 +152,10 @@
               formControlName="nome"
               class="form-input"
               [class.error]="nome?.invalid && nome?.touched"
+              [readonly]="isEditMode()"
               placeholder="Inserisci il nome della cartella"
               maxlength="100">
-            
+
             @if (nome?.invalid && nome?.touched) {
               <div class="field-error">
                 @if (nome?.errors?.['required']) {
@@ -179,7 +180,7 @@
               rows="3"
               maxlength="500">
             </textarea>
-            
+
             @if (descrizione?.invalid && descrizione?.touched) {
               <div class="field-error">
                 @if (descrizione?.errors?.['maxlength']) {
@@ -205,17 +206,17 @@
 
           <!-- Form Actions -->
           <div class="form-actions">
-            <button 
-              type="button" 
-              class="btn-secondary" 
+            <button
+              type="button"
+              class="btn-secondary"
               (click)="hideCartellaForm()"
               [disabled]="isLoading()">
               Annulla
             </button>
-            
-            <button 
-              type="submit" 
-              class="btn-primary" 
+
+            <button
+              type="submit"
+              class="btn-primary"
               [disabled]="cartellaForm.invalid || isLoading()">
               @if (isLoading()) {
                 @if (isEditMode()) {
