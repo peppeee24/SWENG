@@ -15,6 +15,9 @@ import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.UserRepository;
 import tech.ipim.sweng.util.JwtUtil;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 @Transactional
@@ -23,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+
     
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
@@ -169,6 +173,29 @@ public class UserService {
         
         // Crea e restituisce la risposta di successo
         return LoginResponse.success(token, userDto);
+    }
+
+    public List<UserDto> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(UserDto::fromUser)
+                .collect(Collectors.toList());
+    }
+    public List<UserDto> getAllUsersExcept(String excludeUsername) {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .filter(user -> !user.getUsername().equals(excludeUsername))
+                .map(UserDto::fromUser)
+                .collect(Collectors.toList());
+    }
+
+    private UserDto convertToDto(User user) {
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setNome(user.getNome());
+        dto.setCognome(user.getCognome());
+        return dto;
     }
 }
 
