@@ -5,26 +5,26 @@ import jakarta.validation.constraints.Size;
 import java.util.Set;
 
 public class CreateNoteRequest {
-    
+
     @NotBlank(message = "Titolo è obbligatorio")
     @Size(max = 100, message = "Titolo deve essere massimo 100 caratteri")
     private String titolo;
-    
+
     @NotBlank(message = "Contenuto è obbligatorio")
     @Size(max = 280, message = "Contenuto deve essere massimo 280 caratteri")
     private String contenuto;
-    
+
     private Set<String> tags;
     private Set<String> cartelle;
-    
+    private PermissionDto permessi;
+
     public CreateNoteRequest() {}
-    
+
     public CreateNoteRequest(String titolo, String contenuto) {
         this.titolo = titolo;
         this.contenuto = contenuto;
     }
 
-    // Getters e Setters
     public String getTitolo() {
         return titolo;
     }
@@ -57,6 +57,14 @@ public class CreateNoteRequest {
         this.cartelle = cartelle;
     }
 
+    public PermissionDto getPermessi() {
+        return permessi;
+    }
+
+    public void setPermessi(PermissionDto permessi) {
+        this.permessi = permessi;
+    }
+
     @Override
     public String toString() {
         return "CreateNoteRequest{" +
@@ -64,27 +72,26 @@ public class CreateNoteRequest {
                 ", contenuto='" + contenuto + '\'' +
                 ", tags=" + tags +
                 ", cartelle=" + cartelle +
+                ", permessi=" + permessi +
                 '}';
     }
 }
 
-// Classe UpdateNoteRequest separata
 class UpdateNoteRequest {
-    
+
     @NotBlank(message = "Titolo è obbligatorio")
     @Size(max = 100, message = "Titolo deve essere massimo 100 caratteri")
     private String titolo;
-    
+
     @NotBlank(message = "Contenuto è obbligatorio")
     @Size(max = 280, message = "Contenuto deve essere massimo 280 caratteri")
     private String contenuto;
-    
+
     private Set<String> tags;
     private Set<String> cartelle;
-    
+
     public UpdateNoteRequest() {}
 
-    // Getters e Setters
     public String getTitolo() {
         return titolo;
     }

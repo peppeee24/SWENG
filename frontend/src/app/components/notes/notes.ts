@@ -45,7 +45,7 @@ export class NotesComponent implements OnInit {
   displayName = computed(() => {
     const user = this.currentUser();
     if (!user) return 'Utente';
-    
+
     if (user.nome && user.cognome) {
       return `${user.nome} ${user.cognome}`;
     } else if (user.nome) {
@@ -103,10 +103,10 @@ export class NotesComponent implements OnInit {
       if (params['cartella'] && params['autoFilter'] === 'true') {
         const cartellaNome = params['cartella'];
         console.log('Filtro automatico per cartella:', cartellaNome);
-        
+
         // Applica il filtro per cartella
         this.applyCartellaFilter(cartellaNome);
-        
+
         // Rimuovi il parametro autoFilter dall'URL
         this.router.navigate([], {
           relativeTo: this.route,
@@ -138,10 +138,10 @@ export class NotesComponent implements OnInit {
     this.selectedTag.set(null);
     this.searchQuery.set('');
     this.searchForm.patchValue({ query: '' });
-    
+
     // Imposta il filtro per cartella
     this.selectedCartella.set(cartellaNome);
-    
+
     // Carica le note filtrate dal backend
     this.notesService.getNotesByCartella(cartellaNome).subscribe({
       next: () => {
@@ -197,18 +197,18 @@ export class NotesComponent implements OnInit {
   }
 
   onTagFilter(tag: string): void {
-    // Aggiorna l'URL con il nuovo filtro
+    // Aggiorna l'URL con il  filtro
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tag: tag },
       queryParamsHandling: 'merge'
     });
-    
+
     this.selectedTag.set(tag);
     this.selectedCartella.set(null);
     this.searchQuery.set('');
     this.searchForm.patchValue({ query: '' });
-    
+
     this.notesService.getNotesByTag(tag).subscribe({
       error: (error) => {
         console.error('Errore filtro per tag:', error);
@@ -217,13 +217,13 @@ export class NotesComponent implements OnInit {
   }
 
   onCartellaFilter(cartella: string): void {
-    // Aggiorna l'URL con il nuovo filtro
+    // Aggiorna l'URL con il filtro
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { cartella: cartella },
       queryParamsHandling: 'merge'
     });
-    
+
     this.applyCartellaFilter(cartella);
   }
 
@@ -236,10 +236,10 @@ export class NotesComponent implements OnInit {
         queryParams: { search: query },
         queryParamsHandling: 'merge'
       });
-      
+
       this.selectedTag.set(null);
       this.selectedCartella.set(null);
-      
+
       this.notesService.searchNotes(query).subscribe({
         error: (error) => {
           console.error('Errore ricerca:', error);
@@ -255,14 +255,14 @@ export class NotesComponent implements OnInit {
     this.selectedCartella.set(null);
     this.searchQuery.set('');
     this.searchForm.reset();
-    
+
     // Rimuovi query parameters dall'URL
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {},
       queryParamsHandling: 'replace'
     });
-    
+
     // Ricarica tutte le note
     this.loadNotes();
   }
@@ -288,7 +288,7 @@ export class NotesComponent implements OnInit {
 
   onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest): void {
     const selectedNote = this.selectedNote();
-    
+
     if (selectedNote) {
       // Update existing note
       this.notesService.updateNote(selectedNote.id, noteData as UpdateNoteRequest).subscribe({

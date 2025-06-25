@@ -1,8 +1,9 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Note, CreateNoteRequest, UpdateNoteRequest } from '../../../models/note.model';
+import { Note, CreateNoteRequest, UpdateNoteRequest, Permission } from '../../../models/note.model';
 import { CartelleService } from '../../../services/cartelle';
+import { UserService } from '../../../services/user.service';
 
 @Component({
   selector: 'app-note-form',
@@ -14,6 +15,7 @@ import { CartelleService } from '../../../services/cartelle';
 export class NoteFormComponent implements OnInit, OnChanges {
   private fb = inject(FormBuilder);
   private cartelleService = inject(CartelleService);
+  private userService = inject(UserService);
 
   @Input() note: Note | null = null;
   @Input() isVisible = false;
@@ -25,20 +27,28 @@ export class NoteFormComponent implements OnInit, OnChanges {
   @Output() cancel = new EventEmitter<void>();
 
   noteForm: FormGroup;
-  
+
   isEditMode = computed(() => this.note !== null);
-  
+
   characterCount = signal(0);
   maxCharacters = 280;
-  
+
   tagInputValue = signal('');
   showCartelleDropdown = signal(false);
-  
+
   selectedTags = signal<string[]>([]);
   selectedCartelle = signal<string[]>([]);
-  
+
+  //  PROPRIETÀ PER PERMESSI
+  permissionType = signal<'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA'>('PRIVATA');
+  selectedUsersForReading = signal<string[]>([]);
+  selectedUsersForWriting = signal<string[]>([]);
+  showUserDropdown = signal(false);
+
   // Cartelle disponibili dal servizio
   availableCartelle = computed(() => this.cartelleService.cartelle());
+  //  Utenti disponibili dal servizio
+  availableUsers = computed(() => this.userService.users());
 
   constructor() {
     this.noteForm = this.fb.group({
@@ -58,6 +68,8 @@ export class NoteFormComponent implements OnInit, OnChanges {
     }
     // Carica le cartelle all'inizializzazione
     this.loadCartelle();
+    //  Carica gli utenti per i permessi
+    this.loadUsers();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -65,7 +77,7 @@ export class NoteFormComponent implements OnInit, OnChanges {
     if (changes['isVisible'] && !changes['isVisible'].currentValue) {
       this.resetForm();
     }
-    
+
     // Carica dati della nota quando cambia
     if (changes['note']) {
       if (this.note) {
@@ -87,17 +99,37 @@ export class NoteFormComponent implements OnInit, OnChanges {
     });
   }
 
+  //  Carica utenti per i permessi
+  private loadUsers(): void {
+    console.log('---Caricamento utenti...');
+    this.userService.getAllUsers().subscribe({
+      next: (users) => {
+        console.log('-----Utenti caricati:', users);
+        console.log('-----Numero utenti:', users.length);
+        console.log('-----Signal utenti:', this.availableUsers());
+      },
+      error: (error) => {
+        console.error('Errore caricamento utenti:', error);
+      }
+    });
+  }
+
   private loadNoteData(): void {
     if (this.note) {
       this.noteForm.patchValue({
         titolo: this.note.titolo,
         contenuto: this.note.contenuto
       });
-      
+
       // Copia array per evitare mutazioni
       this.selectedTags.set([...this.note.tags]);
       this.selectedCartelle.set([...this.note.cartelle]);
       this.characterCount.set(this.note.contenuto.length);
+
+      //  Carica dati permessi se in edit mode
+      this.permissionType.set(this.note.tipoPermesso);
+      this.selectedUsersForReading.set([...this.note.permessiLettura]);
+      this.selectedUsersForWriting.set([...this.note.permessiScrittura]);
     }
   }
 
@@ -108,6 +140,12 @@ export class NoteFormComponent implements OnInit, OnChanges {
     this.characterCount.set(0);
     this.tagInputValue.set('');
     this.showCartelleDropdown.set(false);
+
+    //  Reset permessi
+    this.permissionType.set('PRIVATA');
+    this.selectedUsersForReading.set([]);
+    this.selectedUsersForWriting.set([]);
+    this.showUserDropdown.set(false);
   }
 
   // Helper methods per template (per evitare errori di parsing)
@@ -119,62 +157,19 @@ export class NoteFormComponent implements OnInit, OnChanges {
     return `${this.characterCount()}/${this.maxCharacters}`;
   }
 
-  getTagInputValue(): string {
-    return this.tagInputValue();
-  }
-
-  getSelectedTags(): string[] {
-    return this.selectedTags();
-  }
-
-  getSelectedCartelle(): string[] {
-    return this.selectedCartelle();
-  }
-
-  hasSelectedTags(): boolean {
-    return this.selectedTags().length > 0;
-  }
-
-  hasSelectedCartelle(): boolean {
-    return this.selectedCartelle().length > 0;
-  }
-
-  // Cartelle dropdown methods
-  toggleCartelleDropdown(): void {
-    this.showCartelleDropdown.update(show => !show);
-  }
-
-  selectCartella(cartellaId: number, cartellaNome: string): void {
-    if (!this.selectedCartelle().includes(cartellaNome)) {
-      this.selectedCartelle.update(cartelle => [...cartelle, cartellaNome]);
-    }
-    this.showCartelleDropdown.set(false);
-  }
-
-  removeCartella(cartella: string): void {
-    this.selectedCartelle.update(cartelle => cartelle.filter(c => c !== cartella));
-  }
-
-  getUnselectedCartelle() {
-    const selected = this.selectedCartelle();
-    return this.availableCartelle().filter(cartella => !selected.includes(cartella.nome));
-  }
-
-  // Tag methods
+  // Tag management methods
   onTagInputChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.tagInputValue.set(target.value);
   }
 
-  onTagInputKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' || event.key === ',') {
+  onTagInputKeyup(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
       event.preventDefault();
       this.addTag();
-    }
-    // Aggiunge supporto per backspace quando input è vuoto
-    if (event.key === 'Backspace' && !this.tagInputValue() && this.selectedTags().length > 0) {
-      const tags = this.selectedTags();
-      this.selectedTags.set(tags.slice(0, -1));
+    } else if (event.key === 'Backspace' && this.tagInputValue() === '' && this.selectedTags().length > 0) {
+      // Remove last tag when backspace on empty input
+      this.selectedTags.set(this.selectedTags().slice(0, -1));
     }
   }
 
@@ -188,9 +183,9 @@ export class NoteFormComponent implements OnInit, OnChanges {
 
   canAddTag(): boolean {
     const tagValue = this.tagInputValue().trim();
-    return tagValue.length > 0 && 
-           !this.selectedTags().includes(tagValue) && 
-           tagValue.length <= 50;
+    return tagValue.length > 0 &&
+      !this.selectedTags().includes(tagValue) &&
+      tagValue.length <= 50;
   }
 
   removeTag(tag: string): void {
@@ -211,27 +206,94 @@ export class NoteFormComponent implements OnInit, OnChanges {
   getFilteredTagSuggestions(): string[] {
     const input = this.tagInputValue().toLowerCase();
     if (!input) return [];
-    
+
     return this.allTags
-      .filter(tag => 
-        tag.toLowerCase().includes(input) && 
+      .filter(tag =>
+        tag.toLowerCase().includes(input) &&
         !this.selectedTags().includes(tag)
       )
       .slice(0, 5);
+  }
+
+  // Cartelle management methods
+  onCartellaToggle(cartella: string): void {
+    const current = this.selectedCartelle();
+    if (current.includes(cartella)) {
+      this.selectedCartelle.set(current.filter(c => c !== cartella));
+    } else {
+      this.selectedCartelle.set([...current, cartella]);
+    }
+  }
+
+  // NUOVI METODI PER GESTIONE PERMESSI
+  onPermissionTypeChange(type: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA'): void {
+    console.log('🔄 Cambio tipo permesso a:', type);
+    console.log('👥 Utenti disponibili:', this.availableUsers());
+    console.log('📊 Numero utenti disponibili:', this.availableUsers().length);
+
+    this.permissionType.set(type);
+    if (type === 'PRIVATA') {
+      this.selectedUsersForReading.set([]);
+      this.selectedUsersForWriting.set([]);
+    }
+  }
+
+  onUserToggle(username: string, forWriting = false): void {
+    if (forWriting) {
+      const current = this.selectedUsersForWriting();
+      if (current.includes(username)) {
+        this.selectedUsersForWriting.set(current.filter(u => u !== username));
+      } else {
+        this.selectedUsersForWriting.set([...current, username]);
+        // Se aggiungi per scrittura, aggiungi automaticamente anche per lettura
+        if (!this.selectedUsersForReading().includes(username)) {
+          this.selectedUsersForReading.set([...this.selectedUsersForReading(), username]);
+        }
+      }
+    } else {
+      const current = this.selectedUsersForReading();
+      if (current.includes(username)) {
+        this.selectedUsersForReading.set(current.filter(u => u !== username));
+        // Se rimuovi dalla lettura, rimuovi anche dalla scrittura
+        this.selectedUsersForWriting.set(this.selectedUsersForWriting().filter(u => u !== username));
+      } else {
+        this.selectedUsersForReading.set([...current, username]);
+      }
+    }
   }
 
   // Form submission
   onSubmit(): void {
     if (this.noteForm.valid) {
       const formValue = this.noteForm.value;
-      const noteData = {
-        titolo: formValue.titolo.trim(),
-        contenuto: formValue.contenuto.trim(),
-        tags: this.selectedTags(),
-        cartelle: this.selectedCartelle()
-      };
 
-      this.save.emit(noteData);
+      if (this.isEditMode()) {
+        // Modalità modifica - non include permessi
+        const updateRequest: UpdateNoteRequest = {
+          id: this.note!.id,
+          titolo: formValue.titolo.trim(),
+          contenuto: formValue.contenuto.trim(),
+          tags: this.selectedTags(),
+          cartelle: this.selectedCartelle()
+        };
+        this.save.emit(updateRequest);
+      } else {
+        // Modalità creazione - include permessi
+        const permission: Permission = {
+          tipoPermesso: this.permissionType(),
+          utentiLettura: this.selectedUsersForReading(),
+          utentiScrittura: this.selectedUsersForWriting()
+        };
+
+        const createRequest: CreateNoteRequest = {
+          titolo: formValue.titolo.trim(),
+          contenuto: formValue.contenuto.trim(),
+          tags: this.selectedTags(),
+          cartelle: this.selectedCartelle(),
+          permessi: permission
+        };
+        this.save.emit(createRequest);
+      }
     }
   }
 
