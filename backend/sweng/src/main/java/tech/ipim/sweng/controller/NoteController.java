@@ -293,6 +293,36 @@ public class NoteController {
         }
     }
 
+
+    @DeleteMapping("/{id}/sharing")
+    public ResponseEntity<?> removeFromSharing(@PathVariable Long id,
+                                               @RequestHeader("Authorization") String authHeader) {
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            noteService.removeUserFromSharing(id, username);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Rimosso con successo dalla condivisione della nota"
+            ));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore rimozione condivisione: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(NoteResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("Errore interno rimozione condivisione: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante la rimozione dalla condivisione"));
+        }
+    }
+
     /**
      * Recupera statistiche utente
      * GET /api/notes/stats

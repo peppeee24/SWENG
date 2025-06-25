@@ -10,6 +10,7 @@ import tech.ipim.sweng.model.Note;
 import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
+import java.time.LocalDateTime;
 
 import java.util.HashSet;
 import java.util.List;
@@ -195,6 +196,40 @@ public class NoteService {
         return true;
     }
 
+<<<<<<< Updated upstream
+=======
+    @Transactional
+    public void removeUserFromSharing(Long noteId, String username) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
+
+        // Verifica che l'utente non sia il proprietario
+        if (note.getAutore().getUsername().equals(username)) {
+            throw new RuntimeException("Il proprietario non può rimuoversi dalla propria nota");
+        }
+
+        // Verifica che l'utente abbia accesso alla nota
+        boolean hasAccess = note.getPermessiLettura().contains(username) ||
+                note.getPermessiScrittura().contains(username);
+
+        if (!hasAccess) {
+            throw new RuntimeException("L'utente non ha accesso a questa nota");
+        }
+
+        // Rimuove l'utente dai permessi
+        note.getPermessiLettura().remove(username);
+        note.getPermessiScrittura().remove(username);
+
+        // Aggiorna la data di modifica
+        note.setDataModifica(LocalDateTime.now());
+
+        // Salva le modifiche
+        noteRepository.save(note);
+
+        System.out.println("Utente " + username + " rimosso dalla condivisione della nota " + noteId);
+    }
+
+>>>>>>> Stashed changes
     public static class UserNotesStats {
         private final long noteCreate;
         private final long noteCondivise;
