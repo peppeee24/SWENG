@@ -6,30 +6,30 @@
       <span class="permission-indicator" [title]="getPermissionText()">
         {{ getPermissionIcon() }}
       </span>
-      
+
       <div class="action-buttons" (click)="$event.stopPropagation()">
         <!-- Duplica -->
-        <button 
-          class="action-btn duplicate-btn" 
+        <button
+          class="action-btn duplicate-btn"
           (click)="onDuplicate()"
           title="Duplica nota">
           📋
         </button>
-        
+
         <!-- Modifica (solo se ha permessi) -->
         @if (note.canEdit) {
-          <button 
-            class="action-btn edit-btn" 
+          <button
+            class="action-btn edit-btn"
             (click)="onEdit()"
-            title="Modifica nota">
+            title="Crea nota">
             ✏️
           </button>
         }
-        
+
         <!-- Elimina (solo se proprietario) -->
         @if (note.canDelete) {
-          <button 
-            class="action-btn delete-btn" 
+          <button
+            class="action-btn delete-btn"
             (click)="onDelete()"
             title="Elimina nota">
             🗑️
@@ -70,7 +70,7 @@
         <span class="owner-badge">Tua</span>
       }
     </div>
-    
+
     <div class="note-dates">
       @if (note.dataModifica !== note.dataCreazione) {
         <span class="modified-date" [title]="'Modificata: ' + formatDate(note.dataModifica)">
@@ -86,8 +86,8 @@
   <!-- Indicatore di caratteri -->
   <div class="character-count">
     <div class="char-bar">
-      <div 
-        class="char-fill" 
+      <div
+        class="char-fill"
         [style.width.%]="(note.contenuto.length / 280) * 100"
         [class.warning]="note.contenuto.length > 224"
         [class.danger]="note.contenuto.length > 252">

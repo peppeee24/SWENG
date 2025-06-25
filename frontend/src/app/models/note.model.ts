@@ -14,15 +14,22 @@ export interface Note {
   canDelete: boolean;
 }
 
+export interface Permission {
+  tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
+  utentiLettura: string[];
+  utentiScrittura: string[];
+}
+
 export interface CreateNoteRequest {
   titolo: string;
   contenuto: string;
   tags?: string[];
   cartelle?: string[];
+  permessi?: Permission;
 }
 
 export interface UpdateNoteRequest {
-  id: number; // Aggiunto ID per identificare la nota da aggiornare
+  id: number;
   titolo: string;
   contenuto: string;
   tags?: string[];
