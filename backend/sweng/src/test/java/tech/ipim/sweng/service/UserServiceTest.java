@@ -38,7 +38,11 @@ public class UserServiceTest {
         mockUserEntities = createMockUserEntities();
         currentUser = createCurrentUser();
 
+<<<<<<< Updated upstream
         // Verifica che nessun oggetto User sia null
+=======
+
+>>>>>>> Stashed changes
         assertNotNull(currentUser, "Current user should not be null");
         for (User user : mockUserEntities) {
             assertNotNull(user, "Mock user should not be null");
@@ -50,6 +54,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("UC8.S1 - getAllUsers restituisce tutti gli utenti")
     void testGetAllUsers_Success() {
+<<<<<<< Updated upstream
         // Arrange
         when(userRepository.findAll()).thenReturn(mockUserEntities);
 
@@ -61,6 +66,19 @@ public class UserServiceTest {
         assertEquals(4, result.size());
 
         // Verifica conversione corretta
+=======
+
+        when(userRepository.findAll()).thenReturn(mockUserEntities);
+
+
+        List<UserDto> result = userService.getAllUsers();
+
+
+        assertNotNull(result);
+        assertEquals(4, result.size());
+
+
+>>>>>>> Stashed changes
         assertEquals("alice", result.get(0).getUsername());
         assertEquals("Alice", result.get(0).getNome());
         assertEquals("Smith", result.get(0).getCognome());
@@ -71,7 +89,11 @@ public class UserServiceTest {
     @Test
     @DisplayName("UC8.S2 - getAllUsersExcept esclude l'utente specificato")
     void testGetAllUsersExcept_ExcludesSpecifiedUser() {
+<<<<<<< Updated upstream
         // Arrange
+=======
+
+>>>>>>> Stashed changes
         when(userRepository.findAll()).thenReturn(mockUserEntities);
 
         // Act
@@ -132,6 +154,7 @@ public class UserServiceTest {
     @Test
     @DisplayName("UC8.S5 - Conversione User -> UserDto non espone password")
     void testUserToDto_DoesNotExposePassword() {
+<<<<<<< Updated upstream
         // Arrange
         when(userRepository.findAll()).thenReturn(List.of(currentUser));
 
@@ -139,6 +162,15 @@ public class UserServiceTest {
         List<UserDto> result = userService.getAllUsers();
 
         // Assert
+=======
+
+        when(userRepository.findAll()).thenReturn(List.of(currentUser));
+
+
+        List<UserDto> result = userService.getAllUsers();
+
+
+>>>>>>> Stashed changes
         assertNotNull(result);
         assertEquals(1, result.size());
 
@@ -153,10 +185,17 @@ public class UserServiceTest {
     @Test
     @DisplayName("UC8.S6 - Gestione eccezione del repository")
     void testGetAllUsers_RepositoryException() {
+<<<<<<< Updated upstream
         // Arrange
         when(userRepository.findAll()).thenThrow(new RuntimeException("Database connection failed"));
 
         // Act & Assert
+=======
+
+        when(userRepository.findAll()).thenThrow(new RuntimeException("Database connection failed"));
+
+
+>>>>>>> Stashed changes
         assertThrows(RuntimeException.class, () -> {
             userService.getAllUsers();
         });
@@ -167,10 +206,17 @@ public class UserServiceTest {
     @Test
     @DisplayName("UC8.S7 - getAllUsersExcept con username null")
     void testGetAllUsersExcept_NullUsername() {
+<<<<<<< Updated upstream
         // Arrange
         when(userRepository.findAll()).thenReturn(mockUserEntities);
 
         // Act
+=======
+
+        when(userRepository.findAll()).thenReturn(mockUserEntities);
+
+
+>>>>>>> Stashed changes
         List<UserDto> result = userService.getAllUsersExcept(null);
 
         // Assert
