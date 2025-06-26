@@ -72,6 +72,32 @@ export class NotesService {
     );
   }
 
+  removeFromSharing(id: number): Observable<any> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    return this.http.delete<any>(`${this.API_URL}/${id}/sharing`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        this.isLoading.set(false);
+        if (response.success) {
+          // Rimuove la nota dall'elenco delle note accessibili
+          const currentNotes = this.notes();
+          this.notes.set(currentNotes.filter(note => note.id !== id));
+
+          // Se è la nota attualmente selezionata, deselezionala
+          if (this.selectedNote()?.id === id) {
+            this.selectedNote.set(null);
+          }
+
+          console.log('Rimosso dalla condivisione della nota:', id);
+        }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
   getNoteById(id: number): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -100,7 +126,7 @@ export class NotesService {
         this.isLoading.set(false);
         if (response.success && response.note) {
           const currentNotes = this.notes();
-          const updatedNotes = currentNotes.map(note => 
+          const updatedNotes = currentNotes.map(note =>
             note.id === id ? response.note! : note
           );
           this.notes.set(updatedNotes);
@@ -138,7 +164,7 @@ export class NotesService {
     console.log('NotesService: Duplicazione nota ID:', id);
     console.log('URL chiamata:', `${this.API_URL}/${id}/duplicate`);
     console.log('Headers:', this.getHeaders());
-    
+
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -281,5 +307,5 @@ export class NotesService {
     this.error.set(errorMessage);
     return throwError(() => new Error(errorMessage));
   }
-  
+
 }

@@ -73,7 +73,7 @@ class NoteControllerTest {
         createRequest.setContenuto("New note content");
         createRequest.setTags(Set.of("new", "test"));
 
-        // Mock JWT utility
+
         when(jwtUtil.extractTokenFromHeader(validToken)).thenReturn("valid.jwt.token");
         when(jwtUtil.isTokenValid("valid.jwt.token")).thenReturn(true);
         when(jwtUtil.extractUsername("valid.jwt.token")).thenReturn(testUsername);
@@ -82,10 +82,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldCreateNoteSuccessfully() throws Exception {
-        // Given
+
         when(noteService.createNote(any(CreateNoteRequest.class), eq(testUsername))).thenReturn(testNoteDto);
 
-        // When & Then
+
         mockMvc.perform(post("/api/notes")
                 .header("Authorization", validToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -104,7 +104,7 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetUserStats() throws Exception {
-        // Given
+
         NoteService.UserNotesStats stats = new NoteService.UserNotesStats(
                 5L, 3L, 4L, 2L,
                 Arrays.asList("tag1", "tag2", "tag3", "tag4"),
@@ -112,7 +112,7 @@ class NoteControllerTest {
         );
         when(noteService.getUserStats(testUsername)).thenReturn(stats);
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes/stats")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -130,11 +130,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldHandleServiceException() throws Exception {
-        // Given
+
         when(noteService.createNote(any(CreateNoteRequest.class), eq(testUsername)))
                 .thenThrow(new RuntimeException("Database error"));
 
-        // When & Then
         mockMvc.perform(post("/api/notes")
                 .header("Authorization", validToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -148,11 +147,11 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetAllNotesSuccessfully() throws Exception {
-        // Given
+
         List<NoteDto> notes = Arrays.asList(testNoteDto);
         when(noteService.getAllAccessibleNotes(testUsername)).thenReturn(notes);
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -168,10 +167,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldDeleteNote() throws Exception {
-        // Given
+
         when(noteService.deleteNote(1L, testUsername)).thenReturn(true);
 
-        // When & Then
+
         mockMvc.perform(delete("/api/notes/1")
                 .header("Authorization", validToken)
                 .with(csrf()))
@@ -185,7 +184,7 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldDuplicateNote() throws Exception {
-        // Given
+
         NoteDto duplicatedNote = new NoteDto();
         duplicatedNote.setId(2L);
         duplicatedNote.setTitolo("Test Note (Copia)");
@@ -194,7 +193,7 @@ class NoteControllerTest {
 
         when(noteService.duplicateNote(1L, testUsername)).thenReturn(duplicatedNote);
 
-        // When & Then
+
         mockMvc.perform(post("/api/notes/1/duplicate")
                 .header("Authorization", validToken)
                 .with(csrf()))
@@ -210,10 +209,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldSearchNotes() throws Exception {
-        // Given
+
         when(noteService.searchNotes(testUsername, "test")).thenReturn(Arrays.asList(testNoteDto));
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes/search?q=test")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -227,10 +226,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetNoteById() throws Exception {
-        // Given
+
         when(noteService.getNoteById(1L, testUsername)).thenReturn(Optional.of(testNoteDto));
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes/1")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -244,10 +243,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldFilterNotesByTag() throws Exception {
-        // Given
+
         when(noteService.getNotesByTag(testUsername, "test")).thenReturn(Arrays.asList(testNoteDto));
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes/filter/tag/test")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -260,10 +259,10 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldFilterNotesByCartella() throws Exception {
-        // Given
+
         when(noteService.getNotesByCartella(testUsername, "Test Folder")).thenReturn(Arrays.asList(testNoteDto));
 
-        // When & Then
+
         mockMvc.perform(get("/api/notes/filter/cartella/Test Folder")
                 .header("Authorization", validToken))
                 .andExpect(status().isOk())
@@ -272,4 +271,6 @@ class NoteControllerTest {
 
         verify(noteService).getNotesByCartella(testUsername, "Test Folder");
     }
+
+
 }

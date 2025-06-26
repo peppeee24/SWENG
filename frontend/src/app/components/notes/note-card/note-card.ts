@@ -12,14 +12,18 @@ import { Note } from '../../../models/note.model';
 export class NoteCardComponent {
   @Input() note!: Note;
   @Input() currentUsername: string = '';
-  
+
   @Output() edit = new EventEmitter<Note>();
   @Output() delete = new EventEmitter<number>();
   @Output() duplicate = new EventEmitter<number>();
   @Output() view = new EventEmitter<Note>();
+  @Output() removeFromSharing = new EventEmitter<number>();
 
   isOwner = computed(() => this.note?.autore === this.currentUsername);
-  
+
+  // Determina se l'utente è un invitato (ha accesso ma non è proprietario)
+  isSharedUser = computed(() => !this.isOwner() && this.note?.autore !== this.currentUsername);
+
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleString('it-IT', {
@@ -35,16 +39,16 @@ export class NoteCardComponent {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Ora';
     if (diffInMinutes < 60) return `${diffInMinutes}m fa`;
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return `${diffInHours}h fa`;
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `${diffInDays}g fa`;
-    
+
     return this.formatDate(dateString);
   }
 
@@ -84,5 +88,11 @@ export class NoteCardComponent {
 
   onView(): void {
     this.view.emit(this.note);
+  }
+
+  onRemoveFromSharing(): void {
+    if (confirm('Sei sicuro di volerti rimuovere dalla condivisione di questa nota?\n\nNon potrai più accedervi a meno che il proprietario non ti reinviti.')) {
+      this.removeFromSharing.emit(this.note.id);
+    }
   }
 }

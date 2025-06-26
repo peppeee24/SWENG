@@ -96,7 +96,7 @@ public class IntegrationTest {
 
         assertTrue(ownerExcluded, "L'utente proprietario deve essere escluso dalla lista");
 
-        // AGGIUNTO: Verifica che ci siano altri utenti disponibili
+        //  Verifica che ci siano altri utenti disponibili
         assertTrue(users.length >= 2, "Devono esserci almeno 2 utenti disponibili per la condivisione");
     }
 
@@ -119,7 +119,7 @@ public class IntegrationTest {
         // Assert: Verifica coerenza con database
         UserDto[] users = objectMapper.readValue(response, UserDto[].class);
 
-        // CORRETTO: L'utente proprietario è escluso, quindi ci sono N-1 utenti
+        // L'utente proprietario è escluso, quindi ci sono N-1 utenti
         assertEquals(userCount - 1, users.length, "La lista dovrebbe contenere tutti gli utenti tranne il proprietario");
     }
 
@@ -279,7 +279,7 @@ public class IntegrationTest {
         assertTrue(availableUsers.length >= 2,
                 "Devono esserci almeno 2 utenti disponibili per la condivisione");
 
-        // AGGIUNTO: Verifica che il proprietario non sia nella lista
+        // Verifica che il proprietario non sia nella lista
         boolean ownerFound = false;
         for (UserDto user : availableUsers) {
             if ("owner_user".equals(user.getUsername())) {

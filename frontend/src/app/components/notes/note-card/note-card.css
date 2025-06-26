@@ -229,6 +229,76 @@
   text-align: right;
 }
 
+
+/*
+.remove-sharing-btn {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+}
+
+.remove-sharing-btn:hover {
+  background: rgba(245, 101, 101, 0.2);
+  transform: scale(1.1);
+}
+
+.shared-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: #4a90e2;
+  background: #f0f7ff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+*/
+
+.remove-sharing-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+.shared-info {
+  margin-bottom: 1rem;
+}
+
+.shared-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
+  color: #4a5568;
+  padding: 0.5rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+}
+
+
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 /* Responsive */
 @media (max-width: 768px) {
   .note-card {

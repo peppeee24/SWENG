@@ -35,9 +35,26 @@
             🗑️
           </button>
         }
+
+        <!-- Rimuovi dalla condivisione (solo se utente invitato) -->
+        @if (isSharedUser()) {
+          <button
+            class="action-btn remove-sharing-btn"
+            (click)="onRemoveFromSharing()"
+            title="Rimuoviti dalla condivisione">
+            ❌
+          </button>
+        }
       </div>
     </div>
   </div>
+
+  <!-- Indicatore se è una nota condivisa (solo per utenti invitati) -->
+  @if (!isOwner()) {
+    <div class="shared-info">
+      <span class="shared-badge">👥 Condivisa da {{ note.autore }}</span>
+    </div>
+  }
 
   <!-- Contenuto della nota -->
   <div class="note-content">
