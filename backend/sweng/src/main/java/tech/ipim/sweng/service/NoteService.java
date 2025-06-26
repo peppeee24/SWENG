@@ -196,8 +196,6 @@ public class NoteService {
         return true;
     }
 
-<<<<<<< Updated upstream
-=======
     @Transactional
     public void removeUserFromSharing(Long noteId, String username) {
         Note note = noteRepository.findById(noteId)
@@ -229,7 +227,6 @@ public class NoteService {
         System.out.println("Utente " + username + " rimosso dalla condivisione della nota " + noteId);
     }
 
->>>>>>> Stashed changes
     public static class UserNotesStats {
         private final long noteCreate;
         private final long noteCondivise;
