@@ -11,6 +11,8 @@ import tech.ipim.sweng.dto.NoteDto;
 import tech.ipim.sweng.dto.NoteResponse;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+
 
 import java.util.HashMap;
 import java.util.List;
@@ -322,6 +324,59 @@ public class NoteController {
                     .body(NoteResponse.error("Errore durante la rimozione dalla condivisione"));
         }
     }
+
+
+    /**
+     * Aggiorna una nota esistente
+     * PUT /api/notes/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateNote(@PathVariable Long id,
+                                        @Valid @RequestBody UpdateNoteRequest request,
+                                        BindingResult bindingResult,
+                                        @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("PUT /api/notes/" + id + " - Aggiornamento nota");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        // Validazione dei dati
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors().forEach(error ->
+                    errors.put(error.getField(), error.getDefaultMessage())
+            );
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Errori di validazione",
+                    "errors", errors
+            ));
+        }
+
+        // Imposta l'ID dalla URL (per sicurezza)
+        request.setId(id);
+
+        try {
+            NoteDto updatedNote = noteService.updateNote(id, request, username);
+            System.out.println("Nota aggiornata con successo: " + updatedNote.getId());
+
+            return ResponseEntity.ok(NoteResponse.success("Nota aggiornata con successo", updatedNote));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore aggiornamento nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(NoteResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("Errore interno aggiornamento nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante l'aggiornamento della nota"));
+        }
+    }
+
 
     /**
      * Recupera statistiche utente
