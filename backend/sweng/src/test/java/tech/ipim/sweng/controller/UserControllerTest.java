@@ -51,7 +51,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.1 - Lista utenti esclude il proprietario della nota")
     void testGetAllUsersExcept_ExcludesCurrentUser() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
 
@@ -59,15 +58,6 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 
         // Assert
-=======
-
-        when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
-
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
-
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(3, response.getBody().size());
@@ -84,7 +74,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.2 - Gestione errore quando nessun utente disponibile")
     void testGetAllUsers_EmptyList() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(new ArrayList<>());
 
@@ -92,13 +81,6 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 
         // Assert
-=======
-
-        when(userService.getAllUsersExcept("fedegambe")).thenReturn(new ArrayList<>());
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(0, response.getBody().size());
@@ -109,16 +91,10 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.3 - Accesso negato senza token di autenticazione")
     void testGetAllUsers_Unauthorized() throws Exception {
-<<<<<<< Updated upstream
         // Act
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(null);
 
         // Assert
-=======
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(null);
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
 
         verify(userService, never()).getAllUsersExcept(anyString());
@@ -128,7 +104,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.4 - Token JWT malformato restituisce errore")
     void testGetAllUsers_InvalidToken() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(jwtUtil.extractUsername("invalid_token")).thenThrow(new RuntimeException("Token non valido"));
 
@@ -136,15 +111,6 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers("Bearer invalid_token");
 
         // Assert
-=======
-
-        when(jwtUtil.extractUsername("invalid_token")).thenThrow(new RuntimeException("Token non valido"));
-
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers("Bearer invalid_token");
-
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
 
         verify(userService, never()).getAllUsersExcept(anyString());
@@ -153,17 +119,10 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.5 - Header Authorization senza Bearer prefix")
     void testGetAllUsers_NoBearerPrefix() throws Exception {
-<<<<<<< Updated upstream
         // Act
         ResponseEntity<List<UserDto>> response = userController.getAllUsers("InvalidTokenFormat");
 
         // Assert
-=======
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers("InvalidTokenFormat");
-
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
 
         verify(userService, never()).getAllUsersExcept(anyString());
@@ -173,7 +132,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.6 - Errore interno del servizio")
     void testGetAllUsers_ServiceError() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(userService.getAllUsersExcept("fedegambe")).thenThrow(new RuntimeException("Database error"));
 
@@ -181,22 +139,12 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 
         // Assert
-=======
-
-        when(userService.getAllUsersExcept("fedegambe")).thenThrow(new RuntimeException("Database error"));
-
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
-
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
     }
 
     @Test
     @DisplayName("UC8.7 - Formato dati UserDto corretto per frontend")
     void testGetAllUsers_CorrectDataFormat() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
 
@@ -204,15 +152,6 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 
         // Assert
-=======
-
-        when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
-
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
-
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -229,7 +168,6 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.8 - Comportamento corretto con token valido")
     void testGetAllUsers_ValidToken() throws Exception {
-<<<<<<< Updated upstream
         // Arrange
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
 
@@ -237,14 +175,6 @@ public class UserControllerTest {
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 
         // Assert
-=======
-
-        when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
-
-
-        ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
-
->>>>>>> Stashed changes
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().size() > 0);
