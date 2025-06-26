@@ -13,6 +13,8 @@ import tech.ipim.sweng.model.Note;
 import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -379,6 +381,190 @@ class NoteServiceTest {
 
         // Assert
         assertTrue(note.getDataModifica().isAfter(originalModDate));
+    }
+
+
+    @Test
+    @DisplayName("Dovrebbe aggiornare una nota quando l'utente è il proprietario")
+    void shouldUpdateNoteWhenUserIsOwner() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.setTags(Set.of("old-tag"));
+        note.setCartelle(Set.of("old-folder"));
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Titolo Aggiornato");
+        request.setContenuto("Contenuto aggiornato");
+        request.setTags(Set.of("new-tag", "updated"));
+        request.setCartelle(Set.of("new-folder"));
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(note.getTitolo()).isEqualTo("Titolo Aggiornato");
+        assertThat(note.getContenuto()).isEqualTo("Contenuto aggiornato");
+        assertThat(note.getTags()).containsExactlyInAnyOrder("new-tag", "updated");
+        assertThat(note.getCartelle()).containsExactly("new-folder");
+        assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
+
+        verify(noteRepository).findById(1L);
+        verify(noteRepository).save(note);
+    }
+
+    @Test
+    @DisplayName("Dovrebbe aggiornare una nota quando l'utente ha permessi di scrittura")
+    void shouldUpdateNoteWhenUserHasWritePermission() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.getPermessiScrittura().add("editor");
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Titolo Modificato");
+        request.setContenuto("Contenuto modificato");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, request, "editor");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(note.getTitolo()).isEqualTo("Titolo Modificato");
+        assertThat(note.getContenuto()).isEqualTo("Contenuto modificato");
+
+        verify(noteRepository).save(note);
+    }
+
+    @Test
+    @DisplayName("Dovrebbe fallire quando l'utente non ha permessi di modifica")
+    void shouldFailWhenUserHasNoEditPermission() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Tentativo Modifica");
+        request.setContenuto("Non dovrebbe funzionare");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> noteService.updateNote(1L, request, "unauthorized"));
+
+        assertEquals("Non hai i permessi per modificare questa nota", exception.getMessage());
+        verify(noteRepository, never()).save(any(Note.class));
+    }
+
+    @Test
+    @DisplayName("Dovrebbe fallire quando la nota non esiste")
+    void shouldFailWhenNoteNotFoundForUpdate() {
+        // Arrange
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Nota Inesistente");
+        request.setContenuto("Non esiste");
+
+        when(noteRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> noteService.updateNote(999L, request, "user"));
+
+        assertEquals("Nota non trovata", exception.getMessage());
+        verify(noteRepository, never()).save(any(Note.class));
+    }
+
+    @Test
+    @DisplayName("Dovrebbe gestire tags e cartelle null")
+    void shouldHandleNullTagsAndCartelle() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.setTags(Set.of("existing-tag"));
+        note.setCartelle(Set.of("existing-folder"));
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Titolo Senza Tags");
+        request.setContenuto("Contenuto senza cartelle");
+        request.setTags(null);
+        request.setCartelle(null);
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(note.getTags()).isEmpty();
+        assertThat(note.getCartelle()).isEmpty();
+
+        verify(noteRepository).save(note);
+    }
+
+    @Test
+    @DisplayName("Dovrebbe aggiornare solo i campi modificati")
+    void shouldUpdateOnlyModifiedFields() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.setTags(Set.of("original-tag"));
+        note.setCartelle(Set.of("original-folder"));
+        LocalDateTime originalDate = note.getDataModifica();
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Solo Titolo Cambiato");
+        request.setContenuto(note.getContenuto()); // Stesso contenuto
+        request.setTags(note.getTags()); // Stessi tags
+        request.setCartelle(note.getCartelle()); // Stesse cartelle
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(note.getTitolo()).isEqualTo("Solo Titolo Cambiato");
+        assertThat(note.getTags()).containsExactly("original-tag");
+        assertThat(note.getCartelle()).containsExactly("original-folder");
+        assertTrue(note.getDataModifica().isAfter(originalDate));
+
+        verify(noteRepository).save(note);
+    }
+
+    @Test
+    @DisplayName("Dovrebbe trimmare spazi bianchi dal titolo e contenuto")
+    void shouldTrimWhitespaceFromTitleAndContent() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("  Titolo con spazi  ");
+        request.setContenuto("  Contenuto con spazi  ");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(note.getTitolo()).isEqualTo("Titolo con spazi");
+        assertThat(note.getContenuto()).isEqualTo("Contenuto con spazi");
+
+        verify(noteRepository).save(note);
     }
 
     // METODI HELPER
