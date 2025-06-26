@@ -60,17 +60,17 @@
 
       <!-- Filter Buttons -->
       <div class="filter-buttons">
-        <button 
+        <button
           [class]="getFilterButtonClass('all')"
           (click)="onFilterChange('all')">
           📋 Tutte
         </button>
-        <button 
+        <button
           [class]="getFilterButtonClass('own')"
           (click)="onFilterChange('own')">
           📝 Mie Note
         </button>
-        <button 
+        <button
           [class]="getFilterButtonClass('shared')"
           (click)="onFilterChange('shared')">
           👥 Condivise
@@ -97,7 +97,7 @@
             <h4>🏷️ Tags</h4>
             <div class="filter-chips">
               @for (tag of userStats()!.allTags; track tag) {
-                <button 
+                <button
                   class="filter-chip"
                   [class.active]="selectedTag() === tag"
                   (click)="onTagFilter(tag)">
@@ -114,7 +114,7 @@
             <h4>📁 Cartelle</h4>
             <div class="filter-chips">
               @for (cartella of userStats()!.allCartelle; track cartella) {
-                <button 
+                <button
                   class="filter-chip"
                   [class.active]="selectedCartella() === cartella"
                   (click)="onCartellaFilter(cartella)">
@@ -170,7 +170,7 @@
           </button>
         </div>
       }
-      
+
       <!-- Pulsante per tornare alle cartelle se filtro attivo -->
       @if (selectedCartella()) {
         <div class="navigation-helper">
@@ -203,12 +203,14 @@
         <div class="notes-grid">
           @for (note of filteredNotes(); track note.id) {
             <app-note-card
+
               [note]="note"
               [currentUsername]="currentUsername()"
               (edit)="showEditForm($event)"
               (delete)="onNoteDelete($event)"
               (duplicate)="onNoteDuplicate($event)"
-              (view)="onNoteView($event)">
+              (view)="onNoteView($event)"
+              (removeFromSharing)="onRemoveFromSharing($event)">
             </app-note-card>
           }
         </div>

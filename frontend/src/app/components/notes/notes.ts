@@ -318,6 +318,24 @@ export class NotesComponent implements OnInit {
     }
   }
 
+  onRemoveFromSharing(noteId: number): void {
+    this.notesService.removeFromSharing(noteId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('Rimosso dalla condivisione con successo');
+          // La nota viene automaticamente rimossa dalla lista nel servizio
+
+          // Opzionale: mostra un messaggio di successo
+          // this.showSuccessMessage('Ti sei rimosso dalla condivisione della nota');
+        }
+      },
+      error: (error) => {
+        console.error('Errore durante la rimozione dalla condivisione:', error);
+        alert(error.error?.message || 'Errore durante la rimozione dalla condivisione');
+      }
+    });
+  }
+
   onNoteDelete(noteId: number): void {
     this.notesService.deleteNote(noteId).subscribe({
       next: (response) => {
