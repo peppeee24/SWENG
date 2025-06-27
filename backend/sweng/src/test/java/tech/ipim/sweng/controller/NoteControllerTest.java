@@ -157,7 +157,7 @@ class NoteControllerTest {
 
         mockMvc.perform(get("/api/notes")
                         .header("Authorization", validToken))
-                .andExpected(status().isOk())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.notes").isArray())
                 .andExpect(jsonPath("$.notes", hasSize(1)))
