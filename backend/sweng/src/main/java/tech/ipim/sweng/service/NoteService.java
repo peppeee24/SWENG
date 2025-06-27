@@ -12,6 +12,9 @@ import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
 import java.time.LocalDateTime;
 
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -225,6 +228,52 @@ public class NoteService {
         noteRepository.save(note);
 
         System.out.println("Utente " + username + " rimosso dalla condivisione della nota " + noteId);
+    }
+
+    /**
+     * Aggiorna una nota esistente
+     */
+    @Transactional
+    public NoteDto updateNote(Long noteId, UpdateNoteRequest request, String username) {
+        // Trova la nota
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
+
+        // Verifica i permessi di modifica
+        boolean canEdit = note.getAutore().getUsername().equals(username) ||
+                note.getPermessiScrittura().contains(username);
+
+        if (!canEdit) {
+            throw new RuntimeException("Non hai i permessi per modificare questa nota");
+        }
+
+        // Aggiorna i campi
+        note.setTitolo(request.getTitolo().trim());
+        note.setContenuto(request.getContenuto().trim());
+
+        // Aggiorna tags se forniti
+        if (request.getTags() != null) {
+            note.setTags(new HashSet<>(request.getTags()));
+        } else {
+            note.setTags(new HashSet<>());
+        }
+
+        // Aggiorna cartelle se fornite
+        if (request.getCartelle() != null) {
+            note.setCartelle(new HashSet<>(request.getCartelle()));
+        } else {
+            note.setCartelle(new HashSet<>());
+        }
+
+        // Aggiorna la data di modifica (dovrebbe essere automatico con @PreUpdate, ma forziamo)
+        note.setDataModifica(LocalDateTime.now());
+
+        // Salva la nota aggiornata
+        Note updatedNote = noteRepository.save(note);
+
+        System.out.println("Nota aggiornata con successo: " + updatedNote.getId() + " da " + username);
+
+        return NoteDto.fromNote(updatedNote, username);
     }
 
     public static class UserNotesStats {
