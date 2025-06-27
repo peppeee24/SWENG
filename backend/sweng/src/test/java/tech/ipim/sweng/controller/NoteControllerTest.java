@@ -3,7 +3,7 @@ package tech.ipim.sweng.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.DisplayName; // AGGIUNTO: Import mancante
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -18,6 +18,8 @@ import tech.ipim.sweng.dto.NoteDto;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
 import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.dto.PermissionDto;
+import tech.ipim.sweng.model.Note;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -49,7 +51,7 @@ class NoteControllerTest {
     private NoteService noteService;
 
     @MockBean
-    private JwtUtil jwtUtil;
+    private JwtUtil jwtUtil; // Nota: è jwtUtil, non jwtService
 
     private NoteDto testNoteDto;
     private CreateNoteRequest createRequest;
@@ -75,6 +77,7 @@ class NoteControllerTest {
         createRequest.setContenuto("New note content");
         createRequest.setTags(Set.of("new", "test"));
 
+        // Mock per il token standard usato nei test esistenti
         when(jwtUtil.extractTokenFromHeader(validToken)).thenReturn("valid.jwt.token");
         when(jwtUtil.isTokenValid("valid.jwt.token")).thenReturn(true);
         when(jwtUtil.extractUsername("valid.jwt.token")).thenReturn(testUsername);
@@ -461,5 +464,246 @@ class NoteControllerTest {
                 .andExpect(status().isBadRequest()); // 400, non 401
 
         verify(noteService, never()).updateNote(anyLong(), any(UpdateNoteRequest.class), anyString());
+    }
+
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe aggiornare i permessi con successo")
+    @WithMockUser(username = "testuser")
+    void shouldUpdatePermissionsSuccessfully() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA);
+        permissionDto.setUtentiLettura(Set.of("user1", "user2"));
+        permissionDto.setUtentiScrittura(Set.of());
+
+        NoteDto updatedNote = new NoteDto();
+        updatedNote.setId(1L);
+        updatedNote.setTitolo("Test Note");
+        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA.name());
+        updatedNote.setPermessiLettura(Set.of("user1", "user2"));
+        updatedNote.setPermessiScrittura(Set.of());
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenReturn(updatedNote);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Permessi aggiornati con successo"))
+                .andExpect(jsonPath("$.note.id").value(1))
+                .andExpect(jsonPath("$.note.tipoPermesso").value("CONDIVISA_LETTURA"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe rendere la nota privata")
+    @WithMockUser(username = "testuser")
+    void shouldMakeNotePrivate() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setUtentiLettura(Set.of());
+        permissionDto.setUtentiScrittura(Set.of());
+
+        NoteDto updatedNote = new NoteDto();
+        updatedNote.setId(1L);
+        updatedNote.setTipoPermesso(Note.TipoPermesso.PRIVATA.name());
+        updatedNote.setPermessiLettura(Set.of());
+        updatedNote.setPermessiScrittura(Set.of());
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenReturn(updatedNote);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.note.tipoPermesso").value("PRIVATA"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe configurare permessi di scrittura")
+    @WithMockUser(username = "testuser")
+    void shouldSetWritePermissions() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_SCRITTURA);
+        permissionDto.setUtentiLettura(Set.of("user1", "user2", "user3"));
+        permissionDto.setUtentiScrittura(Set.of("user2", "user3"));
+
+        NoteDto updatedNote = new NoteDto();
+        updatedNote.setId(1L);
+        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_SCRITTURA.name());
+        updatedNote.setPermessiLettura(Set.of("user1", "user2", "user3"));
+        updatedNote.setPermessiScrittura(Set.of("user2", "user3"));
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenReturn(updatedNote);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.note.tipoPermesso").value("CONDIVISA_SCRITTURA"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire con token non valido")
+    void shouldFailPermissionsUpdateWithInvalidToken() throws Exception {
+        String invalidToken = "Bearer invalid-token";
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", invalidToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Token non valido"));
+
+        verify(noteService, never()).updateNotePermissions(anyLong(), any(PermissionDto.class), anyString());
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire se non è il proprietario")
+    @WithMockUser(username = "testuser")
+    void shouldFailPermissionsUpdateWhenNotOwner() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenThrow(new RuntimeException("Solo il proprietario può modificare i permessi di questa nota"));
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Solo il proprietario può modificare i permessi di questa nota"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire quando la nota non esiste")
+    @WithMockUser(username = "testuser")
+    void shouldFailPermissionsUpdateWhenNoteNotFound() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+
+        when(noteService.updateNotePermissions(eq(999L), any(PermissionDto.class), eq(testUsername)))
+                .thenThrow(new RuntimeException("Nota non trovata"));
+
+        mockMvc.perform(put("/api/notes/999/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Nota non trovata"));
+
+        verify(noteService).updateNotePermissions(eq(999L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe gestire errori di parsing JSON")
+    @WithMockUser(username = "testuser")
+    void shouldFailPermissionsUpdateWithValidationErrors() throws Exception {
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("malformed")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        verify(noteService, never()).updateNotePermissions(anyLong(), any(PermissionDto.class), anyString());
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire senza header Authorization")
+    void shouldFailPermissionsUpdateWithoutAuthorizationHeader() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        verify(noteService, never()).updateNotePermissions(anyLong(), any(PermissionDto.class), anyString());
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe rimuovere utenti dai permessi")
+    @WithMockUser(username = "testuser")
+    void shouldRemoveUsersFromPermissions() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA);
+        permissionDto.setUtentiLettura(Set.of("user1"));
+        permissionDto.setUtentiScrittura(Set.of());
+
+        NoteDto updatedNote = new NoteDto();
+        updatedNote.setId(1L);
+        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA.name());
+        updatedNote.setPermessiLettura(Set.of("user1"));
+        updatedNote.setPermessiScrittura(Set.of());
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenReturn(updatedNote);
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.note.permessiLettura").isArray())
+                .andExpect(jsonPath("$.note.permessiLettura", hasSize(1)))
+                .andExpect(jsonPath("$.note.permessiLettura[0]").value("user1"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
+    }
+
+    @Test
+    @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe gestire errori interni del server")
+    @WithMockUser(username = "testuser")
+    void shouldHandleInternalServerErrorForPermissions() throws Exception {
+        PermissionDto permissionDto = new PermissionDto();
+        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+
+        when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
+                .thenThrow(new RuntimeException("Database connection error"));
+
+        mockMvc.perform(put("/api/notes/1/permissions")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDto))
+                        .with(csrf()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Errore durante la modifica dei permessi"));
+
+        verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
     }
 }

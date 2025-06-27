@@ -1,4 +1,4 @@
-// notes.component.ts - Versione corretta completa
+// notes.component.ts
 
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -10,6 +10,7 @@ import { CartelleService } from '../../services/cartelle';
 import { Note, CreateNoteRequest, UpdateNoteRequest, UserStats } from '../../models/note.model';
 import { NoteCardComponent } from './note-card/note-card';
 import { NoteFormComponent } from './note-form/note-form';
+import { PermissionsRequest } from '../../models/note.model';
 
 @Component({
   selector: 'app-notes',
@@ -286,37 +287,7 @@ export class NotesComponent implements OnInit {
     this.selectedNote.set(null);
   }
 
-  onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest): void {
-    const selectedNote = this.selectedNote();
 
-    if (selectedNote) {
-      // Update existing note
-      this.notesService.updateNote(selectedNote.id, noteData as UpdateNoteRequest).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.hideNoteForm();
-            this.loadUserStats();
-          }
-        },
-        error: (error) => {
-          console.error('Errore aggiornamento nota:', error);
-        }
-      });
-    } else {
-      // Create new note
-      this.notesService.createNote(noteData as CreateNoteRequest).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.hideNoteForm();
-            this.loadUserStats();
-          }
-        },
-        error: (error) => {
-          console.error('Errore creazione nota:', error);
-        }
-      });
-    }
-  }
 
   onRemoveFromSharing(noteId: number): void {
     this.notesService.removeFromSharing(noteId).subscribe({
@@ -376,6 +347,78 @@ export class NotesComponent implements OnInit {
     this.notesService.clearNotes();
     this.authService.logout();
     this.router.navigate(['/auth']);
+  }
+
+  onNoteSave(noteData: any): void {
+    const selectedNote = this.selectedNote();
+
+    if (selectedNote) {
+      const updateRequest: UpdateNoteRequest = {
+        id: selectedNote.id,
+        titolo: noteData.titolo,
+        contenuto: noteData.contenuto,
+        tags: noteData.tags,
+        cartelle: noteData.cartelle
+      };
+
+      this.notesService.updateNote(selectedNote.id, updateRequest).subscribe({
+        next: (response) => {
+          if (response.success) {
+            if (noteData.permessi && this.hasPermissionsChanged(selectedNote, noteData.permessi)) {
+              const permissionsRequest: PermissionsRequest = {
+                tipoPermesso: noteData.permessi.tipoPermesso,
+                utentiLettura: noteData.permessi.utentiLettura || [],
+                utentiScrittura: noteData.permessi.utentiScrittura || []
+              };
+
+              this.notesService.updateNotePermissions(selectedNote.id, permissionsRequest).subscribe({
+                next: (permResponse) => {
+                  if (permResponse.success) {
+                    this.hideNoteForm();
+                    this.loadUserStats();
+                    console.log('Nota e permessi aggiornati con successo');
+                  }
+                },
+                error: (error) => {
+                  console.error('Errore aggiornamento permessi:', error);
+                }
+              });
+            } else {
+              this.hideNoteForm();
+              this.loadUserStats();
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Errore aggiornamento nota:', error);
+        }
+      });
+    } else {
+      this.notesService.createNote(noteData as CreateNoteRequest).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.hideNoteForm();
+            this.loadUserStats();
+          }
+        },
+        error: (error) => {
+          console.error('Errore creazione nota:', error);
+        }
+      });
+    }
+  }
+
+  private hasPermissionsChanged(originalNote: Note, newPermissions: any): boolean {
+    if (!newPermissions) return false;
+
+    return originalNote.tipoPermesso !== newPermissions.tipoPermesso ||
+      !this.arraysEqual(originalNote.permessiLettura, newPermissions.utentiLettura || []) ||
+      !this.arraysEqual(originalNote.permessiScrittura, newPermissions.utentiScrittura || []);
+  }
+
+  private arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every(val => b.includes(val)) && b.every(val => a.includes(val));
   }
 
   getFilterButtonClass(filter: 'all' | 'own' | 'shared'): string {

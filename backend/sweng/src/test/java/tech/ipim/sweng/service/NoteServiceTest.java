@@ -383,7 +383,6 @@ class NoteServiceTest {
         assertTrue(note.getDataModifica().isAfter(originalModDate));
     }
 
-
     @Test
     @DisplayName("Dovrebbe aggiornare una nota quando l'utente è il proprietario")
     void shouldUpdateNoteWhenUserIsOwner() {
