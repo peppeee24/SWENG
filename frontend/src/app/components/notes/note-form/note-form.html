@@ -1,22 +1,23 @@
-<!-- note-form.html -->
 @if (isVisible) {
   <div class="modal-overlay" (click)="onCancel()">
     <div class="modal-content" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
       <div class="modal-header">
-        @if (isEditMode()) {
-          <h2>✏️ Modifica Nota</h2>
-        } @else {
-          <h2>📝 Crea Nuova Nota</h2>
-        }
-        <button
-          class="close-btn"
-          (click)="onCancel()"
-          type="button"
-          [disabled]="isLoading">
-          ✕
-        </button>
+        <h2>
+          @if (isEditMode()) {
+            @if (isOwner()) {
+              Modifica Nota (Proprietario)
+            } @else {
+              Modifica Nota (Condivisa)
+            }
+          } @else {
+            Crea Nuova Nota
+          }
+        </h2>
+        <button class="close-btn" (click)="onCancel()" type="button">✕</button>
       </div>
 
+      <!-- Form -->
       <form [formGroup]="noteForm" (ngSubmit)="onSubmit()" class="note-form">
         <!-- Titolo -->
         <div class="form-group">
@@ -27,9 +28,7 @@
             formControlName="titolo"
             class="form-input"
             [class.error]="noteForm.get('titolo')?.invalid && noteForm.get('titolo')?.touched"
-            placeholder="Inserisci il titolo della nota"
-            maxlength="100"
-            [disabled]="isLoading">
+            placeholder="Inserisci il titolo della nota">
 
           @if (noteForm.get('titolo')?.invalid && noteForm.get('titolo')?.touched) {
             <div class="field-error">
@@ -45,16 +44,14 @@
 
         <!-- Contenuto -->
         <div class="form-group">
-          <label for="contenuto">💬 Contenuto *</label>
+          <label for="contenuto">💭 Contenuto *</label>
           <textarea
             id="contenuto"
             formControlName="contenuto"
             class="form-textarea"
             [class.error]="noteForm.get('contenuto')?.invalid && noteForm.get('contenuto')?.touched"
             placeholder="Scrivi qui il contenuto della tua nota (massimo 280 caratteri)"
-            rows="4"
-            maxlength="280"
-            [disabled]="isLoading">
+            rows="4">
           </textarea>
 
           <!-- Character counter -->
@@ -63,13 +60,14 @@
               <div
                 class="progress-bar"
                 [style.width.%]="getCharacterWidth()"
-                [class.warning]="characterCount() > 200"
-                [class.danger]="characterCount() >= 280">
+                [class.warning]="characterCount() > maxCharacters * 0.8"
+                [class.danger]="characterCount() > maxCharacters">
               </div>
             </div>
-            <span class="character-count"
-                  [class.warning]="characterCount() > 200"
-                  [class.danger]="characterCount() >= 280">
+            <span
+              class="character-count"
+              [class.warning]="characterCount() > maxCharacters * 0.8"
+              [class.danger]="characterCount() > maxCharacters">
               {{ getCharacterDisplay() }}
             </span>
           </div>
@@ -86,10 +84,17 @@
           }
         </div>
 
-        <!-- NUOVA SEZIONE: Gestione Permessi - Solo per creazione -->
-        @if (!isEditMode()) {
+        <!-- Gestione Permessi - Solo per creazione o proprietario in modifica -->
+        @if (!isEditMode() || (isEditMode() && isOwner())) {
           <div class="form-group">
             <label>🔒 Impostazioni di condivisione</label>
+
+            @if (isEditMode() && isOwner()) {
+              <div class="edit-permissions-note">
+                <p><strong>Nota:</strong> Stai modificando i permessi di una nota esistente. Le modifiche ai permessi avranno effetto immediato.</p>
+              </div>
+            }
+
             <div class="permission-options">
               <div class="permission-choice">
                 <input
@@ -125,22 +130,26 @@
 
                   @if (showUserDropdown()) {
                     <div class="dropdown-menu">
-                      @for (user of availableUsers(); track user.id) {
-                        <div class="user-option">
-                          <div class="user-select">
-                            <input
-                              type="checkbox"
-                              [id]="'user-read-' + user.id"
-                              [checked]="selectedUsersForReading().includes(user.username)"
-                              (change)="onUserToggle(user.username, false)">
-                            <label [for]="'user-read-' + user.id">{{ user.displayName }}</label>
-                          </div>
+                      @for (user of availableUsers(); track user.username) {
+                        <div class="user-option" (click)="onUserToggle(user.username)">
+                          <input
+                            type="checkbox"
+                            [checked]="selectedUsersForReading().includes(user.username)"
+                            (click)="$event.stopPropagation()">
+                          <span class="user-info">
+                            <div class="user-primary">{{ user.username }}</div>
+                            <div class="user-secondary">{{ user.displayName }}</div>
+                          </span>
                         </div>
+                      }
+                      @if (availableUsers().length === 0) {
+                        <div class="no-users">Nessun utente disponibile</div>
                       }
                     </div>
                   }
                 </div>
 
+                <!-- Selected users display -->
                 @if (selectedUsersForReading().length > 0) {
                   <div class="selected-users">
                     <h4>Utenti selezionati:</h4>
@@ -148,7 +157,7 @@
                       @for (username of selectedUsersForReading(); track username) {
                         <span class="user-tag">
                           {{ username }}
-                          <button type="button" (click)="onUserToggle(username, false)">✕</button>
+                          <button type="button" (click)="onUserToggle(username)">×</button>
                         </span>
                       }
                     </div>
@@ -159,26 +168,25 @@
           </div>
         }
 
-        <!-- Tags -->
+        <!-- Tags - Sempre modificabili per ora -->
         <div class="form-group">
-          <label for="tags">🏷️ Tag</label>
+          <label>🏷️ Tag</label>
+          @if (isEditMode() && !isOwner()) {
+            <p class="limited-edit-note">Come utente condiviso, puoi modificare i tag della nota.</p>
+          }
           <div class="tag-input-container">
             <input
               type="text"
-              [value]="tagInputValue()"
-              (input)="onTagInputChange($event)"
-              (keyup)="onTagInputKeyup($event)"
               class="form-input tag-input"
               placeholder="Aggiungi tag (premi Invio per aggiungere)"
-              maxlength="50"
-              autocomplete="off"
-              [disabled]="isLoading">
+              [value]="tagInputValue()"
+              (input)="onTagInputChange($event)"
+              (keyup)="onTagInputKeyup($event)">
             <button
               type="button"
               class="add-btn"
-              (click)="addTag()"
-              [disabled]="!canAddTag() || isLoading"
-              aria-label="Aggiungi tag">
+              [disabled]="!canAddTag()"
+              (click)="addTag()">
               +
             </button>
           </div>
@@ -190,10 +198,8 @@
                 <button
                   type="button"
                   class="suggestion-item"
-                  (click)="addTagFromSuggestion(tag)"
-                  tabindex="0"
-                  [disabled]="isLoading">
-                  🏷️ {{ tag }}
+                  (click)="addTagFromSuggestion(tag)">
+                  {{ tag }}
                 </button>
               }
             </div>
@@ -204,15 +210,8 @@
             <div class="selected-tags">
               @for (tag of selectedTags(); track tag) {
                 <span class="tag-chip">
-                  🏷️ {{ tag }}
-                  <button
-                    type="button"
-                    class="remove-tag-btn"
-                    (click)="removeTag(tag)"
-                    [disabled]="isLoading"
-                    [attr.aria-label]="'Rimuovi tag ' + tag">
-                    ✕
-                  </button>
+                  {{ tag }}
+                  <button type="button" (click)="removeTag(tag)">×</button>
                 </span>
               }
             </div>
@@ -222,67 +221,68 @@
         <!-- Cartelle -->
         <div class="form-group">
           <label>📁 Cartelle (opzionali)</label>
+          @if (isEditMode() && !isOwner()) {
+            <p class="limited-edit-note">Come utente condiviso, puoi modificare le cartelle della nota.</p>
+          }
           <div class="cartelle-dropdown" [class.open]="showCartelleDropdown()">
             <button
               type="button"
               class="dropdown-toggle"
-              (click)="showCartelleDropdown.set(!showCartelleDropdown())"
-              [disabled]="isLoading">
+              (click)="showCartelleDropdown.set(!showCartelleDropdown())">
               Seleziona cartelle ({{ selectedCartelle().length }} selezionate)
             </button>
 
             @if (showCartelleDropdown()) {
               <div class="dropdown-menu">
-                @if (availableCartelle().length > 0) {
-                  @for (cartella of availableCartelle(); track cartella.id) {
-                    <div class="cartella-option">
-                      <input
-                        type="checkbox"
-                        [id]="'cartella-' + cartella.id"
-                        [checked]="selectedCartelle().includes(cartella.nome)"
-                        (change)="onCartellaToggle(cartella.nome)">
-                      <label [for]="'cartella-' + cartella.id">{{ cartella.nome }}</label>
-                    </div>
-                  }
-                } @else {
+                @for (cartella of availableCartelle(); track cartella.nome) {
+                  <div class="cartella-option" (click)="onCartellaToggle(cartella.nome)">
+                    <input
+                      type="checkbox"
+                      [checked]="selectedCartelle().includes(cartella.nome)"
+                      (click)="$event.stopPropagation()">
+                    <span>{{ cartella.nome }}</span>
+                  </div>
+                }
+                @if (availableCartelle().length === 0) {
                   <div class="no-cartelle">Nessuna cartella disponibile</div>
                 }
               </div>
             }
           </div>
 
+          <!-- Selected cartelle -->
           @if (selectedCartelle().length > 0) {
             <div class="selected-cartelle">
               @for (cartella of selectedCartelle(); track cartella) {
                 <span class="cartella-tag">
                   📁 {{ cartella }}
-                  <button type="button" (click)="onCartellaToggle(cartella)" [disabled]="isLoading">✕</button>
+                  <button type="button" (click)="onCartellaToggle(cartella)">×</button>
                 </span>
               }
             </div>
           }
         </div>
 
-        <!-- Actions -->
+        <!-- Form Actions -->
         <div class="form-actions">
-          <button
-            type="button"
-            class="btn-cancel"
-            (click)="onCancel()"
-            [disabled]="isLoading">
+          <button type="button" class="btn-cancel" (click)="onCancel()">
             Annulla
           </button>
           <button
             type="submit"
             class="btn-save"
-            [disabled]="noteForm.invalid || isLoading">
+            [disabled]="noteForm.invalid || isLoading"
+            [class.loading]="isLoading">
             @if (isLoading) {
-              <span class="loading-spinner">⏳</span>
-            }
-            @if (isEditMode()) {
-              Aggiorna Nota
+              <span>⏳ Salvando...</span>
+            } @else if (isEditMode()) {
+              @if (isOwner()) {
+                <span>💾 Aggiorna Nota</span>
+              } @else {
+                <span>💾 Salva Modifiche</span>
+              }
             } @else {
-              Crea Nota
+              <span>✨ Crea Nota</span>
             }
           </button>
         </div>
