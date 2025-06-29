@@ -59,3 +59,10 @@ export interface UserStats {
   allTags: string[];
   allCartelle: string[];
 }
+
+export interface PermissionsRequest {
+  tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
+  utentiLettura?: string[];
+  utentiScrittura?: string[];
+}
+

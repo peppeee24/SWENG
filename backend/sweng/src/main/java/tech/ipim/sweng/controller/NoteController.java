@@ -12,6 +12,7 @@ import tech.ipim.sweng.dto.NoteResponse;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
 import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.dto.PermissionDto;
 
 
 import java.util.HashMap;
@@ -325,7 +326,6 @@ public class NoteController {
         }
     }
 
-
     /**
      * Aggiorna una nota esistente
      * PUT /api/notes/{id}
@@ -377,7 +377,6 @@ public class NoteController {
         }
     }
 
-
     /**
      * Recupera statistiche utente
      * GET /api/notes/stats
@@ -426,5 +425,58 @@ public class NoteController {
             System.err.println("Errore validazione token: " + e.getMessage());
         }
         return null;
+    }
+
+
+
+    @PutMapping("/{id}/permissions")
+    public ResponseEntity<?> updateNotePermissions(@PathVariable Long id,
+                                                   @Valid @RequestBody PermissionDto permissionDto,
+                                                   BindingResult bindingResult,
+                                                   @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("PUT /api/notes/" + id + "/permissions - Modifica permessi nota");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors().forEach(error ->
+                    errors.put(error.getField(), error.getDefaultMessage())
+            );
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Errori di validazione",
+                    "errors", errors
+            ));
+        }
+
+        try {
+            NoteDto updatedNote = noteService.updateNotePermissions(id, permissionDto, username);
+            System.out.println("Permessi nota aggiornati con successo: " + id);
+
+            return ResponseEntity.ok(NoteResponse.success("Permessi aggiornati con successo", updatedNote));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore modifica permessi: " + e.getMessage());
+            if (e.getMessage().contains("proprietario") || e.getMessage().contains("permessi")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else if (e.getMessage().contains("non trovata")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(NoteResponse.error("Errore durante la modifica dei permessi"));
+            }
+        } catch (Exception e) {
+            System.err.println("Errore interno modifica permessi: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore interno del server"));
+        }
     }
 }

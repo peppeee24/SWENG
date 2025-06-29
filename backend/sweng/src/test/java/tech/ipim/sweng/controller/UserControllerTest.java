@@ -51,9 +51,12 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.1 - Lista utenti esclude il proprietario della nota")
     void testGetAllUsersExcept_ExcludesCurrentUser() throws Exception {
+
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
 
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
+
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -71,6 +74,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.2 - Gestione errore quando nessun utente disponibile")
     void testGetAllUsers_EmptyList() throws Exception {
+
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(new ArrayList<>());
 
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
@@ -85,6 +89,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.3 - Accesso negato senza token di autenticazione")
     void testGetAllUsers_Unauthorized() throws Exception {
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(null);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
@@ -96,9 +101,12 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.4 - Token JWT malformato restituisce errore")
     void testGetAllUsers_InvalidToken() throws Exception {
+
         when(jwtUtil.extractUsername("invalid_token")).thenThrow(new RuntimeException("Token non valido"));
 
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers("Bearer invalid_token");
+
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
 
@@ -108,7 +116,9 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.5 - Header Authorization senza Bearer prefix")
     void testGetAllUsers_NoBearerPrefix() throws Exception {
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers("InvalidTokenFormat");
+
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
 
@@ -119,9 +129,12 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.6 - Errore interno del servizio")
     void testGetAllUsers_ServiceError() throws Exception {
+
         when(userService.getAllUsersExcept("fedegambe")).thenThrow(new RuntimeException("Database error"));
 
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
+
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
     }
@@ -129,9 +142,12 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.7 - Formato dati UserDto corretto per frontend")
     void testGetAllUsers_CorrectDataFormat() throws Exception {
+
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
 
+
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
+
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -149,7 +165,9 @@ public class UserControllerTest {
     @Test
     @DisplayName("UC8.8 - Comportamento corretto con token valido")
     void testGetAllUsers_ValidToken() throws Exception {
+
         when(userService.getAllUsersExcept("fedegambe")).thenReturn(mockUsersExcludingOwner);
+
 
         ResponseEntity<List<UserDto>> response = userController.getAllUsers(validToken);
 

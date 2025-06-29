@@ -9,8 +9,10 @@ import {
   UpdateNoteRequest,
   NoteResponse,
   NotesListResponse,
-  UserStats
+  UserStats, PermissionsRequest
 } from '../models/note.model';
+
+
 
 @Injectable({
   providedIn: 'root'
@@ -92,6 +94,30 @@ export class NotesService {
           }
 
           console.log('Rimosso dalla condivisione della nota:', id);
+        }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+
+  updateNotePermissions(id: number, permessi: PermissionsRequest): Observable<NoteResponse> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    return this.http.put<NoteResponse>(`${this.API_URL}/${id}/permissions`, permessi, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        this.isLoading.set(false);
+        if (response.success && response.note) {
+          const currentNotes = this.notes();
+          const updatedNotes = currentNotes.map(note =>
+            note.id === id ? response.note! : note
+          );
+          this.notes.set(updatedNotes);
+          this.selectedNote.set(response.note);
+          console.log('Permessi nota aggiornati:', id);
         }
       }),
       catchError(this.handleError.bind(this))

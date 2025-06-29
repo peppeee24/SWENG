@@ -53,7 +53,7 @@
       @if (cartelle().length > 0) {
         <div class="cartelle-grid">
           @for (cartella of cartelle(); track cartella.id) {
-            <div class="cartella-card" [style.border-left-color]="cartella.colore">
+            <div class="cartella-card" [style.border-left-color]="cartella.colore" (click)="viewCartellaNotes(cartella)">
               <!-- Header della cartella -->
               <div class="cartella-header">
                 <div class="cartella-info">
@@ -63,7 +63,7 @@
                   }
                 </div>
 
-                <div class="cartella-actions">
+                <div class="cartella-actions" (click)="$event.stopPropagation()">
                   <button
                     class="action-btn view-btn"
                     (click)="viewCartellaNotes(cartella)"
@@ -152,7 +152,6 @@
               formControlName="nome"
               class="form-input"
               [class.error]="nome?.invalid && nome?.touched"
-              [readonly]="isEditMode()"
               placeholder="Inserisci il nome della cartella"
               maxlength="100">
 

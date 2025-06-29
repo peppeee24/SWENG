@@ -11,9 +11,8 @@ import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
 import java.time.LocalDateTime;
-
 import tech.ipim.sweng.dto.UpdateNoteRequest;
-
+import java.util.Set;
 
 import java.util.HashSet;
 import java.util.List;
@@ -69,17 +68,32 @@ public class NoteService {
             case PRIVATA:
                 note.setPermessiLettura(new HashSet<>());
                 note.setPermessiScrittura(new HashSet<>());
+                System.out.println("Nota configurata come PRIVATA");
                 break;
+
             case CONDIVISA_LETTURA:
                 note.setPermessiLettura(permissionDto.getUtentiLettura() != null ?
                         new HashSet<>(permissionDto.getUtentiLettura()) : new HashSet<>());
                 note.setPermessiScrittura(new HashSet<>());
+                System.out.println("Nota configurata come CONDIVISA_LETTURA con " +
+                        note.getPermessiLettura().size() + " utenti");
                 break;
+
             case CONDIVISA_SCRITTURA:
-                note.setPermessiLettura(permissionDto.getUtentiLettura() != null ?
-                        new HashSet<>(permissionDto.getUtentiLettura()) : new HashSet<>());
+                Set<String> utentiLettura = new HashSet<>();
+                if (permissionDto.getUtentiLettura() != null) {
+                    utentiLettura.addAll(permissionDto.getUtentiLettura());
+                }
+                if (permissionDto.getUtentiScrittura() != null) {
+                    utentiLettura.addAll(permissionDto.getUtentiScrittura());
+                }
+
+                note.setPermessiLettura(utentiLettura);
                 note.setPermessiScrittura(permissionDto.getUtentiScrittura() != null ?
                         new HashSet<>(permissionDto.getUtentiScrittura()) : new HashSet<>());
+                System.out.println("Nota configurata come CONDIVISA_SCRITTURA con " +
+                        note.getPermessiLettura().size() + " utenti lettura e " +
+                        note.getPermessiScrittura().size() + " utenti scrittura");
                 break;
         }
     }
@@ -272,6 +286,32 @@ public class NoteService {
         Note updatedNote = noteRepository.save(note);
 
         System.out.println("Nota aggiornata con successo: " + updatedNote.getId() + " da " + username);
+
+        return NoteDto.fromNote(updatedNote, username);
+    }
+
+
+    @Transactional
+    public NoteDto updateNotePermissions(Long noteId, PermissionDto permissionDto, String username) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
+
+        if (!note.getAutore().getUsername().equals(username)) {
+            throw new RuntimeException("Solo il proprietario può modificare i permessi di questa nota");
+        }
+
+        System.out.println("Aggiornamento permessi nota " + noteId + " da parte di " + username);
+        System.out.println("Nuovo tipo permesso: " + permissionDto.getTipoPermesso());
+        System.out.println("Utenti lettura: " + permissionDto.getUtentiLettura());
+        System.out.println("Utenti scrittura: " + permissionDto.getUtentiScrittura());
+
+        configurePermissions(note, permissionDto);
+
+        note.setDataModifica(LocalDateTime.now());
+
+        Note updatedNote = noteRepository.save(note);
+
+        System.out.println("Permessi nota aggiornati con successo: " + updatedNote.getId());
 
         return NoteDto.fromNote(updatedNote, username);
     }
