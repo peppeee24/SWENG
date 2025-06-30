@@ -12,6 +12,9 @@ export interface Note {
   permessiScrittura: string[];
   canEdit: boolean;
   canDelete: boolean;
+  isLockedForEditing?: boolean;
+  lockedByUser?: string;
+  lockExpiresAt?: string;
 }
 
 export interface Permission {
@@ -36,6 +39,29 @@ export interface UpdateNoteRequest {
   cartelle?: string[];
 }
 
+export interface UpdateNoteRequestWithPermissions extends UpdateNoteRequest {
+  permessi?: Permission;
+}
+
+export interface PermissionsRequest {
+  tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
+  utentiLettura: string[];
+  utentiScrittura: string[];
+}
+
+export interface NoteLockRequest {
+  noteId: number;
+  action: 'LOCK' | 'UNLOCK';
+}
+
+export interface NoteLockResponse {
+  success: boolean;
+  locked: boolean;
+  lockedByUser?: string;
+  lockExpiresAt?: string;
+  message: string;
+}
+
 export interface NoteResponse {
   success: boolean;
   message: string;
@@ -49,6 +75,9 @@ export interface NotesListResponse {
   keyword?: string;
   tag?: string;
   cartella?: string;
+  autore?: string;
+  dataCreazione?: string;
+  dataModifica?: string;
 }
 
 export interface UserStats {
@@ -59,10 +88,3 @@ export interface UserStats {
   allTags: string[];
   allCartelle: string[];
 }
-
-export interface PermissionsRequest {
-  tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
-  utentiLettura?: string[];
-  utentiScrittura?: string[];
-}
-

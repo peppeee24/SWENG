@@ -1,17 +1,17 @@
 package tech.ipim.sweng.dto;
 
-import tech.ipim.sweng.model.Note.TipoPermesso;
-import java.util.Set;
+import tech.ipim.sweng.model.TipoPermesso;
+import java.util.List;
 
 public class PermissionDto {
 
     private TipoPermesso tipoPermesso;
-    private Set<String> utentiLettura;
-    private Set<String> utentiScrittura;
+    private List<String> utentiLettura;
+    private List<String> utentiScrittura;
 
     public PermissionDto() {}
 
-    public PermissionDto(TipoPermesso tipoPermesso, Set<String> utentiLettura, Set<String> utentiScrittura) {
+    public PermissionDto(TipoPermesso tipoPermesso, List<String> utentiLettura, List<String> utentiScrittura) {
         this.tipoPermesso = tipoPermesso;
         this.utentiLettura = utentiLettura;
         this.utentiScrittura = utentiScrittura;
@@ -25,19 +25,19 @@ public class PermissionDto {
         this.tipoPermesso = tipoPermesso;
     }
 
-    public Set<String> getUtentiLettura() {
+    public List<String> getUtentiLettura() {
         return utentiLettura;
     }
 
-    public void setUtentiLettura(Set<String> utentiLettura) {
+    public void setUtentiLettura(List<String> utentiLettura) {
         this.utentiLettura = utentiLettura;
     }
 
-    public Set<String> getUtentiScrittura() {
+    public List<String> getUtentiScrittura() {
         return utentiScrittura;
     }
 
-    public void setUtentiScrittura(Set<String> utentiScrittura) {
+    public void setUtentiScrittura(List<String> utentiScrittura) {
         this.utentiScrittura = utentiScrittura;
     }
 }

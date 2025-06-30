@@ -3,7 +3,7 @@ package tech.ipim.sweng.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName; // AGGIUNTO: Import mancante
+import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -15,8 +15,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import tech.ipim.sweng.config.TestConfig;
 import tech.ipim.sweng.dto.CreateNoteRequest;
 import tech.ipim.sweng.dto.NoteDto;
+import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
+import java.util.HashSet;
 import tech.ipim.sweng.dto.UpdateNoteRequest;
 import tech.ipim.sweng.dto.PermissionDto;
 import tech.ipim.sweng.model.Note;
@@ -115,7 +117,7 @@ class NoteControllerTest {
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetUserStats() throws Exception {
-        NoteService.UserNotesStats stats = new NoteService.UserNotesStats(
+        NoteService.UserStatsDto stats = new NoteService.UserStatsDto(
                 5L, 3L, 4L, 2L,
                 Arrays.asList("tag1", "tag2", "tag3", "tag4"),
                 Arrays.asList("folder1", "folder2")
@@ -472,14 +474,14 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldUpdatePermissionsSuccessfully() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA);
-        permissionDto.setUtentiLettura(Set.of("user1", "user2"));
-        permissionDto.setUtentiScrittura(Set.of());
+        permissionDto.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
+        permissionDto.setUtentiLettura(Arrays.asList("user1", "user2"));
+        permissionDto.setUtentiScrittura(Arrays.asList());
 
         NoteDto updatedNote = new NoteDto();
         updatedNote.setId(1L);
         updatedNote.setTitolo("Test Note");
-        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA.name());
+        updatedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA.name());
         updatedNote.setPermessiLettura(Set.of("user1", "user2"));
         updatedNote.setPermessiScrittura(Set.of());
 
@@ -505,13 +507,13 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldMakeNotePrivate() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
-        permissionDto.setUtentiLettura(Set.of());
-        permissionDto.setUtentiScrittura(Set.of());
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
+        permissionDto.setUtentiLettura(Arrays.asList("user1", "user2"));
+        permissionDto.setUtentiScrittura(Arrays.asList());
 
         NoteDto updatedNote = new NoteDto();
         updatedNote.setId(1L);
-        updatedNote.setTipoPermesso(Note.TipoPermesso.PRIVATA.name());
+        updatedNote.setTipoPermesso(TipoPermesso.PRIVATA.name());
         updatedNote.setPermessiLettura(Set.of());
         updatedNote.setPermessiScrittura(Set.of());
 
@@ -535,13 +537,13 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldSetWritePermissions() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_SCRITTURA);
-        permissionDto.setUtentiLettura(Set.of("user1", "user2", "user3"));
-        permissionDto.setUtentiScrittura(Set.of("user2", "user3"));
+        permissionDto.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
+        permissionDto.setUtentiLettura(Arrays.asList("user1", "user2"));
+        permissionDto.setUtentiScrittura(Arrays.asList());
 
         NoteDto updatedNote = new NoteDto();
         updatedNote.setId(1L);
-        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_SCRITTURA.name());
+        updatedNote.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA.name());
         updatedNote.setPermessiLettura(Set.of("user1", "user2", "user3"));
         updatedNote.setPermessiScrittura(Set.of("user2", "user3"));
 
@@ -565,7 +567,7 @@ class NoteControllerTest {
     void shouldFailPermissionsUpdateWithInvalidToken() throws Exception {
         String invalidToken = "Bearer invalid-token";
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
 
         mockMvc.perform(put("/api/notes/1/permissions")
                         .header("Authorization", invalidToken)
@@ -584,7 +586,7 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldFailPermissionsUpdateWhenNotOwner() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
 
         when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
                 .thenThrow(new RuntimeException("Solo il proprietario può modificare i permessi di questa nota"));
@@ -606,7 +608,7 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldFailPermissionsUpdateWhenNoteNotFound() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
 
         when(noteService.updateNotePermissions(eq(999L), any(PermissionDto.class), eq(testUsername)))
                 .thenThrow(new RuntimeException("Nota non trovata"));
@@ -631,7 +633,7 @@ class NoteControllerTest {
         mockMvc.perform(put("/api/notes/1/permissions")
                         .header("Authorization", validToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("malformed")
+                        .content("")
                         .with(csrf()))
                 .andExpect(status().isBadRequest());
 
@@ -642,7 +644,7 @@ class NoteControllerTest {
     @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire senza header Authorization")
     void shouldFailPermissionsUpdateWithoutAuthorizationHeader() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
 
         mockMvc.perform(put("/api/notes/1/permissions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -658,13 +660,13 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldRemoveUsersFromPermissions() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA);
-        permissionDto.setUtentiLettura(Set.of("user1"));
-        permissionDto.setUtentiScrittura(Set.of());
+        permissionDto.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
+        permissionDto.setUtentiLettura(Arrays.asList("user1", "user2"));
+        permissionDto.setUtentiScrittura(Arrays.asList());
 
         NoteDto updatedNote = new NoteDto();
         updatedNote.setId(1L);
-        updatedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA.name());
+        updatedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA.name());
         updatedNote.setPermessiLettura(Set.of("user1"));
         updatedNote.setPermessiScrittura(Set.of());
 
@@ -690,7 +692,7 @@ class NoteControllerTest {
     @WithMockUser(username = "testuser")
     void shouldHandleInternalServerErrorForPermissions() throws Exception {
         PermissionDto permissionDto = new PermissionDto();
-        permissionDto.setTipoPermesso(Note.TipoPermesso.PRIVATA);
+        permissionDto.setTipoPermesso(TipoPermesso.PRIVATA);
 
         when(noteService.updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername)))
                 .thenThrow(new RuntimeException("Database connection error"));

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.model.User;
 
 import java.util.List;
@@ -47,7 +48,7 @@ class NoteRepositoryTest {
 
         // Crea nota condivisa
         sharedNote = new Note("Nota Condivisa", "Contenuto condiviso di test", testUser1);
-        sharedNote.setTipoPermesso(Note.TipoPermesso.CONDIVISA_LETTURA);
+        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
         sharedNote.setPermessiLettura(Set.of("testuser2"));
         sharedNote.setTags(Set.of("condiviso", "team"));
         sharedNote.setCartelle(Set.of("Progetti Condivisi"));
@@ -198,10 +199,10 @@ class NoteRepositoryTest {
 
     @Test
     void shouldFindSharedNotesForUser() {
-        // When
-        List<Note> sharedNotes = noteRepository.findSharedNotes("testuser2");
 
-        // Then
+        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testUser2");
+
+
         assertThat(sharedNotes).hasSize(1);
         assertThat(sharedNotes.get(0).getTitolo()).isEqualTo("Nota Condivisa");
     }

@@ -59,9 +59,14 @@ public class Note {
     @Column(name = "username")
     private Set<String> permessiScrittura = new HashSet<>();
 
-    public enum TipoPermesso {
-        PRIVATA, CONDIVISA_LETTURA, CONDIVISA_SCRITTURA
-    }
+    @Column(name = "is_locked_for_editing")
+    private Boolean isLockedForEditing = false;
+
+    @Column(name = "locked_by_user")
+    private String lockedByUser;
+
+    @Column(name = "lock_expires_at")
+    private LocalDateTime lockExpiresAt;
 
     public Note() {
         this.dataCreazione = LocalDateTime.now();
@@ -75,12 +80,17 @@ public class Note {
         this.autore = autore;
     }
 
-    @PreUpdate
-    public void preUpdate() {
-        this.dataModifica = LocalDateTime.now();
+    @PrePersist
+    protected void onCreate() {
+        dataCreazione = LocalDateTime.now();
+        dataModifica = LocalDateTime.now();
     }
 
-    // Getters e Setters
+    @PreUpdate
+    protected void onUpdate() {
+        dataModifica = LocalDateTime.now();
+    }
+
     public Long getId() {
         return id;
     }
@@ -169,20 +179,79 @@ public class Note {
         this.permessiScrittura = permessiScrittura;
     }
 
+    public Boolean getIsLockedForEditing() {
+        return isLockedForEditing;
+    }
+
+    public void setIsLockedForEditing(Boolean isLockedForEditing) {
+        this.isLockedForEditing = isLockedForEditing;
+    }
+
+    public String getLockedByUser() {
+        return lockedByUser;
+    }
+
+    public void setLockedByUser(String lockedByUser) {
+        this.lockedByUser = lockedByUser;
+    }
+
+    public LocalDateTime getLockExpiresAt() {
+        return lockExpiresAt;
+    }
+
+    public void setLockExpiresAt(LocalDateTime lockExpiresAt) {
+        this.lockExpiresAt = lockExpiresAt;
+    }
+
+    public boolean isExpiredLock() {
+        return lockExpiresAt != null && LocalDateTime.now().isAfter(lockExpiresAt);
+    }
+
+    public boolean canBeEditedBy(String username) {
+        if (!isLockedForEditing || isExpiredLock()) {
+            return true;
+        }
+        return lockedByUser != null && lockedByUser.equals(username);
+    }
+
     public boolean isAutore(String username) {
         return this.autore != null && this.autore.getUsername().equals(username);
     }
 
     public boolean haPermessoLettura(String username) {
-        return isAutore(username) || 
-               this.tipoPermesso != TipoPermesso.PRIVATA && 
-               (this.permessiLettura.contains(username) || this.permessiScrittura.contains(username));
+        return isAutore(username) ||
+                this.tipoPermesso != TipoPermesso.PRIVATA &&
+                        (this.permessiLettura.contains(username) || this.permessiScrittura.contains(username));
     }
 
     public boolean haPermessoScrittura(String username) {
-        return isAutore(username) || 
-               (this.tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA && 
-                this.permessiScrittura.contains(username));
+        return isAutore(username) ||
+                (this.tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA &&
+                        this.permessiScrittura.contains(username));
+    }
+
+    public boolean hasWriteAccess(String username) {
+        if (autore.getUsername().equals(username)) {
+            return true;
+        }
+        return tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA &&
+                permessiScrittura.contains(username);
+    }
+
+    public boolean hasReadAccess(String username) {
+        if (autore.getUsername().equals(username)) {
+            return true;
+        }
+        if (tipoPermesso == TipoPermesso.PRIVATA) {
+            return false;
+        }
+        if (tipoPermesso == TipoPermesso.CONDIVISA_LETTURA) {
+            return permessiLettura.contains(username);
+        }
+        if (tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA) {
+            return permessiScrittura.contains(username);
+        }
+        return false;
     }
 
     @Override

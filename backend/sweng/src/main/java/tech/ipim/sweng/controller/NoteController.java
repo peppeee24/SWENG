@@ -391,7 +391,7 @@ public class NoteController {
         }
 
         try {
-            NoteService.UserNotesStats stats = noteService.getUserStats(username);
+            NoteService.UserStatsDto stats = noteService.getUserStats(username);
             
             return ResponseEntity.ok(Map.of(
                     "success", true,

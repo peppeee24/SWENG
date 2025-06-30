@@ -252,7 +252,7 @@ class NoteServiceTest {
         when(noteRepository.findAllTagsByUser("testuser")).thenReturn(Arrays.asList("tag1", "tag2"));
         when(noteRepository.findAllCartelleByUser("testuser")).thenReturn(Arrays.asList("folder1"));
 
-        NoteService.UserNotesStats result = noteService.getUserStats("testuser");
+        NoteService.UserStatsDto result = noteService.getUserStats("testuser");
 
         assertThat(result.getNoteCreate()).isEqualTo(5L);
         assertThat(result.getNoteCondivise()).isEqualTo(3L);
