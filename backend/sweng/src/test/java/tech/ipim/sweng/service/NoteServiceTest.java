@@ -1,20 +1,5 @@
 package tech.ipim.sweng.service;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import tech.ipim.sweng.dto.CreateNoteRequest;
-import tech.ipim.sweng.dto.NoteDto;
-import tech.ipim.sweng.dto.UpdateNoteRequest;
-import tech.ipim.sweng.model.Note;
-import tech.ipim.sweng.model.User;
-import tech.ipim.sweng.repository.NoteRepository;
-import tech.ipim.sweng.repository.UserRepository;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,10 +9,30 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import tech.ipim.sweng.dto.CreateNoteRequest;
+import tech.ipim.sweng.dto.NoteDto;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.User;
+import tech.ipim.sweng.repository.NoteRepository;
+import tech.ipim.sweng.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
@@ -287,23 +292,28 @@ class NoteServiceTest {
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in lettura")
     void shouldRemoveUserFromReadingSharing() {
-        // Arrange
-        User owner = createTestUser("owner", "owner@test.com");
+    // Arrange
+    User owner = createTestUser("owner", "owner@test.com");
 
-        Note note = createTestNote(owner);
-        note.getPermessiLettura().add("shared");
+    Note note = createTestNote(owner);
+    note.getPermessiLettura().add("shared");
+    
+    // Imposta manualmente una data di creazione nel passato per il test
+    note.setDataCreazione(LocalDateTime.now().minusMinutes(1));
+    note.setDataModifica(LocalDateTime.now().minusMinutes(1));
 
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
-        when(noteRepository.save(any(Note.class))).thenReturn(note);
+    when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+    when(noteRepository.save(any(Note.class))).thenReturn(note);
 
-        // Act
-        noteService.removeUserFromSharing(1L, "shared");
+    // Act
+    noteService.removeUserFromSharing(1L, "shared");
 
-        // Assert
-        assertFalse(note.getPermessiLettura().contains("shared"));
-        verify(noteRepository).save(note);
-        assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
-    }
+    // Assert
+    assertFalse(note.getPermessiLettura().contains("shared"));
+    verify(noteRepository).save(note);
+    assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
+}
+
 
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in scrittura")
@@ -377,23 +387,27 @@ class NoteServiceTest {
     }
 
     @Test
-    @DisplayName("Dovrebbe aggiornare la data di modifica quando rimuove l'utente")
-    void shouldUpdateModificationDateWhenRemovingUser() {
-        // Arrange
-        User owner = createTestUser("owner", "owner@test.com");
-        Note note = createTestNote(owner);
-        note.getPermessiLettura().add("shared");
-        LocalDateTime originalModDate = note.getDataModifica();
+@DisplayName("Dovrebbe aggiornare la data di modifica quando rimuove l'utente")
+void shouldUpdateModificationDateWhenRemovingUser() {
+    // Arrange
+    User owner = createTestUser("owner", "owner@test.com");
+    Note note = createTestNote(owner);
+    note.getPermessiLettura().add("shared");
+    
+    // Imposta una data di modifica nel passato per essere sicuri che l'aggiornamento sia visibile
+    LocalDateTime pastDate = LocalDateTime.now().minusMinutes(1);
+    note.setDataModifica(pastDate);
+    LocalDateTime originalModDate = note.getDataModifica();
 
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
-        when(noteRepository.save(any(Note.class))).thenReturn(note);
+    when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+    when(noteRepository.save(any(Note.class))).thenReturn(note);
 
-        // Act
-        noteService.removeUserFromSharing(1L, "shared");
+    // Act
+    noteService.removeUserFromSharing(1L, "shared");
 
-        // Assert
-        assertTrue(note.getDataModifica().isAfter(originalModDate));
-    }
+    // Assert
+    assertTrue(note.getDataModifica().isAfter(originalModDate));
+}
 
     // TEST PER AGGIORNAMENTO NOTE
 
