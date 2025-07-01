@@ -46,7 +46,7 @@ class NoteRepositoryTest {
         privateNote.setCartelle(Set.of("Progetto A"));
         privateNote = entityManager.persistAndFlush(privateNote);
 
-        // Crea nota condivisa
+
         sharedNote = new Note("Nota Condivisa", "Contenuto condiviso di test", testUser1);
         sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
         sharedNote.setPermessiLettura(Set.of("testuser2"));
@@ -132,7 +132,7 @@ class NoteRepositoryTest {
     void shouldSearchNotesInTitleAndContent() {
         // When - cerca nel titolo
         List<Note> notesByTitle = noteRepository.searchNotesByKeyword("testuser1", "Condivisa");
-        
+
         // When - cerca nel contenuto
         List<Note> notesByContent = noteRepository.searchNotesByKeyword("testuser1", "condiviso");
 
@@ -200,9 +200,9 @@ class NoteRepositoryTest {
     @Test
     void shouldFindSharedNotesForUser() {
 
-        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testUser2");
+        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testuser2");
 
-
+        // Then
         assertThat(sharedNotes).hasSize(1);
         assertThat(sharedNotes.get(0).getTitolo()).isEqualTo("Nota Condivisa");
     }
