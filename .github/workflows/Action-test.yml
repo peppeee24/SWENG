@@ -1,0 +1,75 @@
+# .github/workflows/total-test.yml
+# GitHub Actions per i test
+#
+name: NotaBene Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  create:
+    tags:
+      - 'v*'
+
+env:
+  JAVA_VERSION: '17'
+  NODE_VERSION: '18'
+
+jobs:
+  # ===== 1. TEST=====
+  automated-tests:
+    name: Automated Unit Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd "pg_isready -U testuser -d testdb"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+
+    - name: Run ALL Unit Tests
+      working-directory: ./backend/sweng
+      run: |
+        echo " Executing automated unit tests..."
+        mvn test -Dspring.profiles.active=test
+      env:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
+        SPRING_DATASOURCE_USERNAME: testuser
+        SPRING_DATASOURCE_PASSWORD: testpass
+
+    - name: Generate Test Coverage Report  
+      working-directory: ./backend/sweng
+      run: |
+        echo "Generating coverage report..."
+        mvn jacoco:report
+    - name: Upload Coverage Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: backend/sweng/target/site/jacoco/
