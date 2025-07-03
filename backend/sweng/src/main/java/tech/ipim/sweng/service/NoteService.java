@@ -5,9 +5,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tech.ipim.sweng.dto.CreateNoteRequest;
 import tech.ipim.sweng.dto.NoteDto;
-import tech.ipim.sweng.dto.PermissionDto;
 import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.dto.PermissionDto;
+import tech.ipim.sweng.dto.NoteVersionDto;
 import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.NoteVersion;
 import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.model.User;
 import tech.ipim.sweng.repository.NoteRepository;
@@ -17,81 +19,58 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @Transactional
 public class NoteService {
 
-    @Autowired
-    private NoteRepository noteRepository;
+    private final NoteRepository noteRepository;
+    private final UserRepository userRepository;
+    // private final NoteVersionService noteVersionService;
 
     @Autowired
-    private UserRepository userRepository;
+    public NoteService(NoteRepository noteRepository, UserRepository userRepository) {
+        this.noteRepository = noteRepository;
+        this.userRepository = userRepository;
+        // this.noteVersionService = noteVersionService;
+    }
 
+    @Transactional
     public NoteDto createNote(CreateNoteRequest request, String username) {
-        User autore = userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
-        Note note = new Note();
-        note.setTitolo(request.getTitolo());
-        note.setContenuto(request.getContenuto());
-        note.setAutore(autore);
+        Note note = new Note(request.getTitolo(), request.getContenuto(), user);
 
-        if (request.getTags() != null && !request.getTags().isEmpty()) {
+        if (request.getTags() != null) {
             note.setTags(new HashSet<>(request.getTags()));
         }
 
-        if (request.getCartelle() != null && !request.getCartelle().isEmpty()) {
+        if (request.getCartelle() != null) {
             note.setCartelle(new HashSet<>(request.getCartelle()));
         }
 
-        configurePermissions(note, request.getPermessi());
+        if (request.getPermessi() != null) {
+            configurePermissions(note, request.getPermessi());
+        }
 
         Note savedNote = noteRepository.save(note);
+
+        // noteVersionService.createVersion(savedNote, username, "Creazione iniziale");
+
         System.out.println("Nota creata con successo: " + savedNote.getId() + " da " + username);
 
         return NoteDto.fromNote(savedNote, username);
     }
 
-    private void configurePermissions(Note note, PermissionDto permissionDto) {
-        if (permissionDto == null) {
-            note.setTipoPermesso(TipoPermesso.PRIVATA);
-            note.setPermessiLettura(new HashSet<>());
-            note.setPermessiScrittura(new HashSet<>());
-            return;
-        }
-
-        note.setTipoPermesso(permissionDto.getTipoPermesso());
-
-        switch (permissionDto.getTipoPermesso()) {
-            case PRIVATA:
-                note.setPermessiLettura(new HashSet<>());
-                note.setPermessiScrittura(new HashSet<>());
-                break;
-            case CONDIVISA_LETTURA:
-                note.setPermessiLettura(permissionDto.getUtentiLettura() != null ?
-                        new HashSet<>(permissionDto.getUtentiLettura()) : new HashSet<>());
-                note.setPermessiScrittura(new HashSet<>());
-                break;
-            case CONDIVISA_SCRITTURA:
-                note.setPermessiLettura(permissionDto.getUtentiLettura() != null ?
-                        new HashSet<>(permissionDto.getUtentiLettura()) : new HashSet<>());
-                note.setPermessiScrittura(permissionDto.getUtentiScrittura() != null ?
-                        new HashSet<>(permissionDto.getUtentiScrittura()) : new HashSet<>());
-                break;
-        }
-    }
-
-    @Transactional(readOnly = true)
     public List<NoteDto> getAllAccessibleNotes(String username) {
         List<Note> notes = noteRepository.findAllAccessibleNotes(username);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<NoteDto> getUserNotes(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
@@ -99,71 +78,33 @@ public class NoteService {
         List<Note> notes = noteRepository.findByAutoreOrderByDataModificaDesc(user);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    @Transactional(readOnly = true)
     public Optional<NoteDto> getNoteById(Long noteId, String username) {
         Optional<Note> note = noteRepository.findAccessibleNoteById(noteId, username);
         return note.map(n -> NoteDto.fromNote(n, username));
     }
 
-    @Transactional(readOnly = true)
     public List<NoteDto> searchNotes(String username, String keyword) {
-        List<Note> notes = noteRepository.searchNotesByKeyword(username, keyword);
+        List<Note> notes = noteRepository.searchNotesByKeyword(username, keyword.trim());
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<NoteDto> getNotesByTag(String username, String tag) {
         List<Note> notes = noteRepository.findNotesByTag(username, tag);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    @Transactional(readOnly = true)
     public List<NoteDto> getNotesByCartella(String username, String cartella) {
         List<Note> notes = noteRepository.findNotesByCartella(username, cartella);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<NoteDto> getNotesByAutore(String username, String autore) {
-        List<Note> notes = noteRepository.findNotesByAutore(username, autore);
-        return notes.stream()
-                .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<NoteDto> getNotesByDataCreazione(String username, LocalDateTime dataCreazione) {
-        List<Note> notes = noteRepository.findNotesByDataCreazione(username, dataCreazione);
-        return notes.stream()
-                .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<NoteDto> getNotesByDataModifica(String username, LocalDateTime dataModifica) {
-        List<Note> notes = noteRepository.findNotesByDataModifica(username, dataModifica);
-        return notes.stream()
-                .map(note -> NoteDto.fromNote(note, username))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public UserStatsDto getUserStats(String username) {
-        long noteCreate = noteRepository.countNotesByAutore(username);
-        long noteCondivise = noteRepository.countSharedNotesForUser(username);
-        List<String> allTags = noteRepository.findAllTagsByUser(username);
-        List<String> allCartelle = noteRepository.findAllCartelleByUser(username);
-
-        return new UserStatsDto(noteCreate, noteCondivise, allTags.size(), allCartelle.size(), allTags, allCartelle);
+                .toList();
     }
 
     @Transactional
@@ -171,21 +112,30 @@ public class NoteService {
         Note originalNote = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
 
-        if (!originalNote.haPermessoLettura(username)) {
-            throw new RuntimeException("Non hai i permessi per duplicare questa nota");
+        boolean hasAccess = originalNote.getAutore().getUsername().equals(username) ||
+                originalNote.getPermessiLettura().contains(username) ||
+                originalNote.getPermessiScrittura().contains(username);
+
+        if (!hasAccess) {
+            throw new RuntimeException("Non hai accesso a questa nota");
         }
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
-        Note duplicatedNote = new Note();
-        duplicatedNote.setTitolo(originalNote.getTitolo() + " (copia)");
-        duplicatedNote.setContenuto(originalNote.getContenuto());
-        duplicatedNote.setAutore(user);
+        Note duplicatedNote = new Note(
+                originalNote.getTitolo() + " (Copia)",
+                originalNote.getContenuto(),
+                user
+        );
+
         duplicatedNote.setTags(new HashSet<>(originalNote.getTags()));
         duplicatedNote.setCartelle(new HashSet<>(originalNote.getCartelle()));
 
         Note savedNote = noteRepository.save(duplicatedNote);
+
+        // noteVersionService.createVersion(savedNote, username, "Duplicazione da nota ID: " + noteId);
+
         System.out.println("Nota duplicata con successo: " + savedNote.getId() + " da " + username);
 
         return NoteDto.fromNote(savedNote, username);
@@ -197,7 +147,7 @@ public class NoteService {
                 .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
 
         if (!note.isAutore(username)) {
-            throw new RuntimeException("Solo il proprietario può eliminare la nota");
+            throw new RuntimeException("Non hai i permessi per eliminare questa nota");
         }
 
         noteRepository.delete(note);
@@ -205,10 +155,12 @@ public class NoteService {
         return true;
     }
 
+
+
     @Transactional
     public void removeUserFromSharing(Long noteId, String username) {
         Note note = noteRepository.findById(noteId)
-                .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
 
         if (note.isAutore(username)) {
             throw new RuntimeException("Il proprietario non può rimuoversi dalla propria nota");
@@ -241,6 +193,9 @@ public class NoteService {
             throw new RuntimeException("Non hai i permessi per modificare questa nota");
         }
 
+        String oldTitle = note.getTitolo();
+        String oldContent = note.getContenuto();
+
         note.setTitolo(request.getTitolo().trim());
         note.setContenuto(request.getContenuto().trim());
 
@@ -256,10 +211,14 @@ public class NoteService {
             note.setCartelle(new HashSet<>());
         }
 
+        note.incrementVersion();
         note.setDataModifica(LocalDateTime.now());
         Note savedNote = noteRepository.save(note);
 
-        System.out.println("Nota aggiornata: " + noteId + " da " + username);
+        // String changeDescription = buildChangeDescription(oldTitle, oldContent, request.getTitolo().trim(), request.getContenuto().trim());
+        // noteVersionService.createVersion(savedNote, username, changeDescription);
+
+        System.out.println("Nota aggiornata: " + noteId + " da " + username + " (versione " + note.getVersionNumber() + ")");
         return NoteDto.fromNote(savedNote, username);
     }
 
@@ -276,9 +235,118 @@ public class NoteService {
         note.setDataModifica(LocalDateTime.now());
 
         Note savedNote = noteRepository.save(note);
+
+        // noteVersionService.createVersion(savedNote, username, "Modifica permessi");
+
         System.out.println("Permessi aggiornati per nota: " + noteId + " da " + username);
 
         return NoteDto.fromNote(savedNote, username);
+    }
+
+    /*
+    public List<NoteVersionDto> getNoteVersionHistory(Long noteId, String username) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
+
+        boolean hasAccess = note.hasReadAccess(username);
+        if (!hasAccess) {
+            throw new RuntimeException("Non hai accesso a questa nota");
+        }
+
+        List<NoteVersion> versions = noteVersionService.getVersionHistory(noteId);
+        return versions.stream()
+                .map(NoteVersionDto::new)
+                .toList();
+    }
+
+    public Optional<NoteVersionDto> getNoteVersion(Long noteId, Integer versionNumber, String username) {
+        Note note = noteRepository.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Nota non trovata"));
+
+        boolean hasAccess = note.hasReadAccess(username);
+        if (!hasAccess) {
+            throw new RuntimeException("Non hai accesso a questa nota");
+        }
+
+        Optional<NoteVersion> version = noteVersionService.getVersion(noteId, versionNumber);
+        return version.map(NoteVersionDto::new);
+    }
+    */
+
+    public UserStatsDto getUserStats(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
+
+        long noteCreate = noteRepository.countByAutore(user);
+        long noteCondivise = noteRepository.countSharedNotes(username);
+
+        List<String> allTags = noteRepository.findAllTagsByUser(username);
+        List<String> allCartelle = noteRepository.findAllCartelleByUser(username);
+
+        return new UserStatsDto(
+                noteCreate,
+                noteCondivise,
+                (long) allTags.size(),
+                (long) allCartelle.size(),
+                allTags,
+                allCartelle
+        );
+    }
+
+    private String buildChangeDescription(String oldTitle, String oldContent, String newTitle, String newContent) {
+        StringBuilder description = new StringBuilder();
+
+        if (!oldTitle.equals(newTitle)) {
+            description.append("Titolo modificato; ");
+        }
+
+        if (!oldContent.equals(newContent)) {
+            description.append("Contenuto modificato; ");
+        }
+
+        if (description.length() == 0) {
+            description.append("Modifica minore");
+        } else {
+            description.setLength(description.length() - 2);
+        }
+
+        return description.toString();
+    }
+
+    private void configurePermissions(Note note, PermissionDto permissionDto) {
+        note.setTipoPermesso(permissionDto.getTipoPermesso());
+
+        switch (permissionDto.getTipoPermesso()) {
+            case PRIVATA:
+                note.getPermessiLettura().clear();
+                note.getPermessiScrittura().clear();
+                break;
+
+            case CONDIVISA_LETTURA:
+                Set<String> letturaSet = new HashSet<>();
+                if (permissionDto.getUtentiLettura() != null) {
+                    letturaSet.addAll(permissionDto.getUtentiLettura());
+                }
+                note.setPermessiLettura(letturaSet);
+                note.getPermessiScrittura().clear();
+                break;
+
+            case CONDIVISA_SCRITTURA:
+                Set<String> letturaSetScrittura = new HashSet<>();
+                Set<String> scritturaSet = new HashSet<>();
+
+                if (permissionDto.getUtentiLettura() != null) {
+                    letturaSetScrittura.addAll(permissionDto.getUtentiLettura());
+                }
+                if (permissionDto.getUtentiScrittura() != null) {
+                    scritturaSet.addAll(permissionDto.getUtentiScrittura());
+                    letturaSetScrittura.addAll(permissionDto.getUtentiScrittura());
+                }
+
+                note.setPermessiLettura(letturaSetScrittura);
+                note.setPermessiScrittura(scritturaSet);
+                break;
+        }
     }
 
     public static class UserStatsDto {

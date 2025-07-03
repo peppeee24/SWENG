@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import tech.ipim.sweng.model.Note;
-import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.model.User;
+import tech.ipim.sweng.model.TipoPermesso;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,9 +46,9 @@ class NoteRepositoryTest {
         privateNote.setCartelle(Set.of("Progetto A"));
         privateNote = entityManager.persistAndFlush(privateNote);
 
-
+        // Crea nota condivisa
         sharedNote = new Note("Nota Condivisa", "Contenuto condiviso di test", testUser1);
-        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
+        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA); // CORREZIONE: Uso corretto dell'enum
         sharedNote.setPermessiLettura(Set.of("testuser2"));
         sharedNote.setTags(Set.of("condiviso", "team"));
         sharedNote.setCartelle(Set.of("Progetti Condivisi"));
@@ -199,8 +199,8 @@ class NoteRepositoryTest {
 
     @Test
     void shouldFindSharedNotesForUser() {
-
-        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testuser2");
+        // When
+        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testuser2"); // CORREZIONE: Metodo corretto
 
         // Then
         assertThat(sharedNotes).hasSize(1);

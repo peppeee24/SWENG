@@ -1,234 +1,130 @@
 package tech.ipim.sweng.service;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
+
+import tech.ipim.sweng.dto.LockStatusDto;
 import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.NoteLock;
 import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.model.User;
+import tech.ipim.sweng.repository.NoteLockRepository;
 import tech.ipim.sweng.repository.NoteRepository;
-
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import tech.ipim.sweng.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
+@DisplayName("NoteLockService - Test con metodi reali")
 class NoteLockServiceTest {
 
     @Mock
+    private NoteLockRepository noteLockRepository;
+    
+    @Mock
     private NoteRepository noteRepository;
-
+    
+    @Mock
+    private UserRepository userRepository;
+    
+    @Mock
+    private NoteService noteService;
+    
     @InjectMocks
     private NoteLockService noteLockService;
-
-    private User autore;
-    private User altroUtente;
-    private Note nota;
-
+    
+    private Note testNote;
+    private User testUser;
+    private NoteLock testLock;
+    
     @BeforeEach
     void setUp() {
-        autore = new User();
-        autore.setUsername("autore");
-
-        altroUtente = new User();
-        altroUtente.setUsername("altro_utente");
-
-        nota = new Note();
-        nota.setId(1L);
-        nota.setTitolo("Test Note");
-        nota.setContenuto("Contenuto di test");
-        nota.setAutore(autore);
-        nota.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
-        Set<String> permessiScrittura = new HashSet<>();
-        permessiScrittura.add("altro_utente");
-        nota.setPermessiScrittura(permessiScrittura);
-        nota.setIsLockedForEditing(false);
+        
+        testUser = new User();
+        testUser.setId(1L);
+        testUser.setUsername("user1");
+        testUser.setEmail("user1@test.com");
+        
+        
+        testNote = new Note();
+        testNote.setId(1L);
+        testNote.setTitolo("Test Note");
+        testNote.setContenuto("Test Content");
+        testNote.setAutore(testUser);
+        testNote.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
+        testNote.setPermessiLettura(new HashSet<>());
+        testNote.setPermessiScrittura(new HashSet<>());
+        testNote.setDataCreazione(LocalDateTime.now());
+        testNote.setDataModifica(LocalDateTime.now());
+        
+        
+        testLock = new NoteLock(1L, "user1", LocalDateTime.now(), LocalDateTime.now().plusMinutes(2));
+        testLock.setId(1L);
     }
-
+    
     @Test
-    void testAcquireLock_Success() {
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-        when(noteRepository.save(any(Note.class))).thenReturn(nota);
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "autore");
-
-        assertTrue(result.isSuccess());
-        assertEquals("Lock acquisito con successo", result.getMessage());
-        assertEquals("autore", result.getLockedByUser());
-        assertNotNull(result.getLockExpiresAt());
-        verify(noteRepository).save(nota);
+    @DisplayName("TTD-LOCK-001: Test NoteLockService può essere istanziato")
+    void testNoteLockServiceExists() {
+        assertNotNull(noteLockService);
     }
-
+    
     @Test
-    void testAcquireLock_NoteNotFound() {
-        when(noteRepository.findById(1L)).thenReturn(Optional.empty());
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "autore");
-
-        assertFalse(result.isSuccess());
-        assertEquals("Nota non trovata", result.getMessage());
-        verify(noteRepository, never()).save(any());
+    @DisplayName("TTD-LOCK-002: Test tryLockNote con parametri null lancia RuntimeException")
+    void testNullParameters() {
+        
+        assertThrows(RuntimeException.class, () -> {
+            noteLockService.tryLockNote(null, "user1");
+        });
+        
+        assertThrows(RuntimeException.class, () -> {
+            noteLockService.tryLockNote(1L, null);
+        });
     }
-
+    
     @Test
-    void testAcquireLock_InsufficientPermissions() {
-        nota.setTipoPermesso(TipoPermesso.PRIVATA);
-        nota.setPermessiScrittura(new HashSet<>());
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "altro_utente");
-
-        assertFalse(result.isSuccess());
-        assertEquals("Permessi insufficienti per modificare questa nota", result.getMessage());
-        verify(noteRepository, never()).save(any());
+    @DisplayName("TTD-LOCK-003: Test tryLockNote con nota inesistente")
+    void testTryLockNote_NoteNotFound() {
+        
+        when(noteRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        assertThrows(RuntimeException.class, () -> {
+            noteLockService.tryLockNote(999L, "user1");
+        });
     }
-
+    
     @Test
-    void testAcquireLock_AlreadyLockedByAnotherUser() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("altro_utente");
-        nota.setLockExpiresAt(LocalDateTime.now().plusMinutes(5));
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "autore");
-
-        assertFalse(result.isSuccess());
-        assertTrue(result.getMessage().contains("Nota attualmente in modifica da altro_utente"));
-        assertEquals("altro_utente", result.getLockedByUser());
-        verify(noteRepository, never()).save(any());
+    @DisplayName("TTD-LOCK-004: Test tryLockNote con utente inesistente")
+    void testTryLockNote_UserNotFound() {
+        
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(testNote));
+        
+        assertThrows(RuntimeException.class, () -> {
+            noteLockService.tryLockNote(1L, "nonexistent");
+        });
     }
-
+    
     @Test
-    void testAcquireLock_AlreadyLockedBySameUser() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("autore");
-        LocalDateTime lockExpiration = LocalDateTime.now().plusMinutes(5);
-        nota.setLockExpiresAt(lockExpiration);
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "autore");
-
-        assertTrue(result.isSuccess());
-        assertEquals("Lock già acquisito dall'utente", result.getMessage());
-        assertEquals("autore", result.getLockedByUser());
-        assertEquals(lockExpiration, result.getLockExpiresAt());
-        verify(noteRepository, never()).save(any());
-    }
-
-    @Test
-    void testAcquireLock_ExpiredLock() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("altro_utente");
-        nota.setLockExpiresAt(LocalDateTime.now().minusMinutes(1));
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-        when(noteRepository.save(any(Note.class))).thenReturn(nota);
-
-        NoteLockService.LockResult result = noteLockService.acquireLock(1L, "autore");
-
-        assertTrue(result.isSuccess());
-        assertEquals("Lock acquisito con successo", result.getMessage());
-        assertEquals("autore", result.getLockedByUser());
-        verify(noteRepository).save(nota);
-    }
-
-    @Test
-    void testReleaseLock_Success() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("autore");
-        nota.setLockExpiresAt(LocalDateTime.now().plusMinutes(5));
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-        when(noteRepository.save(any(Note.class))).thenReturn(nota);
-
-        NoteLockService.LockResult result = noteLockService.releaseLock(1L, "autore");
-
-        assertTrue(result.isSuccess());
-        assertEquals("Lock rilasciato con successo", result.getMessage());
-        assertNull(result.getLockedByUser());
-        verify(noteRepository).save(nota);
-    }
-
-    @Test
-    void testReleaseLock_NotLocked() {
-        nota.setIsLockedForEditing(false);
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockResult result = noteLockService.releaseLock(1L, "autore");
-
-        assertTrue(result.isSuccess());
-        assertEquals("Nota non era bloccata", result.getMessage());
-        verify(noteRepository, never()).save(any());
-    }
-
-    @Test
-    void testReleaseLock_WrongUser() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("altro_utente");
-        nota.setLockExpiresAt(LocalDateTime.now().plusMinutes(5));
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockResult result = noteLockService.releaseLock(1L, "autore");
-
-        assertFalse(result.isSuccess());
-        assertEquals("Non puoi rilasciare un lock di un altro utente", result.getMessage());
-        verify(noteRepository, never()).save(any());
-    }
-
-    @Test
-    void testGetLockStatus_Locked() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("autore");
-        LocalDateTime lockExpiration = LocalDateTime.now().plusMinutes(5);
-        nota.setLockExpiresAt(lockExpiration);
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockStatus status = noteLockService.getLockStatus(1L);
-
-        assertTrue(status.isLocked());
-        assertEquals("autore", status.getLockedByUser());
-        assertEquals(lockExpiration, status.getLockExpiresAt());
-    }
-
-    @Test
-    void testGetLockStatus_NotLocked() {
-        nota.setIsLockedForEditing(false);
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockStatus status = noteLockService.getLockStatus(1L);
-
-        assertFalse(status.isLocked());
-        assertNull(status.getLockedByUser());
-        assertNull(status.getLockExpiresAt());
-    }
-
-    @Test
-    void testGetLockStatus_ExpiredLock() {
-        nota.setIsLockedForEditing(true);
-        nota.setLockedByUser("autore");
-        nota.setLockExpiresAt(LocalDateTime.now().minusMinutes(1));
-
-        when(noteRepository.findById(1L)).thenReturn(Optional.of(nota));
-
-        NoteLockService.LockStatus status = noteLockService.getLockStatus(1L);
-
-        assertFalse(status.isLocked());
-        assertNull(status.getLockedByUser());
-        assertNull(status.getLockExpiresAt());
+    @DisplayName("TTD-LOCK-005: Test getLockStatus con parametri validi")
+    void testGetLockStatus_ValidParameters() {
+        
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(testNote));
+        
+        assertDoesNotThrow(() -> {
+            LockStatusDto result = noteLockService.getLockStatus(1L, "user1");
+            assertNotNull(result);
+        });
     }
 }

@@ -12,8 +12,6 @@ import {
   UserStats, PermissionsRequest
 } from '../models/note.model';
 
-
-
 @Injectable({
   providedIn: 'root'
 })
@@ -100,7 +98,6 @@ export class NotesService {
     );
   }
 
-
   updateNotePermissions(id: number, permessi: PermissionsRequest): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -119,6 +116,55 @@ export class NotesService {
           this.selectedNote.set(response.note);
           console.log('Permessi nota aggiornati:', id);
         }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  // SISTEMA DI LOCK - METODI CORRETTI
+  lockNote(noteId: number): Observable<any> {
+    console.log('🔒 Chiamata API lockNote per nota:', noteId);
+    return this.http.post(`${this.API_URL}/${noteId}/lock`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('✅ Lock acquisito per nota:', noteId, response);
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  getLockStatus(noteId: number): Observable<any> {
+    console.log('🔍 Chiamata API getLockStatus per nota:', noteId);
+    return this.http.get(`${this.API_URL}/${noteId}/lock-status`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('📊 Stato lock nota:', noteId, response);
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  unlockNote(noteId: number): Observable<any> {
+    console.log('🔓 Chiamata API unlockNote per nota:', noteId);
+    return this.http.delete(`${this.API_URL}/${noteId}/lock`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('✅ Lock rilasciato per nota:', noteId, response);
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  refreshLock(noteId: number): Observable<any> {
+    console.log('🔄 Chiamata API refreshLock per nota:', noteId);
+    return this.http.put(`${this.API_URL}/${noteId}/lock/refresh`, {}, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('✅ Lock rinnovato per nota:', noteId, response);
       }),
       catchError(this.handleError.bind(this))
     );
@@ -217,7 +263,7 @@ export class NotesService {
         return this.handleError(error);
       })
     );
-}
+  }
 
   searchNotes(keyword: string): Observable<NotesListResponse> {
     this.isLoading.set(true);
@@ -256,23 +302,22 @@ export class NotesService {
   }
 
   getNotesByCartella(cartella: string): Observable<NotesListResponse> {
-  this.isLoading.set(true);
-  this.error.set(null);
+    this.isLoading.set(true);
+    this.error.set(null);
 
-  return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
-    headers: this.getHeaders()
-  }).pipe(
-    tap(response => {
-      this.isLoading.set(false);
-      if (response.success) {
-        this.notes.set(response.notes);
-        console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
-      }
-    }),
-    catchError(this.handleError.bind(this))
-  );
-}
-
+    return this.http.get<NotesListResponse>(`${this.API_URL}/filter/cartella/${encodeURIComponent(cartella)}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        this.isLoading.set(false);
+        if (response.success) {
+          this.notes.set(response.notes);
+          console.log(`Recuperate ${response.count} note per cartella: ${cartella}`);
+        }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
 
   getUserStats(): Observable<{success: boolean, stats: UserStats}> {
     this.isLoading.set(true);
@@ -315,6 +360,13 @@ export class NotesService {
         errorMessage = 'Non hai i permessi per eseguire questa operazione';
       } else if (error.status === 404) {
         errorMessage = 'Nota non trovata';
+      } else if (error.status === 409) {
+        // Conflitto - probabilmente nota bloccata
+        if (error.error && error.error.message) {
+          errorMessage = error.error.message;
+        } else {
+          errorMessage = 'La nota è già in modifica da un altro utente';
+        }
       } else if (error.status === 400) {
         if (error.error && error.error.message) {
           errorMessage = error.error.message;
@@ -333,5 +385,4 @@ export class NotesService {
     this.error.set(errorMessage);
     return throwError(() => new Error(errorMessage));
   }
-
 }

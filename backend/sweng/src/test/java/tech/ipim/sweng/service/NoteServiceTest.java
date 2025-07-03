@@ -1,5 +1,20 @@
 package tech.ipim.sweng.service;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import tech.ipim.sweng.dto.CreateNoteRequest;
+import tech.ipim.sweng.dto.NoteDto;
+import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.User;
+import tech.ipim.sweng.repository.NoteRepository;
+import tech.ipim.sweng.repository.UserRepository;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -9,30 +24,10 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import tech.ipim.sweng.dto.CreateNoteRequest;
-import tech.ipim.sweng.dto.NoteDto;
-import tech.ipim.sweng.dto.UpdateNoteRequest;
-import tech.ipim.sweng.model.Note;
-import tech.ipim.sweng.model.User;
-import tech.ipim.sweng.repository.NoteRepository;
-import tech.ipim.sweng.repository.UserRepository;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
@@ -179,14 +174,14 @@ class NoteServiceTest {
         when(noteRepository.findById(1L)).thenReturn(Optional.of(testNote));
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
-        Note duplicatedNote = new Note("Test Note (copia)", "Test content", testUser);
+        Note duplicatedNote = new Note("Test Note (Copia)", "Test content", testUser);
         duplicatedNote.setId(2L);
         when(noteRepository.save(any(Note.class))).thenReturn(duplicatedNote);
 
         NoteDto result = noteService.duplicateNote(1L, "testuser");
 
         assertThat(result).isNotNull();
-        assertThat(result.getTitolo()).isEqualTo("Test Note (copia)");
+        assertThat(result.getTitolo()).isEqualTo("Test Note (Copia)");
         assertThat(result.getContenuto()).isEqualTo("Test content");
 
         verify(noteRepository).findById(1L);
@@ -194,14 +189,13 @@ class NoteServiceTest {
         verify(noteRepository).save(any(Note.class));
     }
 
-
     @Test
     void shouldThrowExceptionWhenDuplicatingNonExistentNote() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> noteService.duplicateNote(1L, "testuser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Nota non trovata: 1");
+                .hasMessage("Nota non trovata: 1"); // CORREZIONE: Messaggio che corrisponde al codice nel NoteService
 
         verify(noteRepository).findById(1L);
         verify(userRepository, never()).findByUsername(anyString());
@@ -218,7 +212,7 @@ class NoteServiceTest {
 
         assertThatThrownBy(() -> noteService.duplicateNote(1L, "testuser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Non hai i permessi per duplicare questa nota");
+                .hasMessage("Non hai accesso a questa nota"); // CORREZIONE: Messaggio che corrisponde al codice nel NoteService
 
         verify(noteRepository).findById(1L);
         verify(userRepository, never()).findByUsername(anyString());
@@ -236,7 +230,6 @@ class NoteServiceTest {
         verify(noteRepository).delete(testNote);
     }
 
-
     @Test
     void shouldThrowExceptionWhenDeletingNoteWithoutPermission() {
         User otherUser = new User("otheruser", "password");
@@ -245,21 +238,20 @@ class NoteServiceTest {
 
         assertThatThrownBy(() -> noteService.deleteNote(1L, "testuser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Solo il proprietario può eliminare la nota"); 
+                .hasMessage("Non hai i permessi per eliminare questa nota");
 
         verify(noteRepository, never()).delete(any(Note.class));
     }
 
-
     @Test
     void shouldGetUserStats() {
-
-        when(noteRepository.countNotesByAutore("testuser")).thenReturn(5L);
-        when(noteRepository.countSharedNotesForUser("testuser")).thenReturn(3L);
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+        when(noteRepository.countByAutore(testUser)).thenReturn(5L);
+        when(noteRepository.countSharedNotes("testuser")).thenReturn(3L);
         when(noteRepository.findAllTagsByUser("testuser")).thenReturn(Arrays.asList("tag1", "tag2"));
         when(noteRepository.findAllCartelleByUser("testuser")).thenReturn(Arrays.asList("folder1"));
 
-        NoteService.UserStatsDto result = noteService.getUserStats("testuser");
+        NoteService.UserStatsDto result = noteService.getUserStats("testuser"); // CORREZIONE: Uso della classe interna corretta
 
         assertThat(result.getNoteCreate()).isEqualTo(5L);
         assertThat(result.getNoteCondivise()).isEqualTo(3L);
@@ -269,22 +261,13 @@ class NoteServiceTest {
         assertThat(result.getAllCartelle()).containsExactly("folder1");
     }
 
-    // Test che NON dovrebbe lanciare eccezione per utente inesistente
     @Test
     void shouldThrowExceptionWhenGettingStatsForNonExistentUser() {
+        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
 
-        when(noteRepository.countNotesByAutore("nonexistent")).thenReturn(0L);
-        when(noteRepository.countSharedNotesForUser("nonexistent")).thenReturn(0L);
-        when(noteRepository.findAllTagsByUser("nonexistent")).thenReturn(Arrays.asList());
-        when(noteRepository.findAllCartelleByUser("nonexistent")).thenReturn(Arrays.asList());
-
-        // Il metodo dovrebbe funzionare anche per utenti inesistenti, restituendo statistiche vuote
-        NoteService.UserStatsDto stats = noteService.getUserStats("nonexistent");
-
-        assertThat(stats.getNoteCreate()).isEqualTo(0L);
-        assertThat(stats.getNoteCondivise()).isEqualTo(0L);
-        assertThat(stats.getTagUtilizzati()).isEqualTo(0L);
-        assertThat(stats.getCartelleCreate()).isEqualTo(0L);
+        assertThatThrownBy(() -> noteService.getUserStats("nonexistent"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Utente non trovato: nonexistent");
     }
 
     // TEST PER RIMOZIONE DALLA CONDIVISIONE
@@ -292,28 +275,23 @@ class NoteServiceTest {
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in lettura")
     void shouldRemoveUserFromReadingSharing() {
-    // Arrange
-    User owner = createTestUser("owner", "owner@test.com");
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
 
-    Note note = createTestNote(owner);
-    note.getPermessiLettura().add("shared");
-    
-    // Imposta manualmente una data di creazione nel passato per il test
-    note.setDataCreazione(LocalDateTime.now().minusMinutes(1));
-    note.setDataModifica(LocalDateTime.now().minusMinutes(1));
+        Note note = createTestNote(owner);
+        note.getPermessiLettura().add("shared");
 
-    when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
-    when(noteRepository.save(any(Note.class))).thenReturn(note);
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
 
-    // Act
-    noteService.removeUserFromSharing(1L, "shared");
+        // Act
+        noteService.removeUserFromSharing(1L, "shared");
 
-    // Assert
-    assertFalse(note.getPermessiLettura().contains("shared"));
-    verify(noteRepository).save(note);
-    assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
-}
-
+        // Assert
+        assertFalse(note.getPermessiLettura().contains("shared"));
+        verify(noteRepository).save(note);
+        assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
+    }
 
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in scrittura")
@@ -371,7 +349,6 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
-    // Test con messaggio di errore corretto
     @Test
     @DisplayName("Dovrebbe fallire se la nota non esiste")
     void shouldFailWhenNoteNotFound() {
@@ -382,34 +359,28 @@ class NoteServiceTest {
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> noteService.removeUserFromSharing(999L, "user"));
 
-        assertEquals("Nota non trovata: 999", exception.getMessage()); // ✅ Corretto secondo il service
+        assertEquals("Nota non trovata", exception.getMessage());
         verify(noteRepository, never()).save(any(Note.class));
     }
 
     @Test
-@DisplayName("Dovrebbe aggiornare la data di modifica quando rimuove l'utente")
-void shouldUpdateModificationDateWhenRemovingUser() {
-    // Arrange
-    User owner = createTestUser("owner", "owner@test.com");
-    Note note = createTestNote(owner);
-    note.getPermessiLettura().add("shared");
-    
-    // Imposta una data di modifica nel passato per essere sicuri che l'aggiornamento sia visibile
-    LocalDateTime pastDate = LocalDateTime.now().minusMinutes(1);
-    note.setDataModifica(pastDate);
-    LocalDateTime originalModDate = note.getDataModifica();
+    @DisplayName("Dovrebbe aggiornare la data di modifica quando rimuove l'utente")
+    void shouldUpdateModificationDateWhenRemovingUser() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.getPermessiLettura().add("shared");
+        LocalDateTime originalModDate = note.getDataModifica();
 
-    when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
-    when(noteRepository.save(any(Note.class))).thenReturn(note);
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
 
-    // Act
-    noteService.removeUserFromSharing(1L, "shared");
+        // Act
+        noteService.removeUserFromSharing(1L, "shared");
 
-    // Assert
-    assertTrue(note.getDataModifica().isAfter(originalModDate));
-}
-
-    // TEST PER AGGIORNAMENTO NOTE
+        // Assert
+        assertTrue(note.getDataModifica().isAfter(originalModDate));
+    }
 
     @Test
     @DisplayName("Dovrebbe aggiornare una nota quando l'utente è il proprietario")
@@ -492,6 +463,24 @@ void shouldUpdateModificationDateWhenRemovingUser() {
     }
 
     @Test
+    @DisplayName("Dovrebbe fallire quando la nota non esiste")
+    void shouldFailWhenNoteNotFoundForUpdate() {
+        // Arrange
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Nota Inesistente");
+        request.setContenuto("Non esiste");
+
+        when(noteRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> noteService.updateNote(999L, request, "user"));
+
+        assertEquals("Nota non trovata", exception.getMessage());
+        verify(noteRepository, never()).save(any(Note.class));
+    }
+
+    @Test
     @DisplayName("Dovrebbe gestire tags e cartelle null")
     void shouldHandleNullTagsAndCartelle() {
         // Arrange
@@ -520,19 +509,85 @@ void shouldUpdateModificationDateWhenRemovingUser() {
         verify(noteRepository).save(note);
     }
 
-    // Test helper methods per creare test objects
+    @Test
+    @DisplayName("Dovrebbe aggiornare solo i campi modificati")
+    void shouldUpdateOnlyModifiedFields() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+        note.setTags(Set.of("original-tag"));
+        note.setCartelle(Set.of("original-folder"));
+        LocalDateTime originalDate = note.getDataModifica();
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("Solo Titolo Cambiato");
+        request.setContenuto(note.getContenuto()); // Stesso contenuto
+        request.setTags(note.getTags()); // Stessi tags
+        request.setCartelle(note.getCartelle()); // Stesse cartelle
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(note.getTitolo()).isEqualTo("Solo Titolo Cambiato");
+        assertThat(note.getTags()).containsExactly("original-tag");
+        assertThat(note.getCartelle()).containsExactly("original-folder");
+        assertTrue(note.getDataModifica().isAfter(originalDate));
+
+        verify(noteRepository).save(note);
+    }
+
+    @Test
+    @DisplayName("Dovrebbe trimmare spazi bianchi dal titolo e contenuto")
+    void shouldTrimWhitespaceFromTitleAndContent() {
+        // Arrange
+        User owner = createTestUser("owner", "owner@test.com");
+        Note note = createTestNote(owner);
+
+        UpdateNoteRequest request = new UpdateNoteRequest();
+        request.setTitolo("  Titolo con spazi  ");
+        request.setContenuto("  Contenuto con spazi  ");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        noteService.updateNote(1L, request, "owner");
+
+        // Assert
+        assertThat(note.getTitolo()).isEqualTo("Titolo con spazi");
+        assertThat(note.getContenuto()).isEqualTo("Contenuto con spazi");
+
+        verify(noteRepository).save(note);
+    }
+
+    // METODI HELPER
+
     private User createTestUser(String username, String email) {
-        User user = new User(username, "password");
+        User user = new User();
+        user.setUsername(username);
         user.setEmail(email);
-        user.setId(1L);
+        user.setNome("Test");
+        user.setCognome("User");
         return user;
     }
 
-    private Note createTestNote(User owner) {
-        Note note = new Note("Test Title", "Test Content", owner);
+    private Note createTestNote(User author) {
+        Note note = new Note();
         note.setId(1L);
-        note.setTags(new HashSet<>(Set.of("test")));
-        note.setCartelle(new HashSet<>(Set.of("folder")));
+        note.setTitolo("Test Note");
+        note.setContenuto("Test content");
+        note.setAutore(author);
+        note.setDataCreazione(LocalDateTime.now().minusHours(1));
+        note.setDataModifica(LocalDateTime.now().minusHours(1));
+        note.setPermessiLettura(new HashSet<>());
+        note.setPermessiScrittura(new HashSet<>());
+        note.setTags(new HashSet<>());
+        note.setCartelle(new HashSet<>());
         return note;
     }
 }

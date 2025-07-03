@@ -59,6 +59,7 @@ public class Note {
     @Column(name = "username")
     private Set<String> permessiScrittura = new HashSet<>();
 
+    // Campi per il sistema di blocco - aggiornati per essere compatibili con la tua struttura
     @Column(name = "is_locked_for_editing")
     private Boolean isLockedForEditing = false;
 
@@ -67,6 +68,12 @@ public class Note {
 
     @Column(name = "lock_expires_at")
     private LocalDateTime lockExpiresAt;
+
+    //Campo per il versionamento
+    @Column(name = "version_number")
+    private Long versionNumber = 1L;
+
+
 
     public Note() {
         this.dataCreazione = LocalDateTime.now();
@@ -91,6 +98,7 @@ public class Note {
         dataModifica = LocalDateTime.now();
     }
 
+    // Getters e Setters esistenti
     public Long getId() {
         return id;
     }
@@ -179,6 +187,7 @@ public class Note {
         this.permessiScrittura = permessiScrittura;
     }
 
+    // Getters e Setters per il sistema di blocco - aggiornati
     public Boolean getIsLockedForEditing() {
         return isLockedForEditing;
     }
@@ -203,6 +212,16 @@ public class Note {
         this.lockExpiresAt = lockExpiresAt;
     }
 
+    // Nuovo getter/setter per versionamento
+    public Long getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Long versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    // Metodi di utilità esistenti - mantenuti
     public boolean isExpiredLock() {
         return lockExpiresAt != null && LocalDateTime.now().isAfter(lockExpiresAt);
     }
@@ -254,6 +273,54 @@ public class Note {
         return false;
     }
 
+    // Nuovi metodi di utilità per il sistema di blocco migliorato
+    public boolean isLocked() {
+        return Boolean.TRUE.equals(isLockedForEditing) &&
+                lockExpiresAt != null &&
+                LocalDateTime.now().isBefore(lockExpiresAt);
+    }
+
+    public boolean isLockedBy(String username) {
+        return isLocked() && lockedByUser != null && lockedByUser.equals(username);
+    }
+
+    public void lockFor(String username, int lockDurationMinutes) {
+        this.isLockedForEditing = true;
+        this.lockedByUser = username;
+        this.lockExpiresAt = LocalDateTime.now().plusMinutes(lockDurationMinutes);
+    }
+
+    public void unlock() {
+        this.isLockedForEditing = false;
+        this.lockedByUser = null;
+        this.lockExpiresAt = null;
+    }
+
+    public void incrementVersion() {
+        this.versionNumber = (this.versionNumber == null ? 1L : this.versionNumber + 1);
+    }
+
+    public boolean hasExpiredLock() {
+        return Boolean.TRUE.equals(isLockedForEditing) &&
+                lockExpiresAt != null &&
+                LocalDateTime.now().isAfter(lockExpiresAt);
+    }
+
+    public void updateModificationTime() {
+        this.dataModifica = LocalDateTime.now();
+    }
+
+    // Metodo migliorato per verificare se può essere modificata - integra i tuoi metodi esistenti
+    public boolean canBeModifiedBy(String username) {
+        // Prima verifica i permessi di scrittura
+        if (!hasWriteAccess(username)) {
+            return false;
+        }
+
+        // Poi verifica il blocco
+        return canBeEditedBy(username);
+    }
+
     @Override
     public String toString() {
         return "Note{" +
@@ -262,6 +329,9 @@ public class Note {
                 ", autore=" + (autore != null ? autore.getUsername() : "null") +
                 ", dataCreazione=" + dataCreazione +
                 ", tipoPermesso=" + tipoPermesso +
+                ", isLocked=" + isLocked() +
+                ", lockedBy='" + lockedByUser + '\'' +
+                ", versionNumber=" + versionNumber +
                 '}';
     }
 }
