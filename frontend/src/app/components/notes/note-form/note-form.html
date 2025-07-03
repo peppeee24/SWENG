@@ -22,6 +22,9 @@
         <!-- Titolo -->
         <div class="form-group">
           <label for="titolo">📝 Titolo *</label>
+          @if (isEditMode() && !isOwner()) {
+            <p class="limited-edit-note">Come utente condiviso, puoi modificare il titolo della nota.</p>
+          }
           <input
             id="titolo"
             type="text"
@@ -45,6 +48,9 @@
         <!-- Contenuto -->
         <div class="form-group">
           <label for="contenuto">💭 Contenuto *</label>
+          @if (isEditMode() && !isOwner()) {
+            <p class="limited-edit-note">Come utente condiviso, puoi modificare il contenuto della nota.</p>
+          }
           <textarea
             id="contenuto"
             formControlName="contenuto"
@@ -59,7 +65,7 @@
             <div class="character-progress">
               <div
                 class="progress-bar"
-                [style.width.%]="getCharacterWidth()"
+                [style.width.%]="(characterCount() / maxCharacters) * 100"
                 [class.warning]="characterCount() > maxCharacters * 0.8"
                 [class.danger]="characterCount() > maxCharacters">
               </div>
@@ -68,7 +74,7 @@
               class="character-count"
               [class.warning]="characterCount() > maxCharacters * 0.8"
               [class.danger]="characterCount() > maxCharacters">
-              {{ getCharacterDisplay() }}
+              {{ characterCount() }}/{{ maxCharacters }}
             </span>
           </div>
 
@@ -114,6 +120,13 @@
                   [checked]="permissionType() === 'CONDIVISA_LETTURA'">
                 <label for="pubblica">👁️ Condivisa in lettura</label>
               </div>
+
+              <div class="permission-choice">
+                <input type="radio" id="scrittura" name="permission"
+                       (change)="onPermissionTypeChange('CONDIVISA_SCRITTURA')"
+                       [checked]="permissionType() === 'CONDIVISA_SCRITTURA'">
+                <label for="scrittura">✏️ Condivisa in scrittura</label>
+              </div>
             </div>
 
             <!-- Selezione utenti per condivisione -->
@@ -125,7 +138,13 @@
                     type="button"
                     class="dropdown-toggle"
                     (click)="showUserDropdown.set(!showUserDropdown())">
-                    Seleziona utenti ({{ selectedUsersForReading().length }} selezionati)
+                    @if (permissionType() === 'CONDIVISA_LETTURA') {
+                      Seleziona utenti ({{ selectedUsersForReading().length }} selezionati)
+                    } @else if (permissionType() === 'CONDIVISA_SCRITTURA') {
+                      Seleziona utenti ({{ selectedUsersForWriting().length }} selezionati)
+                    } @else {
+                      Seleziona utenti (0 selezionati)
+                    }
                   </button>
 
                   @if (showUserDropdown()) {
@@ -134,7 +153,7 @@
                         <div class="user-option" (click)="onUserToggle(user.username)">
                           <input
                             type="checkbox"
-                            [checked]="selectedUsersForReading().includes(user.username)"
+                            [checked]="isUserSelected(user.username)"
                             (click)="$event.stopPropagation()">
                           <span class="user-info">
                             <div class="user-primary">{{ user.username }}</div>
@@ -149,10 +168,10 @@
                   }
                 </div>
 
-                <!-- Selected users display -->
-                @if (selectedUsersForReading().length > 0) {
+                <!-- Selected users display - Corretta per entrambi i tipi -->
+                @if (permissionType() === 'CONDIVISA_LETTURA' && selectedUsersForReading().length > 0) {
                   <div class="selected-users">
-                    <h4>Utenti selezionati:</h4>
+                    <h4>Utenti con accesso in lettura:</h4>
                     <div class="user-tags">
                       @for (username of selectedUsersForReading(); track username) {
                         <span class="user-tag">
@@ -163,8 +182,44 @@
                     </div>
                   </div>
                 }
+
+                @if (permissionType() === 'CONDIVISA_SCRITTURA' && selectedUsersForWriting().length > 0) {
+                  <div class="selected-users">
+                    <h4>Utenti con accesso in scrittura:</h4>
+                    <div class="user-tags">
+                      @for (username of selectedUsersForWriting(); track username) {
+                        <span class="user-tag">
+                          {{ username }}
+                          <button type="button" (click)="onUserToggle(username)">×</button>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             }
+          </div>
+        } @else {
+          <!-- Messaggio informativo per utenti che stanno modificando note condivise -->
+          <div class="form-group">
+            <div class="shared-note-permissions-info">
+              <div class="info-header">
+                <span class="info-icon">ℹ️</span>
+                <h3>Modifica nota condivisa</h3>
+              </div>
+              <div class="info-content">
+                <p>Stai modificando una nota condivisa da <strong>{{ note?.autore }}</strong>.</p>
+                <p>Come utente con permessi di scrittura puoi modificare:</p>
+                <ul>
+                  <li>✏️ Titolo e contenuto</li>
+                  <li>🏷️ Tag</li>
+                  <li>📁 Cartelle</li>
+                </ul>
+                <p class="permission-limitation">
+                  <strong>Nota:</strong> Solo il proprietario può modificare i permessi di condivisione.
+                </p>
+              </div>
+            </div>
           </div>
         }
 

@@ -1,14 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnChanges, OnDestroy, SimpleChanges, Input, Output, EventEmitter, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-
-
-interface UpdateNoteRequestWithPermissions extends UpdateNoteRequest {
-  permessi?: Permission;
-}
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CartelleService } from '../../../services/cartelle';
 import { UserService } from '../../../services/user.service';
-import {CreateNoteRequest, Note, Permission, UpdateNoteRequest} from '../../../models/note.model';
+import { NotesService } from '../../../services/notes';
+import { CreateNoteRequest, Note, Permission, UpdateNoteRequest, UpdateNoteRequestWithPermissions } from '../../../models/note.model';
+import { interval, Subscription } from 'rxjs';
+import { AuthService } from '../../../services/auth';
 
 @Component({
   selector: 'app-note-form',
@@ -17,10 +15,11 @@ import {CreateNoteRequest, Note, Permission, UpdateNoteRequest} from '../../../m
   templateUrl: './note-form.html',
   styleUrls: ['./note-form.css']
 })
-export class NoteFormComponent implements OnInit, OnChanges {
+export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
   private fb = inject(FormBuilder);
   private cartelleService = inject(CartelleService);
   private userService = inject(UserService);
+  private notesService = inject(NotesService);
 
   @Input() note: Note | null = null;
   @Input() isVisible = false;
@@ -33,31 +32,38 @@ export class NoteFormComponent implements OnInit, OnChanges {
 
   noteForm: FormGroup;
 
-
+  // Signals per la gestione dello stato
   noteSignal = signal<Note | null>(null);
+
+  // Sistema di lock
+  private lockRefreshSubscription?: Subscription;
+  isNoteLocked = signal(false);
+  lockedByUser = signal<string | null>(null);
+  lockError = signal<string | null>(null);
+
   isEditMode = computed(() => {
     const editMode = this.noteSignal() !== null && this.noteSignal() !== undefined;
     console.log('isEditMode computed called, note:', this.noteSignal(), 'result:', editMode);
     return editMode;
   });
 
+private authService = inject(AuthService);
 
   isOwner = computed(() => {
     const note = this.noteSignal();
-    if (!note) return true; // In modalità creazione, l'utente è sempre "proprietario"
+    if (!note) return true;
 
-    // Qui dovremmo controllare se l'utente corrente è il proprietario
-    // Per ora assumiamo che in edit mode sia sempre il proprietario
-    // Nel prossimo sprint si implementerà la logica per utenti condivisi
-    return true;
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+
+    // Confronta l'username dell'utente corrente con l'autore della nota
+    return note.autore === currentUser.username;
   });
-
 
   canEditPermissions = computed(() => {
-    return this.isOwner() && !this.isEditMode(); // Solo proprietario e solo in creazione per ora
+    return this.isOwner();
   });
 
-  // Computed per determinare se può modificare tutto (proprietario in edit)
   canEditEverything = computed(() => {
     return this.isOwner();
   });
@@ -99,41 +105,9 @@ export class NoteFormComponent implements OnInit, OnChanges {
     }
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    console.log('ngOnChanges triggered:', changes);
-    console.log('note value:', this.note);
-    console.log('isVisible value:', this.isVisible);
-
-    // Aggiorna il signal quando cambia l'input
-    if (changes['note']) {
-      this.noteSignal.set(this.note);
-      console.log('noteSignal updated to:', this.noteSignal());
-      console.log('isEditMode after signal update:', this.isEditMode());
-    }
-
-    if (changes['isVisible']) {
-      if (!changes['isVisible'].currentValue && changes['isVisible'].previousValue) {
-        // Modal chiuso
-        this.resetForm();
-      } else if (changes['isVisible'].currentValue && !changes['isVisible'].previousValue) {
-        // Modal aperto
-        this.noteSignal.set(this.note);
-        if (this.note) {
-          this.loadNoteData();
-        } else {
-          this.resetForm();
-        }
-      }
-    }
-
-    if (changes['note']) {
-      console.log('Note changed from', changes['note'].previousValue, 'to', changes['note'].currentValue);
-      if (this.note && this.isVisible) {
-        this.loadNoteData();
-      } else if (!this.note && this.isVisible) {
-        this.resetForm();
-      }
-    }
+  ngOnDestroy(): void {
+    // Rilascia il lock quando il componente viene distrutto
+    this.releaseLock();
   }
 
   private loadCartelle(): void {
@@ -161,14 +135,160 @@ export class NoteFormComponent implements OnInit, OnChanges {
     });
   }
 
-  private loadNoteData(): void {
-    console.log('loadNoteData called with note:', this.note);
-    if (!this.note) {
-      console.log('No note to load, returning');
-      return;
+  // SISTEMA DI LOCK - METODI PRINCIPALI
+  private async acquireLock(): Promise<boolean> {
+    if (!this.note?.id) {
+      console.log('🆕 Nuova nota, non serve lock');
+      return true; // Nuova nota, non serve lock
     }
 
-    console.log('Loading note data for edit mode');
+    console.log('🔒 Tentativo di acquisire lock per nota:', this.note.id);
+    this.lockError.set(null);
+
+    try {
+      const response = await this.notesService.lockNote(this.note.id).toPromise();
+
+      if (response?.success) {
+        console.log('✅ Lock acquisito con successo per nota:', this.note.id);
+        this.isNoteLocked.set(true);
+        this.lockedByUser.set(response.lockedBy || 'current_user');
+        this.startLockRefresh();
+        return true;
+      } else {
+        const errorMsg = response?.message || 'Nota già in modifica';
+        console.log('❌ Lock non acquisito:', errorMsg);
+        this.lockError.set(errorMsg);
+        alert(`Impossibile modificare la nota: ${errorMsg}`);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('❌ Errore acquisizione lock:', error);
+      const errorMsg = error.error?.message || 'La nota è già in modifica da un altro utente';
+      this.lockError.set(errorMsg);
+      alert(`Errore: ${errorMsg}`);
+      return false;
+    }
+  }
+
+  private startLockRefresh(): void {
+    if (!this.note?.id) return;
+
+    console.log('🔄 Avvio refresh automatico lock per nota:', this.note.id);
+
+    // Rinnova il lock ogni 90 secondi (il lock dura 2 minuti)
+    this.lockRefreshSubscription = interval(90000).subscribe(() => {
+      if (this.note?.id && this.isNoteLocked()) {
+        console.log('🔄 Rinnovo automatico lock...');
+        this.notesService.refreshLock(this.note.id).subscribe({
+          next: (response) => {
+            if (response?.success && this.note?.id) {
+              console.log('✅ Lock rinnovato automaticamente per nota:', this.note.id);
+            } else {
+              console.warn('⚠️ Errore rinnovo lock:', response?.message);
+              this.isNoteLocked.set(false);
+              this.lockError.set('Lock scaduto - la nota potrebbe essere modificata da altri');
+            }
+          },
+          error: (error) => {
+            console.error('❌ Errore rinnovo automatico lock:', error);
+            this.isNoteLocked.set(false);
+            this.lockError.set('Lock scaduto - riprova ad aprire la nota');
+          }
+        });
+      }
+    });
+  }
+
+  private releaseLock(): void {
+    if (this.note?.id && this.isNoteLocked()) {
+      console.log('🔓 Rilascio lock per nota:', this.note.id);
+
+      this.notesService.unlockNote(this.note.id).subscribe({
+        next: (response) => {
+          if (this.note?.id) {
+            console.log('✅ Lock rilasciato con successo per nota:', this.note.id);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Errore rilascio lock:', error);
+        }
+      });
+    }
+
+    // Reset stato lock
+    this.isNoteLocked.set(false);
+    this.lockedByUser.set(null);
+    this.lockError.set(null);
+
+    // Stop refresh automatico
+    if (this.lockRefreshSubscription) {
+      this.lockRefreshSubscription.unsubscribe();
+      this.lockRefreshSubscription = undefined;
+      console.log('🛑 Fermato refresh automatico lock');
+    }
+  }
+
+  async ngOnChanges(changes: SimpleChanges): Promise<void> {
+    console.log('ngOnChanges triggered:', changes);
+    console.log('note value:', this.note);
+    console.log('isVisible value:', this.isVisible);
+
+    // Aggiorna il signal quando cambia l'input
+    if (changes['note']) {
+      this.noteSignal.set(this.note);
+      console.log('noteSignal updated to:', this.noteSignal());
+      console.log('isEditMode after signal update:', this.isEditMode());
+    }
+
+    if (changes['isVisible']) {
+      if (!changes['isVisible'].currentValue && changes['isVisible'].previousValue) {
+        // Modal chiuso - rilascia lock
+        console.log('📝 Modal chiuso - rilascio lock');
+        this.releaseLock();
+        this.resetForm();
+      } else if (changes['isVisible'].currentValue && !changes['isVisible'].previousValue) {
+        // Modal aperto
+        console.log('📝 Modal aperto');
+        this.noteSignal.set(this.note);
+
+        if (this.note) {
+          // ACQUISIRE LOCK PRIMA DI CARICARE I DATI
+          console.log('📝 Nota esistente - acquisizione lock necessaria');
+          const lockAcquired = await this.acquireLock();
+
+          if (lockAcquired) {
+            console.log('✅ Lock acquisito - caricamento dati nota');
+            this.loadNoteData();
+          } else {
+            console.log('❌ Lock non acquisito - chiusura modal');
+            // Se non riesci ad acquisire il lock, chiudi il modal
+            this.cancel.emit();
+            return;
+          }
+        } else {
+          console.log('📝 Nuova nota - nessun lock necessario');
+          this.resetForm();
+        }
+      }
+    }
+
+    if (changes['note']) {
+      console.log('Note changed from', changes['note'].previousValue, 'to', changes['note'].currentValue);
+      if (this.note && this.isVisible) {
+        this.loadNoteData();
+      } else if (!this.note && this.isVisible) {
+        this.resetForm();
+      }
+    }
+  }
+
+  private loadNoteData() {
+    if (!this.note) return;
+
+    console.log('Loading note data:', this.note);
+    console.log('Note author:', this.note.autore);
+    // Rimuovo la chiamata a getCurrentUser() che non esiste
+
     this.noteForm.patchValue({
       titolo: this.note.titolo,
       contenuto: this.note.contenuto
@@ -176,50 +296,246 @@ export class NoteFormComponent implements OnInit, OnChanges {
 
     this.selectedTags.set([...this.note.tags]);
     this.selectedCartelle.set([...this.note.cartelle]);
+    this.permissionType.set(this.note.tipoPermesso);
+    this.selectedUsersForReading.set([...this.note.permessiLettura]);
+    this.selectedUsersForWriting.set([...this.note.permessiScrittura]);
     this.characterCount.set(this.note.contenuto.length);
-
-    if (this.note.tipoPermesso) {
-      this.permissionType.set(this.note.tipoPermesso);
-    }
-
-    if (this.note.permessiLettura) {
-      this.selectedUsersForReading.set([...this.note.permessiLettura]);
-    }
-
-    if (this.note.permessiScrittura) {
-      this.selectedUsersForWriting.set([...this.note.permessiScrittura]);
-    }
-
-    console.log('Note data loaded, isEditMode now:', this.isEditMode());
   }
 
-  private resetForm(): void {
+  private resetForm() {
     this.noteForm.reset();
     this.selectedTags.set([]);
     this.selectedCartelle.set([]);
+    this.permissionType.set('PRIVATA');
+    this.selectedUsersForReading.set([]);
+    this.selectedUsersForWriting.set([]);
     this.characterCount.set(0);
     this.tagInputValue.set('');
     this.showCartelleDropdown.set(false);
+    this.showUserDropdown.set(false);
+    this.lockError.set(null);
+  }
 
-    if (!this.isEditMode()) {
-      this.permissionType.set('PRIVATA');
+  onPermissionTypeChange(type: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA') {
+    this.permissionType.set(type);
+    if (type === 'PRIVATA') {
       this.selectedUsersForReading.set([]);
       this.selectedUsersForWriting.set([]);
+    } else if (type === 'CONDIVISA_LETTURA') {
+      this.selectedUsersForWriting.set([]);
+    } else if (type === 'CONDIVISA_SCRITTURA') {
+      this.selectedUsersForReading.set([]);
     }
     this.showUserDropdown.set(false);
+  }
 
-    // Reset del signal
-    if (!this.note) {
-      this.noteSignal.set(null);
+  toggleUserDropdown() {
+    this.showUserDropdown.set(!this.showUserDropdown());
+  }
+
+  addUserToReading(username: string) {
+    const current = this.selectedUsersForReading();
+    if (!current.includes(username)) {
+      this.selectedUsersForReading.set([...current, username]);
+    }
+    this.showUserDropdown.set(false);
+  }
+
+  addUserToWriting(username: string) {
+    const current = this.selectedUsersForWriting();
+    if (!current.includes(username)) {
+      this.selectedUsersForWriting.set([...current, username]);
+    }
+    this.showUserDropdown.set(false);
+  }
+
+  removeUserFromReading(username: string) {
+    const current = this.selectedUsersForReading();
+    this.selectedUsersForReading.set(current.filter(u => u !== username));
+  }
+
+  removeUserFromWriting(username: string) {
+    const current = this.selectedUsersForWriting();
+    this.selectedUsersForWriting.set(current.filter(u => u !== username));
+  }
+
+  addTag() {
+    const tagValue = this.tagInputValue().trim();
+    if (tagValue && !this.selectedTags().includes(tagValue)) {
+      this.selectedTags.set([...this.selectedTags(), tagValue]);
+      this.tagInputValue.set('');
     }
   }
 
-  getCharacterWidth(): number {
-    return (this.characterCount() / this.maxCharacters) * 100;
+  removeTag(tag: string) {
+    this.selectedTags.set(this.selectedTags().filter(t => t !== tag));
   }
 
-  getCharacterDisplay(): string {
-    return `${this.characterCount()}/${this.maxCharacters}`;
+  onTagInputKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.addTag();
+    }
+  }
+
+  toggleCartelleDropdown() {
+    this.showCartelleDropdown.set(!this.showCartelleDropdown());
+  }
+
+  selectCartella(cartella: string) {
+    const current = this.selectedCartelle();
+    if (!current.includes(cartella)) {
+      this.selectedCartelle.set([...current, cartella]);
+    }
+    this.showCartelleDropdown.set(false);
+  }
+
+  removeCartella(cartella: string) {
+    this.selectedCartelle.set(this.selectedCartelle().filter(c => c !== cartella));
+  }
+
+  onSubmit(): void {
+    if (this.noteForm.valid) {
+      console.log('📝 Submitting form...');
+
+      const formData = {
+        titolo: this.noteForm.value.titolo,
+        contenuto: this.noteForm.value.contenuto,
+        tags: this.selectedTags(),
+        cartelle: this.selectedCartelle()
+      };
+
+      if (this.isEditMode()) {
+        // Modifica nota esistente
+        if (this.canEditPermissions()) {
+          // Se può modificare i permessi, invia anche quelli
+          const updateWithPermissions: UpdateNoteRequestWithPermissions = {
+            id: this.note?.id || 0, // Aggiungo l'ID mancante
+            ...formData,
+            permessi: {
+              tipoPermesso: this.permissionType(),
+              utentiLettura: this.selectedUsersForReading(),
+              utentiScrittura: this.selectedUsersForWriting()
+            }
+          };
+          console.log('📝 Aggiornamento nota con permessi:', updateWithPermissions);
+          this.save.emit(updateWithPermissions);
+        } else {
+          // Solo modifica contenuto
+          const updateRequest: UpdateNoteRequest = {
+            id: this.note?.id || 0, // Aggiungo l'ID mancante
+            ...formData
+          };
+          console.log('📝 Aggiornamento nota senza permessi:', updateRequest);
+          this.save.emit(updateRequest);
+        }
+      } else {
+        // Creazione nuova nota
+        const createRequest: CreateNoteRequest = {
+          ...formData,
+          permessi: {
+            tipoPermesso: this.permissionType(),
+            utentiLettura: this.selectedUsersForReading(),
+            utentiScrittura: this.selectedUsersForWriting()
+          }
+        };
+        console.log('📝 Creazione nuova nota:', createRequest);
+        this.save.emit(createRequest);
+      }
+
+      // IMPORTANTE: Rilascia il lock dopo aver salvato
+      if (this.isEditMode()) {
+        console.log('🔓 Rilascio lock dopo salvataggio');
+        this.releaseLock();
+      }
+    } else {
+      console.log('❌ Form non valido:', this.noteForm.errors);
+      // Marca tutti i campi come "touched" per mostrare gli errori
+      Object.keys(this.noteForm.controls).forEach(key => {
+        this.noteForm.get(key)?.markAsTouched();
+      });
+    }
+  }
+
+  onCancel(): void {
+    console.log('❌ Cancellazione form - rilascio lock');
+    this.releaseLock(); // Rilascia lock quando chiudi
+    this.cancel.emit();
+  }
+
+  // Metodi di utilità per il template
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.noteForm.get(fieldName);
+    return !!(field && field.invalid && field.touched);
+  }
+
+  getFieldError(fieldName: string): string {
+    const field = this.noteForm.get(fieldName);
+    if (field && field.errors && field.touched) {
+      if (field.errors['required']) {
+        return `${fieldName} è obbligatorio`;
+      }
+      if (field.errors['maxlength']) {
+        return `${fieldName} troppo lungo`;
+      }
+    }
+    return '';
+  }
+
+  // Getter per il template
+  get isCharacterLimitWarning(): boolean {
+    return this.characterCount() > this.maxCharacters * 0.8;
+  }
+
+  get isCharacterLimitExceeded(): boolean {
+    return this.characterCount() > this.maxCharacters;
+  }
+
+  get lockStatusMessage(): string {
+    if (this.lockError()) {
+      return this.lockError()!;
+    }
+    if (this.isNoteLocked()) {
+      return `Nota bloccata per modifica`;
+    }
+    return '';
+  }
+
+  get showLockStatus(): boolean {
+    return this.isEditMode() && (this.isNoteLocked() || !!this.lockError());
+  }
+
+  // METODI MANCANTI PER IL TEMPLATE
+  onUserToggle(username: string): void {
+    const permissionType = this.permissionType();
+
+    if (permissionType === 'CONDIVISA_LETTURA') {
+      const current = this.selectedUsersForReading();
+      if (current.includes(username)) {
+        this.removeUserFromReading(username);
+      } else {
+        this.addUserToReading(username);
+      }
+    } else if (permissionType === 'CONDIVISA_SCRITTURA') {
+      const current = this.selectedUsersForWriting();
+      if (current.includes(username)) {
+        this.removeUserFromWriting(username);
+      } else {
+        this.addUserToWriting(username);
+      }
+    }
+  }
+
+  isUserSelected(username: string): boolean {
+    const permissionType = this.permissionType();
+
+    if (permissionType === 'CONDIVISA_LETTURA') {
+      return this.selectedUsersForReading().includes(username);
+    } else if (permissionType === 'CONDIVISA_SCRITTURA') {
+      return this.selectedUsersForWriting().includes(username);
+    }
+
+    return false;
   }
 
   onTagInputChange(event: Event): void {
@@ -231,35 +547,12 @@ export class NoteFormComponent implements OnInit, OnChanges {
     if (event.key === 'Enter') {
       event.preventDefault();
       this.addTag();
-    } else if (event.key === 'Backspace' && this.tagInputValue() === '' && this.selectedTags().length > 0) {
-      this.selectedTags.set(this.selectedTags().slice(0, -1));
-    }
-  }
-
-  addTag(): void {
-    const tagValue = this.tagInputValue().trim();
-    if (tagValue && !this.selectedTags().includes(tagValue) && tagValue.length <= 50) {
-      this.selectedTags.update(tags => [...tags, tagValue]);
-      this.tagInputValue.set('');
     }
   }
 
   canAddTag(): boolean {
-    const tagValue = this.tagInputValue().trim();
-    return tagValue.length > 0 &&
-      !this.selectedTags().includes(tagValue) &&
-      tagValue.length <= 50;
-  }
-
-  removeTag(tag: string): void {
-    this.selectedTags.update(tags => tags.filter(t => t !== tag));
-  }
-
-  addTagFromSuggestion(tag: string): void {
-    if (!this.selectedTags().includes(tag)) {
-      this.selectedTags.update(tags => [...tags, tag]);
-      this.tagInputValue.set('');
-    }
+    return this.tagInputValue().trim().length > 0 &&
+      !this.selectedTags().includes(this.tagInputValue().trim());
   }
 
   shouldShowTagSuggestions(): boolean {
@@ -268,92 +561,24 @@ export class NoteFormComponent implements OnInit, OnChanges {
 
   getFilteredTagSuggestions(): string[] {
     const input = this.tagInputValue().toLowerCase();
-    if (!input) return [];
+    const selectedTags = this.selectedTags();
 
     return this.allTags
-      .filter(tag =>
-        tag.toLowerCase().includes(input) &&
-        !this.selectedTags().includes(tag)
-      )
-      .slice(0, 5);
+      .filter(tag => tag.toLowerCase().includes(input) && !selectedTags.includes(tag))
+      .slice(0, 5); // Mostra max 5 suggerimenti
   }
 
-  onCartellaToggle(cartella: string): void {
+  addTagFromSuggestion(tag: string): void {
+    this.selectedTags.set([...this.selectedTags(), tag]);
+    this.tagInputValue.set('');
+  }
+
+  onCartellaToggle(cartellaNome: string): void {
     const current = this.selectedCartelle();
-    if (current.includes(cartella)) {
-      this.selectedCartelle.set(current.filter(c => c !== cartella));
+    if (current.includes(cartellaNome)) {
+      this.removeCartella(cartellaNome);
     } else {
-      this.selectedCartelle.set([...current, cartella]);
+      this.selectCartella(cartellaNome);
     }
-  }
-
-  onPermissionTypeChange(type: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA'): void {
-    console.log('Cambio tipo permesso a:', type);
-    console.log('Utenti disponibili:', this.availableUsers());
-    console.log('Numero utenti disponibili:', this.availableUsers().length);
-
-    this.permissionType.set(type);
-    if (type === 'PRIVATA') {
-      this.selectedUsersForReading.set([]);
-      this.selectedUsersForWriting.set([]);
-    }
-  }
-
-  onUserToggle(username: string, forWriting = false): void {
-    if (forWriting) {
-      const current = this.selectedUsersForWriting();
-      if (current.includes(username)) {
-        this.selectedUsersForWriting.set(current.filter(u => u !== username));
-      } else {
-        this.selectedUsersForWriting.set([...current, username]);
-        if (!this.selectedUsersForReading().includes(username)) {
-          this.selectedUsersForReading.set([...this.selectedUsersForReading(), username]);
-        }
-      }
-    } else {
-      const current = this.selectedUsersForReading();
-      if (current.includes(username)) {
-        this.selectedUsersForReading.set(current.filter(u => u !== username));
-        this.selectedUsersForWriting.set(this.selectedUsersForWriting().filter(u => u !== username));
-      } else {
-        this.selectedUsersForReading.set([...current, username]);
-      }
-    }
-  }
-
-  onSubmit(): void {
-    if (this.noteForm.valid) {
-      const formValue = this.noteForm.value;
-
-      if (this.isEditMode()) {
-        const updateRequest: UpdateNoteRequest = {
-          id: this.note!.id,
-          titolo: formValue.titolo.trim(),
-          contenuto: formValue.contenuto.trim(),
-          tags: this.selectedTags(),
-          cartelle: this.selectedCartelle()
-        };
-        this.save.emit(updateRequest);
-      } else {
-        const permission: Permission = {
-          tipoPermesso: this.permissionType(),
-          utentiLettura: this.selectedUsersForReading(),
-          utentiScrittura: this.selectedUsersForWriting()
-        };
-
-        const createRequest: CreateNoteRequest = {
-          titolo: formValue.titolo.trim(),
-          contenuto: formValue.contenuto.trim(),
-          tags: this.selectedTags(),
-          cartelle: this.selectedCartelle(),
-          permessi: permission
-        };
-        this.save.emit(createRequest);
-      }
-    }
-  }
-
-  onCancel(): void {
-    this.cancel.emit();
   }
 }

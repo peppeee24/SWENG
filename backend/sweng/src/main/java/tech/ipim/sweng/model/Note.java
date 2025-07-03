@@ -59,9 +59,21 @@ public class Note {
     @Column(name = "username")
     private Set<String> permessiScrittura = new HashSet<>();
 
-    public enum TipoPermesso {
-        PRIVATA, CONDIVISA_LETTURA, CONDIVISA_SCRITTURA
-    }
+    // Campi per il sistema di blocco - aggiornati per essere compatibili con la tua struttura
+    @Column(name = "is_locked_for_editing")
+    private Boolean isLockedForEditing = false;
+
+    @Column(name = "locked_by_user")
+    private String lockedByUser;
+
+    @Column(name = "lock_expires_at")
+    private LocalDateTime lockExpiresAt;
+
+    //Campo per il versionamento
+    @Column(name = "version_number")
+    private Long versionNumber = 1L;
+
+
 
     public Note() {
         this.dataCreazione = LocalDateTime.now();
@@ -75,12 +87,18 @@ public class Note {
         this.autore = autore;
     }
 
-    @PreUpdate
-    public void preUpdate() {
-        this.dataModifica = LocalDateTime.now();
+    @PrePersist
+    protected void onCreate() {
+        dataCreazione = LocalDateTime.now();
+        dataModifica = LocalDateTime.now();
     }
 
-    // Getters e Setters
+    @PreUpdate
+    protected void onUpdate() {
+        dataModifica = LocalDateTime.now();
+    }
+
+    // Getters e Setters esistenti
     public Long getId() {
         return id;
     }
@@ -169,20 +187,138 @@ public class Note {
         this.permessiScrittura = permessiScrittura;
     }
 
+    // Getters e Setters per il sistema di blocco - aggiornati
+    public Boolean getIsLockedForEditing() {
+        return isLockedForEditing;
+    }
+
+    public void setIsLockedForEditing(Boolean isLockedForEditing) {
+        this.isLockedForEditing = isLockedForEditing;
+    }
+
+    public String getLockedByUser() {
+        return lockedByUser;
+    }
+
+    public void setLockedByUser(String lockedByUser) {
+        this.lockedByUser = lockedByUser;
+    }
+
+    public LocalDateTime getLockExpiresAt() {
+        return lockExpiresAt;
+    }
+
+    public void setLockExpiresAt(LocalDateTime lockExpiresAt) {
+        this.lockExpiresAt = lockExpiresAt;
+    }
+
+    // Nuovo getter/setter per versionamento
+    public Long getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Long versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    // Metodi di utilità esistenti - mantenuti
+    public boolean isExpiredLock() {
+        return lockExpiresAt != null && LocalDateTime.now().isAfter(lockExpiresAt);
+    }
+
+    public boolean canBeEditedBy(String username) {
+        if (!isLockedForEditing || isExpiredLock()) {
+            return true;
+        }
+        return lockedByUser != null && lockedByUser.equals(username);
+    }
+
     public boolean isAutore(String username) {
         return this.autore != null && this.autore.getUsername().equals(username);
     }
 
     public boolean haPermessoLettura(String username) {
-        return isAutore(username) || 
-               this.tipoPermesso != TipoPermesso.PRIVATA && 
-               (this.permessiLettura.contains(username) || this.permessiScrittura.contains(username));
+        return isAutore(username) ||
+                this.tipoPermesso != TipoPermesso.PRIVATA &&
+                        (this.permessiLettura.contains(username) || this.permessiScrittura.contains(username));
     }
 
     public boolean haPermessoScrittura(String username) {
-        return isAutore(username) || 
-               (this.tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA && 
-                this.permessiScrittura.contains(username));
+        return isAutore(username) ||
+                (this.tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA &&
+                        this.permessiScrittura.contains(username));
+    }
+
+    public boolean hasWriteAccess(String username) {
+        if (autore.getUsername().equals(username)) {
+            return true;
+        }
+        return tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA &&
+                permessiScrittura.contains(username);
+    }
+
+    public boolean hasReadAccess(String username) {
+        if (autore.getUsername().equals(username)) {
+            return true;
+        }
+        if (tipoPermesso == TipoPermesso.PRIVATA) {
+            return false;
+        }
+        if (tipoPermesso == TipoPermesso.CONDIVISA_LETTURA) {
+            return permessiLettura.contains(username);
+        }
+        if (tipoPermesso == TipoPermesso.CONDIVISA_SCRITTURA) {
+            return permessiScrittura.contains(username);
+        }
+        return false;
+    }
+
+    // Nuovi metodi di utilità per il sistema di blocco migliorato
+    public boolean isLocked() {
+        return Boolean.TRUE.equals(isLockedForEditing) &&
+                lockExpiresAt != null &&
+                LocalDateTime.now().isBefore(lockExpiresAt);
+    }
+
+    public boolean isLockedBy(String username) {
+        return isLocked() && lockedByUser != null && lockedByUser.equals(username);
+    }
+
+    public void lockFor(String username, int lockDurationMinutes) {
+        this.isLockedForEditing = true;
+        this.lockedByUser = username;
+        this.lockExpiresAt = LocalDateTime.now().plusMinutes(lockDurationMinutes);
+    }
+
+    public void unlock() {
+        this.isLockedForEditing = false;
+        this.lockedByUser = null;
+        this.lockExpiresAt = null;
+    }
+
+    public void incrementVersion() {
+        this.versionNumber = (this.versionNumber == null ? 1L : this.versionNumber + 1);
+    }
+
+    public boolean hasExpiredLock() {
+        return Boolean.TRUE.equals(isLockedForEditing) &&
+                lockExpiresAt != null &&
+                LocalDateTime.now().isAfter(lockExpiresAt);
+    }
+
+    public void updateModificationTime() {
+        this.dataModifica = LocalDateTime.now();
+    }
+
+    // Metodo migliorato per verificare se può essere modificata - integra i tuoi metodi esistenti
+    public boolean canBeModifiedBy(String username) {
+        // Prima verifica i permessi di scrittura
+        if (!hasWriteAccess(username)) {
+            return false;
+        }
+
+        // Poi verifica il blocco
+        return canBeEditedBy(username);
     }
 
     @Override
@@ -193,6 +329,9 @@ public class Note {
                 ", autore=" + (autore != null ? autore.getUsername() : "null") +
                 ", dataCreazione=" + dataCreazione +
                 ", tipoPermesso=" + tipoPermesso +
+                ", isLocked=" + isLocked() +
+                ", lockedBy='" + lockedByUser + '\'' +
+                ", versionNumber=" + versionNumber +
                 '}';
     }
 }

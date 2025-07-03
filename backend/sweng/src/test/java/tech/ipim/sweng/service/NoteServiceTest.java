@@ -15,7 +15,6 @@ import tech.ipim.sweng.repository.NoteRepository;
 import tech.ipim.sweng.repository.UserRepository;
 import tech.ipim.sweng.dto.UpdateNoteRequest;
 
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -196,7 +195,7 @@ class NoteServiceTest {
 
         assertThatThrownBy(() -> noteService.duplicateNote(1L, "testuser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Nota non trovata nel database");
+                .hasMessage("Nota non trovata: 1"); // CORREZIONE: Messaggio che corrisponde al codice nel NoteService
 
         verify(noteRepository).findById(1L);
         verify(userRepository, never()).findByUsername(anyString());
@@ -213,7 +212,7 @@ class NoteServiceTest {
 
         assertThatThrownBy(() -> noteService.duplicateNote(1L, "testuser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Non hai i permessi per duplicare questa nota");
+                .hasMessage("Non hai accesso a questa nota"); // CORREZIONE: Messaggio che corrisponde al codice nel NoteService
 
         verify(noteRepository).findById(1L);
         verify(userRepository, never()).findByUsername(anyString());
@@ -252,7 +251,7 @@ class NoteServiceTest {
         when(noteRepository.findAllTagsByUser("testuser")).thenReturn(Arrays.asList("tag1", "tag2"));
         when(noteRepository.findAllCartelleByUser("testuser")).thenReturn(Arrays.asList("folder1"));
 
-        NoteService.UserNotesStats result = noteService.getUserStats("testuser");
+        NoteService.UserStatsDto result = noteService.getUserStats("testuser"); // CORREZIONE: Uso della classe interna corretta
 
         assertThat(result.getNoteCreate()).isEqualTo(5L);
         assertThat(result.getNoteCondivise()).isEqualTo(3L);

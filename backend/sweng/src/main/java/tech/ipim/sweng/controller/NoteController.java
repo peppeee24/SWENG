@@ -6,14 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-import tech.ipim.sweng.dto.CreateNoteRequest;
-import tech.ipim.sweng.dto.NoteDto;
-import tech.ipim.sweng.dto.NoteResponse;
+import tech.ipim.sweng.dto.*;
+import tech.ipim.sweng.service.NoteLockService;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
-import tech.ipim.sweng.dto.UpdateNoteRequest;
-import tech.ipim.sweng.dto.PermissionDto;
-
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,37 +19,37 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/notes")
 @CrossOrigin(
-    origins = {"http://localhost:4200", "http://127.0.0.1:4200"}, 
-    allowedHeaders = "*",
-    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
-    allowCredentials = "true"
+        origins = {"http://localhost:4200", "http://127.0.0.1:4200"},
+        allowedHeaders = "*",
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+        allowCredentials = "true"
 )
 public class NoteController {
 
     private final NoteService noteService;
     private final JwtUtil jwtUtil;
+    private final NoteLockService noteLockService;
 
     @Autowired
-    public NoteController(NoteService noteService, JwtUtil jwtUtil) {
+    public NoteController(NoteService noteService, JwtUtil jwtUtil, NoteLockService noteLockService) {
         this.noteService = noteService;
         this.jwtUtil = jwtUtil;
+        this.noteLockService = noteLockService;
     }
 
-  
     @PostMapping
     public ResponseEntity<?> createNote(@Valid @RequestBody CreateNoteRequest request,
-                                       BindingResult bindingResult,
-                                       @RequestHeader("Authorization") String authHeader) {
-        
+                                        BindingResult bindingResult,
+                                        @RequestHeader("Authorization") String authHeader) {
+
         System.out.println("POST /api/notes - Creazione nota");
-        
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(NoteResponse.error("Token non valido"));
         }
 
-       
         if (bindingResult.hasErrors()) {
             Map<String, String> errors = new HashMap<>();
             bindingResult.getFieldErrors().forEach(error ->
@@ -81,10 +77,10 @@ public class NoteController {
 
     @GetMapping
     public ResponseEntity<?> getAllNotes(@RequestHeader("Authorization") String authHeader,
-                                        @RequestParam(value = "filter", defaultValue = "all") String filter) {
-        
+                                         @RequestParam(value = "filter", defaultValue = "all") String filter) {
+
         System.out.println("GET /api/notes - Filter: " + filter);
-        
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -93,7 +89,7 @@ public class NoteController {
 
         try {
             List<NoteDto> notes;
-            
+
             switch (filter) {
                 case "own":
                     notes = noteService.getUserNotes(username);
@@ -121,11 +117,10 @@ public class NoteController {
         }
     }
 
-    
     @GetMapping("/{id}")
     public ResponseEntity<?> getNoteById(@PathVariable Long id,
-                                        @RequestHeader("Authorization") String authHeader) {
-        
+                                         @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -134,7 +129,7 @@ public class NoteController {
 
         try {
             Optional<NoteDto> note = noteService.getNoteById(id, username);
-            
+
             if (note.isPresent()) {
                 return ResponseEntity.ok(NoteResponse.success("Nota trovata", note.get()));
             } else {
@@ -149,11 +144,10 @@ public class NoteController {
         }
     }
 
-    
     @GetMapping("/search")
     public ResponseEntity<?> searchNotes(@RequestParam("q") String keyword,
-                                        @RequestHeader("Authorization") String authHeader) {
-        
+                                         @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -162,7 +156,7 @@ public class NoteController {
 
         try {
             List<NoteDto> notes = noteService.searchNotes(username, keyword);
-            
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "notes", notes,
@@ -179,8 +173,8 @@ public class NoteController {
 
     @GetMapping("/filter/tag/{tag}")
     public ResponseEntity<?> getNotesByTag(@PathVariable String tag,
-                                          @RequestHeader("Authorization") String authHeader) {
-        
+                                           @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -189,7 +183,7 @@ public class NoteController {
 
         try {
             List<NoteDto> notes = noteService.getNotesByTag(username, tag);
-            
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "notes", notes,
@@ -204,11 +198,10 @@ public class NoteController {
         }
     }
 
-    
     @GetMapping("/filter/cartella/{cartella}")
     public ResponseEntity<?> getNotesByCartella(@PathVariable String cartella,
-                                               @RequestHeader("Authorization") String authHeader) {
-        
+                                                @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -217,7 +210,7 @@ public class NoteController {
 
         try {
             List<NoteDto> notes = noteService.getNotesByCartella(username, cartella);
-            
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "notes", notes,
@@ -232,14 +225,10 @@ public class NoteController {
         }
     }
 
-    /**
-     * Duplica una nota
-     * POST /api/notes/{id}/duplicate
-     */
     @PostMapping("/{id}/duplicate")
     public ResponseEntity<?> duplicateNote(@PathVariable Long id,
-                                          @RequestHeader("Authorization") String authHeader) {
-        
+                                           @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -248,7 +237,7 @@ public class NoteController {
 
         try {
             NoteDto duplicatedNote = noteService.duplicateNote(id, username);
-            
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(NoteResponse.success("Nota duplicata con successo", duplicatedNote));
 
@@ -262,14 +251,10 @@ public class NoteController {
         }
     }
 
-    /**
-     * Elimina una nota
-     * DELETE /api/notes/{id}
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteNote(@PathVariable Long id,
-                                       @RequestHeader("Authorization") String authHeader) {
-        
+                                        @RequestHeader("Authorization") String authHeader) {
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -278,7 +263,7 @@ public class NoteController {
 
         try {
             boolean deleted = noteService.deleteNote(id, username);
-            
+
             if (deleted) {
                 return ResponseEntity.ok(NoteResponse.success("Nota eliminata con successo"));
             } else {
@@ -295,7 +280,6 @@ public class NoteController {
                     .body(NoteResponse.error("Errore durante l'eliminazione"));
         }
     }
-
 
     @DeleteMapping("/{id}/sharing")
     public ResponseEntity<?> removeFromSharing(@PathVariable Long id,
@@ -326,17 +310,13 @@ public class NoteController {
         }
     }
 
-    /**
-     * Aggiorna una nota esistente
-     * PUT /api/notes/{id}
-     */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateNote(@PathVariable Long id,
                                         @Valid @RequestBody UpdateNoteRequest request,
                                         BindingResult bindingResult,
                                         @RequestHeader("Authorization") String authHeader) {
 
-        System.out.println("PUT /api/notes/" + id + " - Aggiornamento nota");
+        System.out.println("PUT /api/notes/" + id + " - Aggiornamento nota con verifica blocco");
 
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
@@ -344,7 +324,6 @@ public class NoteController {
                     .body(NoteResponse.error("Token non valido"));
         }
 
-        // Validazione dei dati
         if (bindingResult.hasErrors()) {
             Map<String, String> errors = new HashMap<>();
             bindingResult.getFieldErrors().forEach(error ->
@@ -357,13 +336,24 @@ public class NoteController {
             ));
         }
 
-        // Imposta l'ID dalla URL (per sicurezza)
-        request.setId(id);
-
         try {
-            NoteDto updatedNote = noteService.updateNote(id, request, username);
-            System.out.println("Nota aggiornata con successo: " + updatedNote.getId());
+            LockStatusDto lockStatus = noteLockService.getLockStatus(id, username);
 
+            if (lockStatus.isLocked() && !lockStatus.canEdit()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(NoteResponse.error("La nota è in modifica da " + lockStatus.getLockedBy()));
+            }
+
+            if (!lockStatus.isLocked() && !noteLockService.tryLockNote(id, username)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(NoteResponse.error("Impossibile acquisire il lock sulla nota"));
+            }
+
+            request.setId(id);
+            NoteDto updatedNote = noteService.updateNote(id, request, username);
+            noteLockService.unlockNote(id, username);
+
+            System.out.println("Nota aggiornata e sbloccata con successo: " + updatedNote.getId());
             return ResponseEntity.ok(NoteResponse.success("Nota aggiornata con successo", updatedNote));
 
         } catch (RuntimeException e) {
@@ -377,13 +367,9 @@ public class NoteController {
         }
     }
 
-    /**
-     * Recupera statistiche utente
-     * GET /api/notes/stats
-     */
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats(@RequestHeader("Authorization") String authHeader) {
-        
+
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -391,8 +377,8 @@ public class NoteController {
         }
 
         try {
-            NoteService.UserNotesStats stats = noteService.getUserStats(username);
-            
+            NoteService.UserStatsDto stats = noteService.getUserStats(username);
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "stats", Map.of(
@@ -411,23 +397,6 @@ public class NoteController {
                     .body(NoteResponse.error("Errore durante il recupero delle statistiche"));
         }
     }
-
-    /**
-     * Estrae lo username dal token JWT
-     */
-    private String extractUsernameFromAuth(String authHeader) {
-        try {
-            String token = jwtUtil.extractTokenFromHeader(authHeader);
-            if (token != null && jwtUtil.isTokenValid(token)) {
-                return jwtUtil.extractUsername(token);
-            }
-        } catch (Exception e) {
-            System.err.println("Errore validazione token: " + e.getMessage());
-        }
-        return null;
-    }
-
-
 
     @PutMapping("/{id}/permissions")
     public ResponseEntity<?> updateNotePermissions(@PathVariable Long id,
@@ -478,5 +447,134 @@ public class NoteController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(NoteResponse.error("Errore interno del server"));
         }
+    }
+
+    @PostMapping("/{id}/lock")
+    public ResponseEntity<?> lockNote(@PathVariable Long id,
+                                      @RequestHeader("Authorization") String authHeader) {
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            boolean locked = noteLockService.tryLockNote(id, username);
+
+            if (locked) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Nota bloccata per la modifica",
+                        "lockedBy", username
+                ));
+            } else {
+                String lockedBy = noteLockService.getNoteLockOwner(id);
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(NoteResponse.error("Nota già in modifica da " + lockedBy));
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore blocco nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il blocco della nota"));
+        }
+    }
+
+    @DeleteMapping("/{id}/lock")
+    public ResponseEntity<?> unlockNote(@PathVariable Long id,
+                                        @RequestHeader("Authorization") String authHeader) {
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            noteLockService.unlockNote(id, username);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Nota sbloccata con successo"
+            ));
+
+        } catch (Exception e) {
+            System.err.println("Errore sblocco nota: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante lo sblocco della nota"));
+        }
+    }
+
+    @GetMapping("/{id}/lock-status")
+    public ResponseEntity<?> getLockStatus(@PathVariable Long id,
+                                           @RequestHeader("Authorization") String authHeader) {
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            LockStatusDto status = noteLockService.getLockStatus(id, username);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "locked", status.isLocked(),
+                    "lockedBy", status.getLockedBy(),
+                    "lockExpiresAt", status.getLockExpiresAt(),
+                    "canEdit", status.canEdit()
+            ));
+
+        } catch (Exception e) {
+            System.err.println("Errore stato blocco: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il recupero dello stato del blocco"));
+        }
+    }
+
+    @PutMapping("/{id}/extend-lock")
+    public ResponseEntity<?> extendLock(@PathVariable Long id,
+                                        @RequestHeader("Authorization") String authHeader) {
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            boolean canEdit = noteLockService.canUserEditNote(id, username);
+
+            if (!canEdit) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error("Non puoi estendere il blocco di questa nota"));
+            }
+
+            noteLockService.extendNoteLock(id, username);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Blocco esteso con successo"
+            ));
+
+        } catch (Exception e) {
+            System.err.println("Errore estensione blocco: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante l'estensione del blocco"));
+        }
+    }
+
+    private String extractUsernameFromAuth(String authHeader) {
+        try {
+            String token = jwtUtil.extractTokenFromHeader(authHeader);
+            if (token != null && jwtUtil.isTokenValid(token)) {
+                return jwtUtil.extractUsername(token);
+            }
+        } catch (Exception e) {
+            System.err.println("Errore validazione token: " + e.getMessage());
+        }
+        return null;
     }
 }
