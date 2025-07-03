@@ -1,0 +1,164 @@
+<!-- note-version-history.component.html -->
+
+@if (isVisible) {
+  <div class="modal-overlay" (click)="onClose()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <!-- Header del modal -->
+      <div class="modal-header">
+        <h2>📋 Cronologia Versioni</h2>
+        <button class="close-btn" (click)="onClose()" type="button">✕</button>
+      </div>
+
+      <!-- Contenuto principale -->
+      <div class="version-history-content">
+        <!-- Loading State -->
+        @if (isLoading()) {
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Caricamento cronologia...</p>
+          </div>
+        }
+
+        <!-- Error State -->
+        @if (error()) {
+          <div class="error-state">
+            <div class="error-icon">⚠️</div>
+            <h3>Errore</h3>
+            <p>{{ error() }}</p>
+            <button class="retry-btn" (click)="loadVersionHistory()">
+              🔄 Riprova
+            </button>
+          </div>
+        }
+
+        <!-- Versions List -->
+        @if (!isLoading() && !error()) {
+          @if (sortedVersions().length > 0) {
+            <div class="versions-list">
+              @for (version of sortedVersions(); track version.id) {
+                <div
+                  class="version-item"
+                  [class]="getVersionBadgeClass(version)"
+                  (click)="onVersionSelect(version)">
+
+                  <div class="version-header">
+                    <div class="version-badge">
+                      <span class="version-icon">{{ getVersionIcon(version) }}</span>
+                      <span class="version-number">Versione {{ version.versionNumber }}</span>
+                      @if (sortedVersions().length > 0 && version.versionNumber === sortedVersions()[0].versionNumber) {
+                        <span class="latest-badge">Attuale</span>
+                      }
+                    </div>
+
+                    <div class="version-meta">
+                      <span class="version-author">👤 {{ version.createdBy }}</span>
+                      <span class="version-date">🕒 {{ getRelativeTime(version.createdAt) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="version-content">
+                    <h4 class="version-title">{{ version.titolo }}</h4>
+                    <p class="version-preview">{{ version.contenuto }}</p>
+
+                    @if (version.changeDescription) {
+                      <div class="change-description">
+                        <span class="change-label">Modifiche:</span>
+                        <span class="change-text">{{ version.changeDescription }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Actions -->
+                  @if (sortedVersions().length > 0 && version.versionNumber !== sortedVersions()[0].versionNumber) {
+                    <div class="version-actions">
+                      <button
+                        class="restore-btn"
+                        (click)="onRestoreVersion(version); $event.stopPropagation()"
+                        title="Ripristina questa versione">
+                        🔄 Ripristina
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="versions-summary">
+              <div class="summary-stats">
+                <div class="stat-item">
+                  <span class="stat-number">{{ sortedVersions().length }}</span>
+                  <span class="stat-label">Versioni Totali</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-number">{{ uniqueContributorsCount }}</span>
+                  <span class="stat-label">Contributori</span>
+                </div>
+              </div>
+            </div>
+
+          } @else {
+            <!-- Empty State -->
+            <div class="empty-state">
+              <div class="empty-icon">📋</div>
+              <h3>Nessuna versione</h3>
+              <p>Questa nota non ha versioni precedenti.</p>
+            </div>
+          }
+        }
+
+        <!-- Version Comparison (se selezionata una versione) -->
+        @if (showComparison() && selectedVersion()) {
+          <div class="version-comparison">
+            <div class="comparison-header">
+              <h3>
+                {{ getVersionIcon(selectedVersion()!) }}
+                Versione {{ selectedVersion()!.versionNumber }}
+              </h3>
+              <div class="comparison-meta">
+                <span class="details-author">👤 {{ selectedVersion()!.createdBy }}</span>
+                <span class="details-date">📅 {{ formatDate(selectedVersion()!.createdAt) }}</span>
+              </div>
+            </div>
+
+            @if (selectedVersion()!.changeDescription) {
+              <div class="change-details">
+                <h4>📝 Descrizione modifiche</h4>
+                <p>{{ selectedVersion()!.changeDescription }}</p>
+              </div>
+            }
+
+            <div class="content-details">
+              <div class="detail-section">
+                <h4>📝 Titolo</h4>
+                <div class="content-preview">
+                  {{ selectedVersion()!.titolo }}
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <h4>📄 Contenuto</h4>
+                <div class="content-preview">
+                  {{ selectedVersion()!.contenuto }}
+                </div>
+                <div class="content-stats">
+                  Caratteri: {{ selectedVersion()!.contenuto.length }}
+                </div>
+              </div>
+
+              @if (sortedVersions().length > 0 && selectedVersion()!.versionNumber !== sortedVersions()[0].versionNumber) {
+                <div class="restore-section">
+                  <button
+                    class="restore-full-btn"
+                    (click)="onRestoreVersion(selectedVersion()!)">
+                    🔄 Ripristina questa versione
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

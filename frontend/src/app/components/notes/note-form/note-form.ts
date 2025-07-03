@@ -8,6 +8,13 @@ import { CreateNoteRequest, Note, Permission, UpdateNoteRequest, UpdateNoteReque
 import { interval, Subscription } from 'rxjs';
 import { AuthService } from '../../../services/auth';
 
+// Interfaccia per i permessi (definita all'interno del file)
+interface PermissionsRequest {
+  tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
+  utentiLettura: string[];
+  utentiScrittura: string[];
+}
+
 @Component({
   selector: 'app-note-form',
   standalone: true,
@@ -20,6 +27,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
   private cartelleService = inject(CartelleService);
   private userService = inject(UserService);
   private notesService = inject(NotesService);
+  private authService = inject(AuthService);
 
   @Input() note: Note | null = null;
   @Input() isVisible = false;
@@ -46,8 +54,6 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     console.log('isEditMode computed called, note:', this.noteSignal(), 'result:', editMode);
     return editMode;
   });
-
-private authService = inject(AuthService);
 
   isOwner = computed(() => {
     const note = this.noteSignal();
@@ -122,15 +128,15 @@ private authService = inject(AuthService);
   }
 
   private loadUsers(): void {
-    console.log('---Caricamento utenti...');
+    console.log(' Caricamento utenti...');
     this.userService.getAllUsers().subscribe({
       next: (users) => {
-        console.log('-----Utenti caricati:', users);
-        console.log('-----Numero utenti:', users.length);
-        console.log('-----Signal utenti:', this.availableUsers());
+        console.log(' Utenti caricati:', users);
+        console.log(' Numero utenti:', users.length);
+        console.log(' Signal utenti:', this.availableUsers());
       },
       error: (error) => {
-        console.error('Errore caricamento utenti:', error);
+        console.error(' Errore caricamento utenti:', error);
       }
     });
   }
@@ -138,31 +144,31 @@ private authService = inject(AuthService);
   // SISTEMA DI LOCK - METODI PRINCIPALI
   private async acquireLock(): Promise<boolean> {
     if (!this.note?.id) {
-      console.log('🆕 Nuova nota, non serve lock');
+      console.log(' Nuova nota, non serve lock');
       return true; // Nuova nota, non serve lock
     }
 
-    console.log('🔒 Tentativo di acquisire lock per nota:', this.note.id);
+    console.log(' Tentativo di acquisire lock per nota:', this.note.id);
     this.lockError.set(null);
 
     try {
       const response = await this.notesService.lockNote(this.note.id).toPromise();
 
       if (response?.success) {
-        console.log('✅ Lock acquisito con successo per nota:', this.note.id);
+        console.log(' Lock acquisito con successo per nota:', this.note.id);
         this.isNoteLocked.set(true);
         this.lockedByUser.set(response.lockedBy || 'current_user');
         this.startLockRefresh();
         return true;
       } else {
         const errorMsg = response?.message || 'Nota già in modifica';
-        console.log('❌ Lock non acquisito:', errorMsg);
+        console.log(' Lock non acquisito:', errorMsg);
         this.lockError.set(errorMsg);
         alert(`Impossibile modificare la nota: ${errorMsg}`);
         return false;
       }
     } catch (error: any) {
-      console.error('❌ Errore acquisizione lock:', error);
+      console.error(' Errore acquisizione lock:', error);
       const errorMsg = error.error?.message || 'La nota è già in modifica da un altro utente';
       this.lockError.set(errorMsg);
       alert(`Errore: ${errorMsg}`);
@@ -173,24 +179,24 @@ private authService = inject(AuthService);
   private startLockRefresh(): void {
     if (!this.note?.id) return;
 
-    console.log('🔄 Avvio refresh automatico lock per nota:', this.note.id);
+    console.log(' Avvio refresh automatico lock per nota:', this.note.id);
 
     // Rinnova il lock ogni 90 secondi (il lock dura 2 minuti)
     this.lockRefreshSubscription = interval(90000).subscribe(() => {
       if (this.note?.id && this.isNoteLocked()) {
-        console.log('🔄 Rinnovo automatico lock...');
+        console.log(' Rinnovo automatico lock...');
         this.notesService.refreshLock(this.note.id).subscribe({
           next: (response) => {
             if (response?.success && this.note?.id) {
-              console.log('✅ Lock rinnovato automaticamente per nota:', this.note.id);
+              console.log(' Lock rinnovato automaticamente per nota:', this.note.id);
             } else {
-              console.warn('⚠️ Errore rinnovo lock:', response?.message);
+              console.warn('️ Errore rinnovo lock:', response?.message);
               this.isNoteLocked.set(false);
               this.lockError.set('Lock scaduto - la nota potrebbe essere modificata da altri');
             }
           },
           error: (error) => {
-            console.error('❌ Errore rinnovo automatico lock:', error);
+            console.error(' Errore rinnovo automatico lock:', error);
             this.isNoteLocked.set(false);
             this.lockError.set('Lock scaduto - riprova ad aprire la nota');
           }
@@ -201,16 +207,16 @@ private authService = inject(AuthService);
 
   private releaseLock(): void {
     if (this.note?.id && this.isNoteLocked()) {
-      console.log('🔓 Rilascio lock per nota:', this.note.id);
+      console.log(' Rilascio lock per nota:', this.note.id);
 
       this.notesService.unlockNote(this.note.id).subscribe({
         next: (response) => {
           if (this.note?.id) {
-            console.log('✅ Lock rilasciato con successo per nota:', this.note.id);
+            console.log('Lock rilasciato con successo per nota:', this.note.id);
           }
         },
         error: (error) => {
-          console.error('❌ Errore rilascio lock:', error);
+          console.error(' Errore rilascio lock:', error);
         }
       });
     }
@@ -224,56 +230,143 @@ private authService = inject(AuthService);
     if (this.lockRefreshSubscription) {
       this.lockRefreshSubscription.unsubscribe();
       this.lockRefreshSubscription = undefined;
-      console.log('🛑 Fermato refresh automatico lock');
+      console.log(' Fermato refresh automatico lock');
     }
+  }
+
+  onPermissionsSave(): void {
+    if (!this.note) {
+      console.error(' Errore: nessuna nota selezionata per il cambio permessi');
+      return;
+    }
+
+    // Debug dello stato corrente
+    console.log(' Stato PRIMA del cambio permessi:');
+    console.log('   - Nota ID:', this.note.id);
+    console.log('   - Tipo permesso attuale:', this.note.tipoPermesso);
+    console.log('   - Permessi lettura attuali:', this.note.permessiLettura);
+    console.log('   - Permessi scrittura attuali:', this.note.permessiScrittura);
+
+    // Debug dei valori del form
+    console.log(' Valori dal form:');
+    console.log('   - permissionType():', this.permissionType());
+    console.log('   - selectedUsersForReading():', this.selectedUsersForReading());
+    console.log('   - selectedUsersForWriting():', this.selectedUsersForWriting());
+
+    const permessi: PermissionsRequest = {
+      tipoPermesso: this.permissionType(),
+      utentiLettura: this.selectedUsersForReading(),
+      utentiScrittura: this.selectedUsersForWriting()
+    };
+
+    console.log(' Permessi da inviare al server:', permessi);
+
+    // Verifica che i dati siano validi
+    if (!permessi.tipoPermesso) {
+      console.error(' Errore: tipo permesso non valido');
+      alert('Errore: tipo permesso non valido');
+      return;
+    }
+
+    console.log(' Invio richiesta al server...');
+
+    this.notesService.updateNotePermissions(this.note.id, permessi).subscribe({
+      next: (response) => {
+        console.log(' Risposta ricevuta dal server:', response);
+
+        if (response.success) {
+          console.log(' Permessi salvati con successo');
+          console.log(' Nota aggiornata:', response.note || response.data);
+
+          // Verifica che la nota sia stata aggiornata correttamente
+          const updatedNote = response.note || response.data;
+          if (updatedNote) {
+            console.log(' Verifica stato DOPO il salvataggio:');
+            console.log('   - Tipo permesso nuovo:', updatedNote.tipoPermesso);
+            console.log('   - Permessi lettura nuovi:', updatedNote.permessiLettura);
+            console.log('   - Permessi scrittura nuovi:', updatedNote.permessiScrittura);
+          }
+
+          // Forza il refresh della nota dopo un piccolo delay
+          console.log(' Avvio refresh della nota...');
+          setTimeout(() => {
+            this.notesService.refreshNote(this.note!.id);
+            console.log(' Refresh completato');
+          }, 500);
+
+          // Chiudi il form e mostra messaggio
+          this.cancel.emit();
+          alert('Permessi aggiornati con successo!');
+        } else {
+          console.error(' Errore: risposta del server indica fallimento');
+          console.error('   - Messaggio:', response.message);
+          alert('Errore durante l\'aggiornamento dei permessi: ' + (response.message || 'Errore sconosciuto'));
+        }
+      },
+      error: (error) => {
+        console.error(' Errore durante la chiamata al server:', error);
+        console.error('   - Status:', error.status);
+        console.error('   - Message:', error.message);
+        console.error('   - Error body:', error.error);
+
+        let errorMessage = 'Errore durante l\'aggiornamento dei permessi';
+        if (error.error?.message) {
+          errorMessage += ': ' + error.error.message;
+        } else if (error.message) {
+          errorMessage += ': ' + error.message;
+        }
+
+        alert(errorMessage);
+      }
+    });
   }
 
   async ngOnChanges(changes: SimpleChanges): Promise<void> {
     console.log('ngOnChanges triggered:', changes);
     console.log('note value:', this.note);
-    console.log('isVisible value:', this.isVisible);
+    console.log(' isVisible value:', this.isVisible);
 
     // Aggiorna il signal quando cambia l'input
     if (changes['note']) {
       this.noteSignal.set(this.note);
-      console.log('noteSignal updated to:', this.noteSignal());
-      console.log('isEditMode after signal update:', this.isEditMode());
+      console.log(' noteSignal updated to:', this.noteSignal());
+      console.log('✏ isEditMode after signal update:', this.isEditMode());
     }
 
     if (changes['isVisible']) {
       if (!changes['isVisible'].currentValue && changes['isVisible'].previousValue) {
         // Modal chiuso - rilascia lock
-        console.log('📝 Modal chiuso - rilascio lock');
+        console.log(' Modal chiuso - rilascio lock');
         this.releaseLock();
         this.resetForm();
       } else if (changes['isVisible'].currentValue && !changes['isVisible'].previousValue) {
         // Modal aperto
-        console.log('📝 Modal aperto');
+        console.log(' Modal aperto');
         this.noteSignal.set(this.note);
 
         if (this.note) {
           // ACQUISIRE LOCK PRIMA DI CARICARE I DATI
-          console.log('📝 Nota esistente - acquisizione lock necessaria');
+          console.log(' Nota esistente - acquisizione lock necessaria');
           const lockAcquired = await this.acquireLock();
 
           if (lockAcquired) {
-            console.log('✅ Lock acquisito - caricamento dati nota');
+            console.log(' Lock acquisito - caricamento dati nota');
             this.loadNoteData();
           } else {
-            console.log('❌ Lock non acquisito - chiusura modal');
+            console.log(' Lock non acquisito - chiusura modal');
             // Se non riesci ad acquisire il lock, chiudi il modal
             this.cancel.emit();
             return;
           }
         } else {
-          console.log('📝 Nuova nota - nessun lock necessario');
+          console.log(' Nuova nota - nessun lock necessario');
           this.resetForm();
         }
       }
     }
 
     if (changes['note']) {
-      console.log('Note changed from', changes['note'].previousValue, 'to', changes['note'].currentValue);
+      console.log(' Note changed from', changes['note'].previousValue, 'to', changes['note'].currentValue);
       if (this.note && this.isVisible) {
         this.loadNoteData();
       } else if (!this.note && this.isVisible) {
@@ -285,9 +378,8 @@ private authService = inject(AuthService);
   private loadNoteData() {
     if (!this.note) return;
 
-    console.log('Loading note data:', this.note);
-    console.log('Note author:', this.note.autore);
-    // Rimuovo la chiamata a getCurrentUser() che non esiste
+    console.log(' Loading note data:', this.note);
+    console.log(' Note author:', this.note.autore);
 
     this.noteForm.patchValue({
       titolo: this.note.titolo,
@@ -396,7 +488,7 @@ private authService = inject(AuthService);
 
   onSubmit(): void {
     if (this.noteForm.valid) {
-      console.log('📝 Submitting form...');
+      console.log(' Submitting form...');
 
       const formData = {
         titolo: this.noteForm.value.titolo,
@@ -410,7 +502,7 @@ private authService = inject(AuthService);
         if (this.canEditPermissions()) {
           // Se può modificare i permessi, invia anche quelli
           const updateWithPermissions: UpdateNoteRequestWithPermissions = {
-            id: this.note?.id || 0, // Aggiungo l'ID mancante
+            id: this.note?.id || 0,
             ...formData,
             permessi: {
               tipoPermesso: this.permissionType(),
@@ -418,15 +510,15 @@ private authService = inject(AuthService);
               utentiScrittura: this.selectedUsersForWriting()
             }
           };
-          console.log('📝 Aggiornamento nota con permessi:', updateWithPermissions);
+          console.log(' Aggiornamento nota con permessi:', updateWithPermissions);
           this.save.emit(updateWithPermissions);
         } else {
           // Solo modifica contenuto
           const updateRequest: UpdateNoteRequest = {
-            id: this.note?.id || 0, // Aggiungo l'ID mancante
+            id: this.note?.id || 0,
             ...formData
           };
-          console.log('📝 Aggiornamento nota senza permessi:', updateRequest);
+          console.log('Aggiornamento nota senza permessi:', updateRequest);
           this.save.emit(updateRequest);
         }
       } else {
@@ -439,17 +531,17 @@ private authService = inject(AuthService);
             utentiScrittura: this.selectedUsersForWriting()
           }
         };
-        console.log('📝 Creazione nuova nota:', createRequest);
+        console.log(' Creazione nuova nota:', createRequest);
         this.save.emit(createRequest);
       }
 
       // IMPORTANTE: Rilascia il lock dopo aver salvato
       if (this.isEditMode()) {
-        console.log('🔓 Rilascio lock dopo salvataggio');
+        console.log(' Rilascio lock dopo salvataggio');
         this.releaseLock();
       }
     } else {
-      console.log('❌ Form non valido:', this.noteForm.errors);
+      console.log(' Form non valido:', this.noteForm.errors);
       // Marca tutti i campi come "touched" per mostrare gli errori
       Object.keys(this.noteForm.controls).forEach(key => {
         this.noteForm.get(key)?.markAsTouched();
@@ -458,7 +550,7 @@ private authService = inject(AuthService);
   }
 
   onCancel(): void {
-    console.log('❌ Cancellazione form - rilascio lock');
+    console.log(' Cancellazione form - rilascio lock');
     this.releaseLock(); // Rilascia lock quando chiudi
     this.cancel.emit();
   }

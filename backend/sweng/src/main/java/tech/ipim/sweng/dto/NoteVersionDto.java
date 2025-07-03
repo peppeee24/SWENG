@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class NoteVersionDto {
 
     private Long id;
+    private Long noteId;
     private Integer versionNumber;
     private String contenuto;
     private String titolo;
@@ -18,6 +19,7 @@ public class NoteVersionDto {
 
     public NoteVersionDto(NoteVersion version) {
         this.id = version.getId();
+        this.noteId = version.getNote().getId();
         this.versionNumber = version.getVersionNumber();
         this.contenuto = version.getContenuto();
         this.titolo = version.getTitolo();
@@ -81,4 +83,13 @@ public class NoteVersionDto {
     public void setChangeDescription(String changeDescription) {
         this.changeDescription = changeDescription;
     }
+
+    public Long getNoteId() {
+        return noteId;
+    }
+
+    public void setNoteId(Long noteId) {
+        this.noteId = noteId;
+    }
+
 }

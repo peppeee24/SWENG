@@ -44,6 +44,17 @@ public class NoteVersionService {
         return noteVersionRepository.findByNoteIdAndVersionNumber(noteId, versionNumber);
     }
 
+
+    @Transactional
+    public void deleteAllVersionsForNote(Long noteId) {
+        List<NoteVersion> versions = noteVersionRepository.findVersionHistory(noteId);
+        for (NoteVersion version : versions) {
+            noteVersionRepository.delete(version);
+        }
+        System.out.println("Eliminate " + versions.size() + " versioni per la nota " + noteId);
+    }
+
+
     public Optional<NoteVersion> getLatestVersion(Long noteId) {
         List<NoteVersion> versions = noteVersionRepository.findByNoteIdOrderByVersionNumberDesc(noteId);
         return versions.isEmpty() ? Optional.empty() : Optional.of(versions.get(0));

@@ -109,4 +109,13 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
 
     @Query("SELECT COUNT(n) FROM Note n WHERE n.autore = :autore")
     long countByAutore(@Param("autore") User autore);
+
+
+
+    default Note saveAndFlush(Note note) {
+        Note saved = save(note);
+        flush();  // Forza il salvataggio immediato
+        return saved;
+    }
+
 }

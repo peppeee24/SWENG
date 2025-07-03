@@ -1,3 +1,5 @@
+// note.model.ts
+
 export interface Note {
   id: number;
   titolo: string;
@@ -12,6 +14,7 @@ export interface Note {
   permessiScrittura: string[];
   canEdit: boolean;
   canDelete: boolean;
+  versionNumber?: number;
   isLockedForEditing?: boolean;
   lockedByUser?: string;
   lockExpiresAt?: string;
@@ -26,21 +29,21 @@ export interface Permission {
 export interface CreateNoteRequest {
   titolo: string;
   contenuto: string;
-  tags?: string[];
-  cartelle?: string[];
-  permessi?: Permission;
+  tags: string[];
+  cartelle: string[];
+  permessi: Permission;
 }
 
 export interface UpdateNoteRequest {
   id: number;
   titolo: string;
   contenuto: string;
-  tags?: string[];
-  cartelle?: string[];
+  tags: string[];
+  cartelle: string[];
 }
 
 export interface UpdateNoteRequestWithPermissions extends UpdateNoteRequest {
-  permessi?: Permission;
+  permessi: Permission;
 }
 
 export interface PermissionsRequest {
@@ -65,7 +68,8 @@ export interface NoteLockResponse {
 export interface NoteResponse {
   success: boolean;
   message: string;
-  note?: Note;
+  data?: Note;
+  note?: Note; // Mantenuto per retrocompatibilità
 }
 
 export interface NotesListResponse {
@@ -80,6 +84,16 @@ export interface NotesListResponse {
   dataModifica?: string;
 }
 
+export interface NoteVersion {
+  id: number;
+  versionNumber: number;
+  titolo: string;
+  contenuto: string;
+  createdAt: string;
+  createdBy: string;
+  changeDescription: string;
+}
+
 export interface UserStats {
   noteCreate: number;
   noteCondivise: number;
@@ -87,4 +101,31 @@ export interface UserStats {
   cartelleCreate: number;
   allTags: string[];
   allCartelle: string[];
+}
+
+export interface NoteVersionDto {
+  id: number;
+  versionNumber: number;
+  contenuto: string;
+  titolo: string;
+  createdAt: string;
+  createdBy: string;
+  changeDescription?: string;
+}
+
+export interface RestoreVersionRequest {
+  versionNumber: number;
+}
+
+export interface VersionComparisonDto {
+  version1: NoteVersionDto;
+  version2: NoteVersionDto;
+  version1Number: number;
+  version2Number: number;
+  differences: {
+    titleChanged: boolean;
+    contentChanged: boolean;
+    titleDiff?: string;
+    contentDiff?: string;
+  };
 }

@@ -1,11 +1,13 @@
-import { Component, Input, Output, EventEmitter, computed } from '@angular/core';
+// note-card.component.ts
+import { Component, Input, Output, EventEmitter, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Note } from '../../../models/note.model';
+import { NoteVersionHistoryComponent } from '../note-version-history/note-version-history.component';
 
 @Component({
   selector: 'app-note-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NoteVersionHistoryComponent],
   templateUrl: './note-card.html',
   styleUrls: ['./note-card.css']
 })
@@ -18,12 +20,37 @@ export class NoteCardComponent {
   @Output() duplicate = new EventEmitter<number>();
   @Output() view = new EventEmitter<Note>();
   @Output() removeFromSharing = new EventEmitter<number>();
+  @Output() restoreVersion = new EventEmitter<{ noteId: number, versionNumber: number }>();
 
+
+  isVersionHistoryVisible = signal(false);
+
+  // Computed properties
   isOwner = computed(() => this.note?.autore === this.currentUsername);
 
   // Determina se l'utente è un invitato (ha accesso ma non è proprietario)
   isSharedUser = computed(() => !this.isOwner() && this.note?.autore !== this.currentUsername);
 
+
+  /*
+  canViewHistory(): boolean {
+    return this.note?.canEdit || this.note?.canDelete || false;
+  }
+
+  hasMultipleVersions(): boolean {
+    return this.note?.versionNumber ? this.note.versionNumber > 1 : false;
+  }
+
+   */
+
+
+  showVersionHistory(): boolean {
+    const hasMultiple = this.hasMultipleVersions();
+    const canView = this.canViewHistory();
+    return hasMultiple && canView;
+  }
+
+  // Metodi per formattazione date
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleString('it-IT', {
@@ -52,6 +79,7 @@ export class NoteCardComponent {
     return this.formatDate(dateString);
   }
 
+  // Metodi per permessi
   getPermissionIcon(): string {
     switch (this.note.tipoPermesso) {
       case 'PRIVATA': return '🔒';
@@ -70,6 +98,7 @@ export class NoteCardComponent {
     }
   }
 
+  // Metodi per azioni
   onEdit(): void {
     if (this.note.canEdit) {
       this.edit.emit(this.note);
@@ -80,6 +109,10 @@ export class NoteCardComponent {
     if (this.note.canDelete && confirm('Sei sicuro di voler eliminare questa nota?')) {
       this.delete.emit(this.note.id);
     }
+  }
+
+  shouldShowVersionHistory(): boolean {
+    return this.hasMultipleVersions() && this.canViewHistory();
   }
 
   onDuplicate(): void {
@@ -95,4 +128,56 @@ export class NoteCardComponent {
       this.removeFromSharing.emit(this.note.id);
     }
   }
+
+
+  onShowVersionHistory(): void {
+    this.isVersionHistoryVisible.set(true);
+  }
+
+  onCloseVersionHistory(): void {
+    this.isVersionHistoryVisible.set(false);
+  }
+
+  onRestoreVersion(event: { noteId: number, versionNumber: number }): void {
+    this.restoreVersion.emit(event);
+    this.isVersionHistoryVisible.set(false);
+  }
+
+  /*
+  // Metodo per ottenere il testo del badge della versione
+  getVersionBadgeText(): string {
+    if (!this.note.versionNumber) return '';
+
+    if (this.note.versionNumber === 1) {
+      return 'v1';
+    } else {
+      return `v${this.note.versionNumber}`;
+    }
+  }
+
+  // Metodo per determinare se mostrare l'indicatore di versioni multiple
+  shouldShowVersionIndicator(): boolean {
+    return this.hasMultipleVersions() && this.canViewHistory();
+  }
+
+   */
+
+
+  canViewHistory(): boolean {
+    return this.note?.canEdit || this.note?.canDelete || false;
+  }
+
+  hasMultipleVersions(): boolean {
+    return this.note?.versionNumber ? this.note.versionNumber > 1 : false;
+  }
+
+  shouldShowVersionIndicator(): boolean {
+    return this.note?.versionNumber ? this.note.versionNumber >= 1 : false;
+  }
+
+  getVersionBadgeText(): string {
+    if (!this.note?.versionNumber) return 'v1';
+    return `v${this.note.versionNumber}`;
+  }
+
 }
