@@ -45,14 +45,6 @@ public class NoteVersionService {
     }
 
 
-    @Transactional
-    public void deleteAllVersionsForNote(Long noteId) {
-        List<NoteVersion> versions = noteVersionRepository.findVersionHistory(noteId);
-        for (NoteVersion version : versions) {
-            noteVersionRepository.delete(version);
-        }
-        System.out.println("Eliminate " + versions.size() + " versioni per la nota " + noteId);
-    }
 
 
     public Optional<NoteVersion> getLatestVersion(Long noteId) {
@@ -79,4 +71,30 @@ public class NoteVersionService {
 
         return false;
     }
+
+
+
+    @Transactional
+    public void deleteAllVersionsForNote(Long noteId) {
+        System.out.println(" Eliminazione di tutte le versioni per nota ID: " + noteId);
+
+        try {
+            List<NoteVersion> versions = noteVersionRepository.findByNoteIdOrderByVersionNumberDesc(noteId);
+            System.out.println(" Trovate " + versions.size() + " versioni da eliminare");
+
+            if (!versions.isEmpty()) {
+                // Elimina tutte le versioni
+                noteVersionRepository.deleteAll(versions);
+                noteVersionRepository.flush(); // Forza l'eliminazione immediata
+                System.out.println(" Eliminate " + versions.size() + " versioni per la nota " + noteId);
+            } else {
+                System.out.println("ℹNessuna versione trovata per la nota " + noteId);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Errore eliminazione versioni per nota " + noteId + ": " + e.getMessage());
+            throw new RuntimeException("Errore durante l'eliminazione delle versioni: " + e.getMessage());
+        }
+    }
+
 }

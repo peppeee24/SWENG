@@ -31,6 +31,7 @@ public class NoteService {
     private final NoteVersionService noteVersionService;
 
     @Autowired
+
     public NoteService(NoteRepository noteRepository, UserRepository userRepository, NoteVersionService noteVersionService) {
         this.noteRepository = noteRepository;
         this.userRepository = userRepository;
@@ -197,18 +198,46 @@ public class NoteService {
 
     @Transactional
     public boolean deleteNote(Long noteId, String username) {
+        System.out.println("=== INIZIO ELIMINAZIONE NOTA ===");
+        System.out.println("Note ID: " + noteId + ", Username: " + username);
+
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
 
+        System.out.println("Nota trovata - Autore: " + note.getAutore().getUsername());
+        System.out.println("Utente richiedente: " + username);
+        System.out.println("È proprietario? " + note.isAutore(username));
+
         if (!note.isAutore(username)) {
+            System.err.println(" ERRORE: L'utente " + username + " non è il proprietario della nota " + noteId);
             throw new RuntimeException("Non hai i permessi per eliminare questa nota");
         }
 
-        noteVersionService.deleteAllVersionsForNote(noteId);
+        try {
+            // STEP 1: Elimina PRIMA tutte le versioni della nota
+            System.out.println("STEP 1: Eliminazione versioni...");
+            noteVersionService.deleteAllVersionsForNote(noteId);
+            System.out.println("Versioni eliminate con successo");
 
-        noteRepository.delete(note);
-        System.out.println("Nota eliminata: " + noteId + " da " + username);
-        return true;
+            // STEP 2: Elimina la nota principale
+            System.out.println("STEP 2: Eliminazione nota principale...");
+            noteRepository.delete(note);
+            System.out.println(" Nota principale eliminata con successo");
+
+            // STEP 3: Flush per assicurarsi che tutto sia committed
+            noteRepository.flush();
+            System.out.println("Operazioni committed nel database");
+
+            System.out.println("=== ELIMINAZIONE COMPLETATA CON SUCCESSO ===");
+            System.out.println("Nota eliminata: " + noteId + " da " + username);
+
+            return true;
+
+        } catch (Exception e) {
+            System.err.println(" ERRORE durante l'eliminazione della nota " + noteId + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Errore durante l'eliminazione della nota: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -312,6 +341,7 @@ public class NoteService {
         System.out.println("DOPO SAVE - Permessi scrittura: " + savedNote.getPermessiScrittura());
 
         // Crea versione SOLO dopo il salvataggio dei permessi
+        /*
         try {
             noteVersionService.createVersion(savedNote, username, "Modifica permessi");
             System.out.println("Versione creata con successo");
@@ -319,6 +349,8 @@ public class NoteService {
             System.err.println("Errore durante la creazione della versione: " + e.getMessage());
             // Non bloccare l'operazione se fallisce solo il versionamento
         }
+
+         */
 
         System.out.println("Permessi aggiornati per nota: " + noteId + " da " + username);
         System.out.println("=== FINE updateNotePermissions ===");

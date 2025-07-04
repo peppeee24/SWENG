@@ -217,7 +217,7 @@ export class NotesComponent implements OnInit {
     }
   }
 
-
+/*
   onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest | UpdateNoteRequestWithPermissions): void {
     const selectedNote = this.selectedNote();
 
@@ -335,6 +335,147 @@ export class NotesComponent implements OnInit {
         }
       });
     }
+  }
+
+ */
+
+
+  onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest | UpdateNoteRequestWithPermissions): void {
+    const selectedNote = this.selectedNote();
+
+    if (selectedNote) {
+      // Aggiorna nota esistente
+
+      // Controlla se ha permessi (UpdateNoteRequestWithPermissions)
+      if ('permessi' in noteData) {
+        console.log('Aggiornamento nota CON permessi');
+        const updateWithPermissions = noteData as UpdateNoteRequestWithPermissions;
+
+        // Verifica se i permessi sono effettivamente cambiati
+        const permissionsChanged = this.hasPermissionsChanged(selectedNote, updateWithPermissions.permessi);
+
+        if (permissionsChanged) {
+          console.log(' I permessi sono cambiati, aggiorno tutto');
+
+          // Prima aggiorna il contenuto
+          const contentUpdate: UpdateNoteRequest = {
+            id: selectedNote.id,
+            titolo: updateWithPermissions.titolo,
+            contenuto: updateWithPermissions.contenuto,
+            tags: updateWithPermissions.tags,
+            cartelle: updateWithPermissions.cartelle
+          };
+
+          this.notesService.updateNote(selectedNote.id, contentUpdate).subscribe({
+            next: (contentResponse: any) => {
+              console.log('Contenuto aggiornato:', contentResponse);
+
+              // Poi aggiorna i permessi
+              const permissionsRequest: PermissionsRequest = {
+                tipoPermesso: updateWithPermissions.permessi.tipoPermesso,
+                utentiLettura: updateWithPermissions.permessi.utentiLettura,
+                utentiScrittura: updateWithPermissions.permessi.utentiScrittura
+              };
+
+              this.notesService.updateNotePermissions(selectedNote.id, permissionsRequest).subscribe({
+                next: (permissionsResponse: any) => {
+                  console.log('Permessi aggiornati:', permissionsResponse);
+                  this.showSuccessMessage(permissionsResponse);
+                  this.hideNoteForm();
+                  this.loadNotes();
+                },
+                error: (error) => {
+                  this.handleUpdateError(error, 'permessi');
+                }
+              });
+            },
+            error: (error) => {
+              this.handleUpdateError(error, 'contenuto');
+            }
+          });
+        } else {
+          console.log(' Solo contenuto cambiato, aggiorno solo quello');
+
+          // Solo aggiornamento contenuto (senza permessi)
+          const updateRequest: UpdateNoteRequest = {
+            id: selectedNote.id,
+            titolo: updateWithPermissions.titolo,
+            contenuto: updateWithPermissions.contenuto,
+            tags: updateWithPermissions.tags,
+            cartelle: updateWithPermissions.cartelle
+          };
+
+          this.notesService.updateNote(selectedNote.id, updateRequest).subscribe({
+            next: (response: any) => {
+              console.log('Solo contenuto aggiornato:', response);
+              this.showSuccessMessage(response);
+              this.hideNoteForm();
+              this.loadNotes();
+            },
+            error: (error) => {
+              this.handleUpdateError(error, 'nota');
+            }
+          });
+        }
+
+      } else {
+        // Aggiornamento normale SENZA permessi
+        console.log(' Aggiornamento nota SENZA permessi');
+        const updateRequest: UpdateNoteRequest = {
+          id: selectedNote.id,
+          titolo: (noteData as UpdateNoteRequest).titolo,
+          contenuto: (noteData as UpdateNoteRequest).contenuto,
+          tags: (noteData as UpdateNoteRequest).tags,
+          cartelle: (noteData as UpdateNoteRequest).cartelle
+        };
+
+        this.notesService.updateNote(selectedNote.id, updateRequest).subscribe({
+          next: (response: any) => {
+            console.log('Nota aggiornata (solo contenuto):', response);
+            this.showSuccessMessage(response);
+            this.hideNoteForm();
+            this.loadNotes();
+          },
+          error: (error) => {
+            this.handleUpdateError(error, 'nota');
+          }
+        });
+      }
+
+    } else {
+      // Creazione nuova nota (rimane uguale)
+      console.log('Creazione nuova nota');
+      const createRequest = noteData as CreateNoteRequest;
+
+      this.notesService.createNote(createRequest).subscribe({
+        next: (response: any) => {
+          console.log('Nota creata:', response);
+          this.hideNoteForm();
+          this.loadNotes();
+        },
+        error: (error) => {
+          this.handleUpdateError(error, 'creazione');
+        }
+      });
+    }
+  }
+
+// AGGIUNGI questi metodi helper:
+  private showSuccessMessage(response: any): void {
+    const updatedNote = response.data || response.note || response;
+
+    if (updatedNote?.versionNumber) {
+      this.versionRestoreSuccess.set(
+        `Nota aggiornata con successo! Versione ${updatedNote.versionNumber}`
+      );
+      setTimeout(() => this.versionRestoreSuccess.set(null), 3000);
+    }
+  }
+
+  private handleUpdateError(error: any, operation: string): void {
+    console.error(`Errore aggiornamento ${operation}:`, error);
+    this.versionRestoreError.set(`Errore durante l'aggiornamento della ${operation}`);
+    setTimeout(() => this.versionRestoreError.set(null), 5000);
   }
 
   private finalizeNoteSave(): void {
