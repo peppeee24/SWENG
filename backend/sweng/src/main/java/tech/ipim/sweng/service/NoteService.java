@@ -124,7 +124,8 @@ public class NoteService {
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
         Note duplicatedNote = new Note(
-                originalNote.getTitolo() + " (Copia)",
+                // (Prima era copia, ho messo c minuscola altrimenti crea problemi comn github action)
+                originalNote.getTitolo() + " (copia)",
                 originalNote.getContenuto(),
                 user
         );
