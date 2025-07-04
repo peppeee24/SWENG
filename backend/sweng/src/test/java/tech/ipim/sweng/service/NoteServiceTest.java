@@ -879,9 +879,10 @@ class NoteServiceTest {
         verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), anyString());
     }
 
+
     @Test
-    @DisplayName("Dovrebbe creare una versione quando si aggiornano i permessi")
-    void shouldCreateVersionWhenUpdatingPermissions() {
+    @DisplayName("Dovrebbe aggiornare i permessi senza creare una versione")
+    void shouldUpdatePermissionsWithoutCreatingVersion() {
         // Setup della nota esistente con permessi inizializzati
         testNote.setTipoPermesso(TipoPermesso.PRIVATA);
         testNote.setPermessiLettura(new HashSet<>());
@@ -898,12 +899,6 @@ class NoteServiceTest {
 
         // Mock per saveAndFlush (metodo usato in updateNotePermissions)
         when(noteRepository.saveAndFlush(any(Note.class))).thenReturn(updatedNote);
-
-        // Mock per la creazione della versione
-        NoteVersion newVersion = new NoteVersion(updatedNote, 2, updatedNote.getContenuto(),
-                updatedNote.getTitolo(), "testuser", "Modifica permessi");
-        when(noteVersionService.createVersion(any(Note.class), eq("testuser"), eq("Modifica permessi")))
-                .thenReturn(newVersion);
 
         // Setup del PermissionDto
         PermissionDto permissionDto = new PermissionDto();
@@ -922,9 +917,14 @@ class NoteServiceTest {
         // Verifica che i metodi siano stati chiamati
         verify(noteRepository).findById(1L);
         verify(noteRepository).saveAndFlush(any(Note.class));
-        verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), eq("Modifica permessi"));
-    }
 
+        // IMPORTANTE: Verifica che NON venga creata una versione per le modifiche dei permessi
+        verify(noteVersionService, never()).createVersion(
+                any(Note.class),
+                anyString(),
+                anyString()
+        );
+    }
 
 
     @Test
