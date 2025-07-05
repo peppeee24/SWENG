@@ -193,4 +193,18 @@ public interface NoteRepository extends JpaRepository<Note, Long> {
         return saved;
     }
 
+
+    //  Note accessibili da un utente, create da un autore
+    @Query("SELECT n FROM Note n WHERE n.autore.username = :autore AND (n.autore.username = :utente OR :utente MEMBER OF n.utentiConAccesso)")
+    List<Note> findByAutoreUsernameAndAccessibleByUser(@Param("autore") String autore, @Param("utente") String utente);
+
+    // Note accessibili da un utente in un intervallo di date
+    @Query("SELECT n FROM Note n WHERE n.dataCreazione BETWEEN :inizio AND :fine AND (n.autore.username = :utente OR :utente MEMBER OF n.utentiConAccesso)")
+    List<Note> findByDateRangeAndAccessibleByUser(@Param("inizio") LocalDateTime inizio, @Param("fine") LocalDateTime fine, @Param("utente") String utente);
+
+    // Note accessibili da un utente, create da un autore, in un intervallo di date
+    @Query("SELECT n FROM Note n WHERE n.autore.username = :autore AND n.dataCreazione BETWEEN :inizio AND :fine AND (n.autore.username = :utente OR :utente MEMBER OF n.utentiConAccesso)")
+    List<Note> findByAuthorAndDateRangeAndAccessibleByUser(@Param("autore") String autore, @Param("inizio") LocalDateTime inizio, @Param("fine") LocalDateTime fine, @Param("utente") String utente);
+
+
 }

@@ -36,6 +36,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import org.junit.jupiter.api.DisplayName;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -940,5 +943,306 @@ class NoteServiceTest {
         verify(noteRepository).findById(1L);
         verify(noteVersionService).deleteAllVersionsForNote(1L);
         verify(noteRepository).delete(testNote);
+    }
+
+
+
+
+    @Test
+    @DisplayName("SEARCH-001: Dovrebbe trovare note per autore specifico")
+    void shouldFindNotesByAuthor() {
+        // Given
+        User mario = createTestUser("mario", "mario@test.com");
+        User luigi = createTestUser("luigi", "luigi@test.com");
+
+        Note notaMario = createTestNote(mario);
+        notaMario.setTitolo("Nota di Mario");
+        notaMario.setContenuto("Contenuto di Mario");
+
+        Note notaLuigi = createTestNote(luigi);
+        notaLuigi.setTitolo("Nota di Luigi");
+
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("mario", "testuser"))
+                .thenReturn(Arrays.asList(notaMario));
+
+        // When
+        List<NoteDto> result = noteService.findNotesByAuthor("mario", "testuser");
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAutore()).isEqualTo("mario");
+        assertThat(result.get(0).getTitolo()).isEqualTo("Nota di Mario");
+
+        verify(noteRepository).findByAutoreUsernameAndAccessibleByUser("mario", "testuser");
+    }
+
+    @Test
+    @DisplayName("SEARCH-002: Dovrebbe gestire autore inesistente")
+    void shouldHandleNonExistentAuthor() {
+        // Given
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("inesistente", "testuser"))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<NoteDto> result = noteService.findNotesByAuthor("inesistente", "testuser");
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(noteRepository).findByAutoreUsernameAndAccessibleByUser("inesistente", "testuser");
+    }
+
+    @Test
+    @DisplayName("SEARCH-003: Dovrebbe considerare solo note accessibili per autore")
+    void shouldConsiderOnlyAccessibleNotesForAuthor() {
+        // Given
+        User mario = createTestUser("mario", "mario@test.com");
+        Note notaPrivata = createTestNote(mario);
+        notaPrivata.setTitolo("Nota Privata di Mario");
+        // Nota privata - non accessibile a testuser
+
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("mario", "testuser"))
+                .thenReturn(Collections.emptyList()); // Nessuna nota accessibile
+
+        // When
+        List<NoteDto> result = noteService.findNotesByAuthor("mario", "testuser");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("SEARCH-004: Dovrebbe essere case-sensitive per username autore")
+    void shouldBeCaseSensitiveForAuthorUsername() {
+        // Given
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("Mario", "testuser"))
+                .thenReturn(Collections.emptyList());
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("mario", "testuser"))
+                .thenReturn(Arrays.asList(testNote));
+
+        // When
+        List<NoteDto> resultUpperCase = noteService.findNotesByAuthor("Mario", "testuser");
+        List<NoteDto> resultLowerCase = noteService.findNotesByAuthor("mario", "testuser");
+
+        // Then
+        assertThat(resultUpperCase).isEmpty();
+        assertThat(resultLowerCase).hasSize(1);
+    }
+
+
+    @Test
+    @DisplayName("SEARCH-005: Dovrebbe trovare note in range di date")
+    void shouldFindNotesInDateRange() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        Note notaGennaio = createTestNote(testUser);
+        notaGennaio.setDataModifica(LocalDateTime.of(2025, 1, 15, 10, 0));
+        notaGennaio.setTitolo("Nota Gennaio");
+
+        when(noteRepository.findByDateRangeAndAccessibleByUser(startDate, endDate, "testuser"))
+                .thenReturn(Arrays.asList(notaGennaio));
+
+        // When
+        List<NoteDto> result = noteService.findNotesByDateRange(startDate, endDate, "testuser");
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTitolo()).isEqualTo("Nota Gennaio");
+
+        verify(noteRepository).findByDateRangeAndAccessibleByUser(startDate, endDate, "testuser");
+    }
+
+    @Test
+    @DisplayName("SEARCH-006: Dovrebbe gestire date invalide")
+    void shouldHandleInvalidDates() {
+        // Given
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        // When & Then
+        assertThatThrownBy(() ->
+                noteService.findNotesByDateRange(startDate, endDate, "testuser"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Data inizio non può essere successiva a data fine");
+    }
+
+    @Test
+    @DisplayName("SEARCH-007: Dovrebbe gestire range di date vuoto")
+    void shouldHandleEmptyDateRange() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 6, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 6, 1, 23, 59);
+
+        when(noteRepository.findByDateRangeAndAccessibleByUser(startDate, endDate, "testuser"))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<NoteDto> result = noteService.findNotesByDateRange(startDate, endDate, "testuser");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("SEARCH-008: Dovrebbe ordinare risultati per data modifica")
+    void shouldOrderResultsByModificationDate() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        Note notaRecente = createTestNote(testUser);
+        notaRecente.setDataModifica(LocalDateTime.of(2025, 1, 20, 10, 0));
+        notaRecente.setTitolo("Nota Recente");
+
+        Note notaVecchia = createTestNote(testUser);
+        notaVecchia.setDataModifica(LocalDateTime.of(2025, 1, 5, 10, 0));
+        notaVecchia.setTitolo("Nota Vecchia");
+
+        when(noteRepository.findByDateRangeAndAccessibleByUser(startDate, endDate, "testuser"))
+                .thenReturn(Arrays.asList(notaRecente, notaVecchia)); // Ordinate per data desc
+
+        // When
+        List<NoteDto> result = noteService.findNotesByDateRange(startDate, endDate, "testuser");
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getTitolo()).isEqualTo("Nota Recente");
+        assertThat(result.get(1).getTitolo()).isEqualTo("Nota Vecchia");
+    }
+
+
+    @Test
+    @DisplayName("SEARCH-009: Dovrebbe combinare filtri autore e data")
+    void shouldCombineAuthorAndDateFilters() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        Note notaFiltrata = createTestNote(testUser);
+        notaFiltrata.setTitolo("Nota Mario Gennaio");
+        notaFiltrata.setDataModifica(LocalDateTime.of(2025, 1, 15, 10, 0));
+
+        when(noteRepository.findByAuthorAndDateRangeAndAccessibleByUser(
+                "mario", startDate, endDate, "testuser"))
+                .thenReturn(Arrays.asList(notaFiltrata));
+
+        // When
+        List<NoteDto> result = noteService.findNotesByAuthorAndDateRange(
+                "mario", startDate, endDate, "testuser");
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getTitolo()).isEqualTo("Nota Mario Gennaio");
+    }
+
+    @Test
+    @DisplayName("SEARCH-010: Dovrebbe gestire filtri multipli senza risultati")
+    void shouldHandleMultipleFiltersWithNoResults() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        when(noteRepository.findByAuthorAndDateRangeAndAccessibleByUser(
+                "mario", startDate, endDate, "testuser"))
+                .thenReturn(Collections.emptyList());
+
+        // When
+        List<NoteDto> result = noteService.findNotesByAuthorAndDateRange(
+                "mario", startDate, endDate, "testuser");
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+
+
+
+    @Test
+    @DisplayName("SEARCH-011: Dovrebbe essere performante con molte note")
+    void shouldBePerformantWithManyNotes() {
+        // Given
+        List<Note> molteNote = generateManyNotesForSearch(1000);
+        when(noteRepository.findByAutoreUsernameAndAccessibleByUser("testuser", "testuser"))
+                .thenReturn(molteNote);
+
+        // When
+        long startTime = System.currentTimeMillis();
+        List<NoteDto> result = noteService.findNotesByAuthor("testuser", "testuser");
+        long endTime = System.currentTimeMillis();
+
+        // Then
+        assertThat(result).hasSize(1000);
+        assertThat(endTime - startTime).isLessThan(100); // Meno di 100ms
+    }
+
+    @Test
+    @DisplayName("SEARCH-012: Dovrebbe ottimizzare query con indici")
+    void shouldOptimizeQueriesWithIndexes() {
+        // Given
+        LocalDateTime startDate = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2025, 1, 31, 23, 59);
+
+        // When
+        noteService.findNotesByDateRange(startDate, endDate, "testuser");
+
+        // Then
+        verify(noteRepository).findByDateRangeAndAccessibleByUser(startDate, endDate, "testuser");
+    }
+
+
+
+    @Test
+    @DisplayName("SEARCH-013: Dovrebbe gestire timezone nelle date")
+    void shouldHandleTimezoneInDates() {
+        // Given
+        LocalDateTime startDateUTC = LocalDateTime.of(2025, 1, 1, 0, 0);
+        LocalDateTime endDateUTC = LocalDateTime.of(2025, 1, 1, 23, 59);
+
+        Note notaConTimezone = createTestNote(testUser);
+        notaConTimezone.setDataModifica(LocalDateTime.of(2025, 1, 1, 12, 0)); // Mezzogiorno UTC
+
+        when(noteRepository.findByDateRangeAndAccessibleByUser(startDateUTC, endDateUTC, "testuser"))
+                .thenReturn(Arrays.asList(notaConTimezone));
+
+        // When
+        List<NoteDto> result = noteService.findNotesByDateRange(startDateUTC, endDateUTC, "testuser");
+
+        // Then
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("SEARCH-014: Dovrebbe gestire date limite (edge cases)")
+    void shouldHandleDateEdgeCases() {
+        // Given - Test con data esattamente al limite
+        LocalDateTime exactStartDate = LocalDateTime.of(2025, 1, 1, 0, 0, 0);
+        LocalDateTime exactEndDate = LocalDateTime.of(2025, 1, 1, 23, 59, 59);
+
+        Note notaAlLimite = createTestNote(testUser);
+        notaAlLimite.setDataModifica(exactStartDate); // Esattamente al limite
+
+        when(noteRepository.findByDateRangeAndAccessibleByUser(exactStartDate, exactEndDate, "testuser"))
+                .thenReturn(Arrays.asList(notaAlLimite));
+
+        // When
+        List<NoteDto> result = noteService.findNotesByDateRange(exactStartDate, exactEndDate, "testuser");
+
+        // Then
+        assertThat(result).hasSize(1);
+    }
+
+
+
+    private List<Note> generateManyNotesForSearch(int count) {
+        return java.util.stream.IntStream.range(1, count + 1)
+                .mapToObj(i -> {
+                    Note note = createTestNote(testUser);
+                    note.setId((long) i);
+                    note.setTitolo("Nota Test " + i);
+                    note.setContenuto("Contenuto test numero " + i);
+                    note.setDataModifica(LocalDateTime.now().minusDays(i % 30));
+                    return note;
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 }

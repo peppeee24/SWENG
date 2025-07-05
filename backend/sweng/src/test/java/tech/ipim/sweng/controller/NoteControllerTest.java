@@ -831,4 +831,394 @@ class NoteControllerTest {
             throw new AssertionError("Expected no exception but got: " + e.getMessage(), e);
         }
     }
+
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEARCH-001: GET /api/notes/search/author - Dovrebbe cercare note per autore")
+    void shouldSearchNotesByAuthor() throws Exception {
+        // Given
+        NoteDto notaMario = createTestNoteDto("mario");
+        notaMario.setTitolo("Nota di Mario");
+        when(noteService.findNotesByAuthor("mario", "testuser")).thenReturn(Arrays.asList(notaMario));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", validToken)
+                        .param("author", "mario"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].autore", is("mario")))
+                .andExpect(jsonPath("$.data[0].titolo", is("Nota di Mario")));
+
+        verify(noteService).findNotesByAuthor("mario", "testuser");
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEARCH-002: GET /api/notes/search/author - Dovrebbe gestire autore vuoto")
+    void shouldHandleEmptyAuthorSearch() throws Exception {
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", validToken)
+                        .param("author", ""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", is("Parametro autore richiesto")));
+
+        verify(noteService, never()).findNotesByAuthor(anyString(), anyString());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEARCH-003: GET /api/notes/search/date - Dovrebbe cercare note per range di date")
+    void shouldSearchNotesByDateRange() throws Exception {
+        // Given
+        NoteDto notaGennaio = createTestNoteDto("testuser");
+        notaGennaio.setTitolo("Nota di Gennaio");
+        when(noteService.findNotesByDateRange(any(LocalDateTime.class), any(LocalDateTime.class), eq("testuser")))
+                .thenReturn(Arrays.asList(notaGennaio));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", validToken)
+                        .param("startDate", "2025-01-01T00:00:00")
+                        .param("endDate", "2025-01-31T23:59:59"))
+                .andExpect(status().isOk())
+                .andExpected(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data", hasSize(1)))
+                .andExpected(jsonPath("$.data[0].titolo", is("Nota di Gennaio")));
+
+        verify(noteService).findNotesByDateRange(any(LocalDateTime.class), any(LocalDateTime.class), eq("testuser"));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEARCH-004: GET /api/notes/search/date - Dovrebbe validare formato date")
+    void shouldValidateDateFormat() throws Exception {
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", validToken)
+                        .param("startDate", "data-invalida")
+                        .param("endDate", "2025-01-31T23:59:59"))
+                .andExpected(status().isBadRequest())
+                .andExpected(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", containsString("Formato data invalido")));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEARCH-005: GET /api/notes/search/combined - Dovrebbe cercare con filtri combinati")
+    void shouldSearchWithCombinedFilters() throws Exception {
+        // Given
+        NoteDto notaCombinata = createTestNoteDto("mario");
+        notaCombinata.setTitolo("Nota Mario Gennaio");
+        when(noteService.findNotesByAuthorAndDateRange(eq("mario"), any(LocalDateTime.class), any(LocalDateTime.class), eq("testuser")))
+                .thenReturn(Arrays.asList(notaCombinata));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/search/combined")
+                        .header("Authorization", validToken)
+                        .param("author", "mario")
+                        .param("startDate", "2025-01-01T00:00:00")
+                        .param("endDate", "2025-01-31T23:59:59"))
+                .andExpected(status().isOk())
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data", hasSize(1)))
+                .andExpected(jsonPath("$.data[0].autore", is("mario")));
+
+        verify(noteService).findNotesByAuthorAndDateRange(eq("mario"), any(LocalDateTime.class), any(LocalDateTime.class), eq("testuser"));
+    }
+
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-001: GET /api/notes/{id}/versions - Dovrebbe gestire note con molte versioni")
+    void shouldHandleNotesWithManyVersions() throws Exception {
+        // Given
+        List<NoteVersionDto> molteVersioni = generateManyVersionDtos(50);
+        when(noteService.getNoteVersionHistory(1L, "testuser")).thenReturn(molteVersioni);
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/1/versions")
+                        .header("Authorization", validToken))
+                .andExpected(status().isOk())
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data", hasSize(50)))
+                .andExpected(jsonPath("$.data[0].versionNumber", is(50))) // Più recente
+                .andExpected(jsonPath("$.data[49].versionNumber", is(1))); // Più vecchia
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-002: GET /api/notes/{id}/versions/{version} - Dovrebbe ottenere versione specifica")
+    void shouldGetSpecificVersion() throws Exception {
+        // Given
+        NoteVersionDto versioneSpecifica = createVersionDto(5);
+        when(noteService.getNoteVersion(1L, 5, "testuser")).thenReturn(Optional.of(versioneSpecifica));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/1/versions/5")
+                        .header("Authorization", validToken))
+                .andExpected(status().isOk())
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data.versionNumber", is(5)))
+                .andExpected(jsonPath("$.data.titolo", is("Titolo v5")))
+                .andExpected(jsonPath("$.data.contenuto", is("Contenuto v5")));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-003: POST /api/notes/{id}/restore - Dovrebbe ripristinare versione con validazione")
+    void shouldRestoreVersionWithValidation() throws Exception {
+        // Given
+        NoteDto notaRipristinata = createTestNoteDto("testuser");
+        notaRipristinata.setTitolo("Titolo Ripristinato");
+        when(noteService.restoreNoteVersion(1L, 3, "testuser")).thenReturn(notaRipristinata);
+
+        // When & Then
+        mockMvc.perform(post("/api/notes/1/restore")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"versionNumber\": 3}")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data.titolo", is("Titolo Ripristinato")))
+                .andExpected(jsonPath("$.message", containsString("ripristinata alla versione 3")));
+
+        verify(noteService).restoreNoteVersion(1L, 3, "testuser");
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-004: POST /api/notes/{id}/restore - Dovrebbe validare numero versione")
+    void shouldValidateVersionNumber() throws Exception {
+        mockMvc.perform(post("/api/notes/1/restore")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"versionNumber\": -1}")
+                        .with(csrf()))
+                .andExpected(status().isBadRequest())
+                .andExpected(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", containsString("Numero versione deve essere positivo")));
+
+        verify(noteService, never()).restoreNoteVersion(anyLong(), anyInt(), anyString());
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-005: GET /api/notes/{id}/compare/{v1}/{v2} - Dovrebbe confrontare versioni")
+    void shouldCompareVersions() throws Exception {
+        // Given
+        VersionComparisonDto confronto = createVersionComparisonDto();
+        when(noteService.compareNoteVersions(1L, 1, 2, "testuser")).thenReturn(confronto);
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/1/compare/1/2")
+                        .header("Authorization", validToken))
+                .andExpected(status().isOk())
+                .andExpected(jsonPath("$.success", is(true)))
+                .andExpected(jsonPath("$.data.version1Number", is(1)))
+                .andExpected(jsonPath("$.data.version2Number", is(2)))
+                .andExpected(jsonPath("$.data.differences.titleChanged", is(true)))
+                .andExpected(jsonPath("$.data.differences.contentChanged", is(true)));
+
+        verify(noteService).compareNoteVersions(1L, 1, 2, "testuser");
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VER-006: Dovrebbe gestire errori di versionamento con messaggi appropriati")
+    void shouldHandleVersioningErrorsWithAppropriateMessages() throws Exception {
+        // Given
+        when(noteService.getNoteVersionHistory(999L, "testuser"))
+                .thenThrow(new RuntimeException("Nota non trovata"));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/999/versions")
+                        .header("Authorization", validToken))
+                .andExpected(status().isNotFound())
+                .andExpected(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", is("Nota non trovata")));
+    }
+
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEC-001: Dovrebbe impedire accesso a versioni non autorizzate")
+    void shouldPreventAccessToUnauthorizedVersions() throws Exception {
+        // Given
+        when(noteService.getNoteVersionHistory(1L, "testuser"))
+                .thenThrow(new RuntimeException("Non hai accesso a questa nota"));
+
+        // When & Then
+        mockMvc.perform(get("/api/notes/1/versions")
+                        .header("Authorization", validToken))
+                .andExpected(status().isForbidden())
+                .andExpected(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", is("Non hai accesso a questa nota")));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-SEC-002: Dovrebbe impedire ripristino senza permessi di scrittura")
+    void shouldPreventRestoreWithoutWritePermissions() throws Exception {
+        // Given
+        when(noteService.restoreNoteVersion(1L, 2, "testuser"))
+                .thenThrow(new RuntimeException("Non hai i permessi per ripristinare versioni di questa nota"));
+
+        // When & Then
+        mockMvc.perform(post("/api/notes/1/restore")
+                        .header("Authorization", validToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"versionNumber\": 2}")
+                        .with(csrf()))
+                .andExpected(status().isForbidden())
+                .andExpected(jsonPath("$.success", is(false)))
+                .andExpected(jsonPath("$.message", containsString("Non hai i permessi")));
+    }
+
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-PERF-001: Dovrebbe gestire richieste concorrenti per versioni")
+    void shouldHandleConcurrentVersionRequests() throws Exception {
+        // Given
+        List<NoteVersionDto> versioni = generateManyVersionDtos(10);
+        when(noteService.getNoteVersionHistory(1L, "testuser")).thenReturn(versioni);
+
+        // When - Simula richieste concorrenti
+        List<Boolean> risultati = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        List<Future<Boolean>> futures = new ArrayList<>();
+
+        for (int i = 0; i < 10; i++) {
+            futures.add(executor.submit(() -> {
+                try {
+                    MvcResult result = mockMvc.perform(get("/api/notes/1/versions")
+                                    .header("Authorization", validToken))
+                            .andExpected(status().isOk())
+                            .andReturn();
+                    return result.getResponse().getStatus() == 200;
+                } catch (Exception e) {
+                    return false;
+                }
+            }));
+        }
+
+        // Then
+        for (Future<Boolean> future : futures) {
+            risultati.add(future.get());
+        }
+        executor.shutdown();
+
+        assertThat(risultati).allMatch(result -> result == true);
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-PERF-002: Dovrebbe rispondere velocemente per cronologia versioni")
+    void shouldRespondQuicklyForVersionHistory() throws Exception {
+        // Given
+        List<NoteVersionDto> versioni = generateManyVersionDtos(100);
+        when(noteService.getNoteVersionHistory(1L, "testuser")).thenReturn(versioni);
+
+        // When
+        long startTime = System.currentTimeMillis();
+        mockMvc.perform(get("/api/notes/1/versions")
+                        .header("Authorization", validToken))
+                .andExpected(status().isOk())
+                .andExpected(jsonPath("$.data", hasSize(100)));
+        long endTime = System.currentTimeMillis();
+
+        // Then
+        assertThat(endTime - startTime).isLessThan(200); // Meno di 200ms
+    }
+
+
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VAL-001: Dovrebbe validare parametri di ricerca per autore")
+    void shouldValidateAuthorSearchParameters() throws Exception {
+        // Test con autore troppo lungo
+        String autoreTroppoLungo = "a".repeat(256);
+
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", validToken)
+                        .param("author", autoreTroppoLungo))
+                .andExpected(status().isBadRequest())
+                .andExpected(jsonPath("$.message", containsString("Username autore troppo lungo")));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VAL-002: Dovrebbe validare caratteri speciali in ricerca autore")
+    void shouldValidateSpecialCharactersInAuthorSearch() throws Exception {
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", validToken)
+                        .param("author", "user<script>alert('xss')</script>"))
+                .andExpected(status().isBadRequest())
+                .andExpected(jsonPath("$.message", containsString("Caratteri non validi nel nome utente")));
+    }
+
+    @Test
+    @WithMockUser(username = "testuser")
+    @DisplayName("CTRL-VAL-003: Dovrebbe validare range di date logico")
+    void shouldValidateLogicalDateRange() throws Exception {
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", validToken)
+                        .param("startDate", "2025-12-31T23:59:59")
+                        .param("endDate", "2025-01-01T00:00:00"))
+                .andExpected(status().isBadRequest())
+                .andExpected(jsonPath("$.message", containsString("Data inizio posteriore a data fine")));
+    }
+
+
+
+    private NoteDto createTestNoteDto(String author) {
+        NoteDto dto = new NoteDto();
+        dto.setId(1L);
+        dto.setTitolo("Test Note");
+        dto.setContenuto("Test content");
+        dto.setAutore(author);
+        dto.setDataCreazione(LocalDateTime.now().minusHours(1));
+        dto.setDataModifica(LocalDateTime.now().minusMinutes(30));
+        return dto;
+    }
+
+    private List<NoteVersionDto> generateManyVersionDtos(int count) {
+        return java.util.stream.IntStream.range(1, count + 1)
+                .mapToObj(this::createVersionDto)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private NoteVersionDto createVersionDto(int versionNumber) {
+        NoteVersionDto dto = new NoteVersionDto();
+        dto.setId((long) versionNumber);
+        dto.setVersionNumber(versionNumber);
+        dto.setTitolo("Titolo v" + versionNumber);
+        dto.setContenuto("Contenuto v" + versionNumber);
+        dto.setCreatedBy("testuser");
+        dto.setCreatedAt(LocalDateTime.now().minusHours(versionNumber));
+        dto.setChangeDescription("Versione " + versionNumber);
+        return dto;
+    }
+
+    private VersionComparisonDto createVersionComparisonDto() {
+        VersionComparisonDto dto = new VersionComparisonDto();
+        dto.setVersion1Number(1);
+        dto.setVersion2Number(2);
+
+        VersionComparisonDto.Differences differences = new VersionComparisonDto.Differences();
+        differences.setTitleChanged(true);
+        differences.setContentChanged(true);
+        differences.setTitleDiff("Titolo v1 → Titolo v2");
+        differences.setContentDiff("Contenuto v1 → Contenuto v2");
+
+        dto.setDifferences(differences);
+        return dto;
+    }
 }

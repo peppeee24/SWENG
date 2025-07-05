@@ -7,6 +7,8 @@ import tech.ipim.sweng.model.NoteVersion;
 import tech.ipim.sweng.repository.NoteVersionRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+
+
 import java.util.List;
 import java.util.Optional;
 
@@ -93,4 +95,13 @@ public class NoteVersionService {
 
         return false;
     }
+
+    public List<NoteVersion> getNoteVersions(Long noteId) {
+        return noteVersionRepository.findByNoteId(noteId);
+    }
+
+    public Optional<NoteVersion> getNoteVersionById(Long versionId) {
+        return noteVersionRepository.findById(versionId);
+    }
+
 }

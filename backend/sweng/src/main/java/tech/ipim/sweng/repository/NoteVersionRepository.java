@@ -6,6 +6,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import tech.ipim.sweng.model.NoteVersion;
 
+
+
 import java.util.List;
 import java.util.Optional;
 
@@ -21,4 +23,11 @@ public interface NoteVersionRepository extends JpaRepository<NoteVersion, Long> 
 
     @Query("SELECT nv FROM NoteVersion nv WHERE nv.note.id = :noteId ORDER BY nv.versionNumber DESC")
     List<NoteVersion> findVersionHistory(@Param("noteId") Long noteId);
+
+    //  Recupera tutte le versioni di una nota
+    List<NoteVersion> findByNoteId(Long noteId);
+
+    //  Recupera una versione specifica per ID
+    Optional<NoteVersion> findById(Long versionId);
+
 }

@@ -361,4 +361,364 @@ public class IntegrationTest {
         LoginResponse loginResponse = objectMapper.readValue(response, LoginResponse.class);
         return loginResponse.getToken();
     }
+
+    // ===== AGGIUNGERE QUESTI TEST AL TUO FILE IntegrationTest.java ESISTENTE =====
+
+// ===== NUOVI TEST PER VERSIONAMENTO =====
+
+    @Test
+    @DisplayName("INT-VER-001: Workflow completo versionamento - Crea → Modifica → Versiona → Ripristina")
+    void testCompleteVersioningWorkflow() throws Exception {
+        // Step 1: Crea una nota
+        String createNoteRequest = """
+            {
+                "titolo": "Nota Test Versionamento",
+                "contenuto": "Contenuto iniziale per test versioning",
+                "tags": ["test", "versioning"]
+            }
+            """;
+
+        String createResponse = mockMvc.perform(post("/api/notes")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createNoteRequest))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // Estrai ID della nota
+        Long noteId = extractNoteIdFromResponse(createResponse);
+
+        // Step 2: Verifica creazione della prima versione
+        mockMvc.perform(get("/api/notes/" + noteId + "/versions")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].versionNumber", is(1)));
+
+        // Step 3: Modifica la nota (crea seconda versione)
+        String updateNoteRequest = """
+            {
+                "titolo": "Nota Test Versionamento - Modificata",
+                "contenuto": "Contenuto modificato per test versioning",
+                "tags": ["test", "versioning", "modificata"]
+            }
+            """;
+
+        mockMvc.perform(put("/api/notes/" + noteId)
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateNoteRequest))
+                .andExpect(status().isOk());
+
+        // Step 4: Verifica creazione della seconda versione
+        mockMvc.perform(get("/api/notes/" + noteId + "/versions")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(2)))
+                .andExpect(jsonPath("$.data[0].versionNumber", is(2))) // Più recente
+                .andExpect(jsonPath("$.data[1].versionNumber", is(1))); // Originale
+
+        // Step 5: Confronta le versioni
+        mockMvc.perform(get("/api/notes/" + noteId + "/compare/1/2")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.differences.titleChanged", is(true)))
+                .andExpect(jsonPath("$.data.differences.contentChanged", is(true)));
+
+        // Step 6: Ripristina la prima versione
+        String restoreRequest = """
+            {
+                "versionNumber": 1
+            }
+            """;
+
+        mockMvc.perform(post("/api/notes/" + noteId + "/restore")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(restoreRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.titolo", is("Nota Test Versionamento"))); // Titolo originale
+
+        // Step 7: Verifica che sia stata creata una terza versione (ripristino)
+        mockMvc.perform(get("/api/notes/" + noteId + "/versions")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(3)));
+    }
+
+    @Test
+    @DisplayName("INT-VER-002: Test sicurezza versionamento - Accesso non autorizzato")
+    void testVersioningSecurity_UnauthorizedAccess() throws Exception {
+        // Setup: Crea un secondo utente
+        String secondUserToken = createAndAuthenticateSecondUser();
+
+        // Step 1: Owner crea una nota
+        String createNoteRequest = """
+            {
+                "titolo": "Nota Privata Owner",
+                "contenuto": "Contenuto privato che non deve essere accessibile"
+            }
+            """;
+
+        String createResponse = mockMvc.perform(post("/api/notes")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createNoteRequest))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Long noteId = extractNoteIdFromResponse(createResponse);
+
+        // Step 2: Secondo utente tenta di accedere alle versioni
+        mockMvc.perform(get("/api/notes/" + noteId + "/versions")
+                        .header("Authorization", "Bearer " + secondUserToken))
+                .andExpect(status().isForbidden());
+
+        // Step 3: Secondo utente tenta di ripristinare una versione
+        mockMvc.perform(post("/api/notes/" + noteId + "/restore")
+                        .header("Authorization", "Bearer " + secondUserToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"versionNumber\": 1}"))
+                .andExpect(status().isForbidden());
+
+        // Step 4: Secondo utente tenta di confrontare versioni
+        mockMvc.perform(get("/api/notes/" + noteId + "/compare/1/1")
+                        .header("Authorization", "Bearer " + secondUserToken))
+                .andExpect(status().isForbidden());
+    }
+
+// ===== NUOVI TEST PER RICERCA AVANZATA =====
+
+    @Test
+    @DisplayName("INT-SEARCH-001: Workflow ricerca per autore")
+    void testSearchByAuthorWorkflow() throws Exception {
+        // Setup: Crea note di diversi autori
+        String secondUserToken = createAndAuthenticateSecondUser();
+
+        // Owner crea una nota
+        createNoteForTest("Nota Owner 1", "Contenuto owner", authToken);
+        createNoteForTest("Nota Owner 2", "Contenuto owner", authToken);
+
+        // Secondo utente crea una nota
+        createNoteForTest("Nota User2 1", "Contenuto user2", secondUserToken);
+
+        // Condividi una nota dell'owner con il secondo utente
+        Long sharedNoteId = createNoteForTest("Nota Condivisa", "Contenuto condiviso", authToken);
+        shareNoteWithUser(sharedNoteId, "target_user_search", "LETTURA");
+
+        // Test 1: Owner cerca le proprie note
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("author", "owner_user"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(3))); // 3 note dell'owner
+
+        // Test 2: Secondo utente cerca note dell'owner (dovrebbe vedere solo quelle condivise)
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", "Bearer " + secondUserToken)
+                        .param("author", "owner_user"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1))) // Solo la nota condivisa
+                .andExpect(jsonPath("$.data[0].titolo", is("Nota Condivisa")));
+
+        // Test 3: Ricerca autore inesistente
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("author", "utente_inesistente"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("INT-SEARCH-002: Workflow ricerca per data")
+    void testSearchByDateWorkflow() throws Exception {
+        // Step 1: Crea note con date diverse (simulando modifica delle date)
+        Long noteRecente = createNoteForTest("Nota Recente", "Contenuto recente", authToken);
+        Long noteVecchia = createNoteForTest("Nota Vecchia", "Contenuto vecchio", authToken);
+
+        // Step 2: Ricerca nell'ultimo giorno
+        String oggi = java.time.LocalDate.now().toString();
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("startDate", oggi + "T00:00:00")
+                        .param("endDate", oggi + "T23:59:59"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(2))));
+
+        // Step 3: Ricerca in range futuro (nessun risultato)
+        String domani = java.time.LocalDate.now().plusDays(1).toString();
+        String dopodomani = java.time.LocalDate.now().plusDays(2).toString();
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("startDate", domani + "T00:00:00")
+                        .param("endDate", dopodomani + "T23:59:59"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // Step 4: Test validazione date invalide
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("startDate", "data-invalida")
+                        .param("endDate", oggi + "T23:59:59"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("INT-SEARCH-003: Workflow ricerca combinata autore + data")
+    void testCombinedSearchWorkflow() throws Exception {
+        // Setup
+        String secondUserToken = createAndAuthenticateSecondUser();
+
+        // Crea note di diversi autori
+        createNoteForTest("Nota Owner Oggi", "Contenuto", authToken);
+        createNoteForTest("Nota User2 Oggi", "Contenuto", secondUserToken);
+
+        // Condividi nota del secondo utente con l'owner
+        Long sharedNote = createNoteForTest("Nota User2 Condivisa", "Contenuto condiviso", secondUserToken);
+        shareNoteFromUserToOwner(sharedNote, secondUserToken);
+
+        // Test ricerca combinata
+        String oggi = java.time.LocalDate.now().toString();
+        mockMvc.perform(get("/api/notes/search/combined")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("author", "target_user_search")
+                        .param("startDate", oggi + "T00:00:00")
+                        .param("endDate", oggi + "T23:59:59"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+// ===== TEST PERFORMANCE INTEGRATION =====
+
+    @Test
+    @DisplayName("INT-PERF-001: Performance ricerca con molte note")
+    void testSearchPerformanceWithManyNotes() throws Exception {
+        // Step 1: Crea molte note (limitiamo per i test)
+        for (int i = 1; i <= 20; i++) {
+            createNoteForTest("Nota Performance " + i, "Contenuto " + i, authToken);
+        }
+
+        // Step 2: Test performance ricerca per autore
+        long startTime = System.currentTimeMillis();
+        mockMvc.perform(get("/api/notes/search/author")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("author", "owner_user"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(20))));
+        long endTime = System.currentTimeMillis();
+
+        // Verifica performance (meno di 200ms)
+        assertTrue((endTime - startTime) < 200, "Ricerca per autore troppo lenta: " + (endTime - startTime) + "ms");
+
+        // Step 3: Test performance ricerca per data
+        String oggi = java.time.LocalDate.now().toString();
+        startTime = System.currentTimeMillis();
+        mockMvc.perform(get("/api/notes/search/date")
+                        .header("Authorization", "Bearer " + authToken)
+                        .param("startDate", oggi + "T00:00:00")
+                        .param("endDate", oggi + "T23:59:59"))
+                .andExpect(status().isOk());
+        endTime = System.currentTimeMillis();
+
+        assertTrue((endTime - startTime) < 200, "Ricerca per data troppo lenta: " + (endTime - startTime) + "ms");
+    }
+
+// ===== METODI HELPER AGGIUNTIVI =====
+
+    private Long extractNoteIdFromResponse(String responseContent) throws Exception {
+        var jsonNode = objectMapper.readTree(responseContent);
+        return jsonNode.get("data").get("id").asLong();
+    }
+
+    private String createAndAuthenticateSecondUser() throws Exception {
+        // Registra secondo utente per i test
+        RegistrationRequest secondUser = new RegistrationRequest();
+        secondUser.setUsername("target_user_search");
+        secondUser.setPassword("SearchPass123!");
+        secondUser.setNome("Search");
+        secondUser.setCognome("User");
+        secondUser.setEmail("search@example.com");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(secondUser)))
+                .andExpect(status().isCreated());
+
+        // Login del secondo utente
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setUsername("target_user_search");
+        loginRequest.setPassword("SearchPass123!");
+
+        String response = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        LoginResponse loginResponse = objectMapper.readValue(response, LoginResponse.class);
+        return loginResponse.getToken();
+    }
+
+    private Long createNoteForTest(String titolo, String contenuto, String token) throws Exception {
+        String createRequest = String.format("""
+            {
+                "titolo": "%s",
+                "contenuto": "%s",
+                "tags": ["test"]
+            }
+            """, titolo, contenuto);
+
+        String response = mockMvc.perform(post("/api/notes")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createRequest))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return extractNoteIdFromResponse(response);
+    }
+
+    private void shareNoteWithUser(Long noteId, String targetUsername, String permissionType) throws Exception {
+        String shareRequest = String.format("""
+            {
+                "tipo": "%s",
+                "utentiCondivisi": ["%s"]
+            }
+            """, permissionType, targetUsername);
+
+        mockMvc.perform(put("/api/notes/" + noteId + "/permissions")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shareRequest))
+                .andExpect(status().isOk());
+    }
+
+    private void shareNoteFromUserToOwner(Long noteId, String userToken) throws Exception {
+        String shareRequest = """
+            {
+                "tipo": "LETTURA",
+                "utentiCondivisi": ["owner_user"]
+            }
+            """;
+
+        mockMvc.perform(put("/api/notes/" + noteId + "/permissions")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shareRequest))
+                .andExpect(status().isOk());
+    }
 }

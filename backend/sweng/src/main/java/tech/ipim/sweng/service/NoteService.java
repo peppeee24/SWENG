@@ -766,4 +766,21 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
         }
     }
 
+
+    public List<Note> findNotesByAuthor(String autore, String utente) {
+        return noteRepository.findByAutoreUsernameAndAccessibleByUser(autore, utente);
+    }
+
+    public List<Note> findNotesByDateRange(LocalDateTime inizio, LocalDateTime fine, String utente) {
+        return noteRepository.findByDateRangeAndAccessibleByUser(inizio, fine, utente);
+    }
+
+    public List<Note> findNotesByAuthorAndDateRange(String autore, LocalDateTime inizio, LocalDateTime fine, String utente) {
+        return noteRepository.findByAuthorAndDateRangeAndAccessibleByUser(autore, inizio, fine, utente);
+    }
+
+
+
+
+
 }
