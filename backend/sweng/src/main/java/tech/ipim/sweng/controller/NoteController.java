@@ -75,47 +75,7 @@ public class NoteController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllNotes(@RequestHeader("Authorization") String authHeader,
-                                         @RequestParam(value = "filter", defaultValue = "all") String filter) {
 
-        System.out.println("GET /api/notes - Filter: " + filter);
-
-        String username = extractUsernameFromAuth(authHeader);
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(NoteResponse.error("Token non valido"));
-        }
-
-        try {
-            List<NoteDto> notes;
-
-            switch (filter) {
-                case "own":
-                    notes = noteService.getUserNotes(username);
-                    break;
-                case "shared":
-                    notes = noteService.getAllAccessibleNotes(username)
-                            .stream()
-                            .filter(note -> !note.getAutore().equals(username))
-                            .toList();
-                    break;
-                default:
-                    notes = noteService.getAllAccessibleNotes(username);
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "notes", notes,
-                    "count", notes.size()
-            ));
-
-        } catch (Exception e) {
-            System.err.println("Errore recupero note: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(NoteResponse.error("Errore durante il recupero delle note"));
-        }
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getNoteById(@PathVariable Long id,
@@ -780,6 +740,117 @@ public class NoteController {
             System.err.println("Errore validazione token: " + e.getMessage());
         }
         return null;
+    }
+
+
+
+
+    @GetMapping
+    public ResponseEntity<?> getAllNotes(
+            @RequestParam(defaultValue = "all") String filter,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String cartella,
+            @RequestParam(required = false) String autore,
+            @RequestParam(required = false) String dataInizio,
+            @RequestParam(required = false) String dataFine,
+            @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("GET /api/notes - Filtri: " +
+                "filter=" + filter +
+                ", search=" + search +
+                ", tag=" + tag +
+                ", cartella=" + cartella +
+                ", autore=" + autore +
+                ", dataInizio=" + dataInizio +
+                ", dataFine=" + dataFine);
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            List<NoteDto> notes;
+
+            // Verifica se ci sono filtri specifici
+            if (search != null && !search.trim().isEmpty()) {
+                notes = noteService.searchNotes(username, search);
+            } else if (tag != null && !tag.trim().isEmpty()) {
+                notes = noteService.getNotesByTag(username, tag);
+            } else if (cartella != null && !cartella.trim().isEmpty()) {
+                notes = noteService.getNotesByCartella(username, cartella);
+            } else if (autore != null && !autore.trim().isEmpty()) {
+
+                notes = noteService.getNotesByAutore(username, autore, filter);
+            } else if (dataInizio != null || dataFine != null) {
+
+                notes = noteService.getNotesByDateRange(username, dataInizio, dataFine, filter);
+            } else {
+                // Nessun filtro specifico - usa il filtro standard
+                switch (filter) {
+                    case "own":
+                        notes = noteService.getUserNotes(username);
+                        break;
+                    case "shared":
+                        notes = noteService.getAllAccessibleNotes(username)
+                                .stream()
+                                .filter(note -> !note.getAutore().equals(username))
+                                .toList();
+                        break;
+                    default:
+                        notes = noteService.getAllAccessibleNotes(username);
+                }
+            }
+
+            System.out.println("Note trovate: " + notes.size());
+
+            // Prepara la risposta
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("notes", notes);
+            response.put("count", notes.size());
+
+            // Aggiungi informazioni sui filtri applicati
+            if (search != null) response.put("keyword", search);
+            if (tag != null) response.put("tag", tag);
+            if (cartella != null) response.put("cartella", cartella);
+            if (autore != null) response.put("autore", autore);
+            if (dataInizio != null) response.put("dataInizio", dataInizio);
+            if (dataFine != null) response.put("dataFine", dataFine);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Errore recupero note: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il recupero delle note"));
+        }
+    }
+
+
+    @GetMapping("/autori")
+    public ResponseEntity<?> getAvailableAutori(@RequestHeader("Authorization") String authHeader) {
+        System.out.println("GET /api/notes/autori - Recupero autori disponibili");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            List<String> autori = noteService.getAvailableAutori(username);
+            System.out.println("Autori disponibili trovati: " + autori.size());
+
+            return ResponseEntity.ok(autori);
+
+        } catch (Exception e) {
+            System.err.println("Errore recupero autori: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il recupero degli autori"));
+        }
     }
 
 }

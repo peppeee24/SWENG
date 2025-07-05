@@ -88,8 +88,7 @@
       </form>
     </div>
 
-    <!-- Tags and Folders Filters -->
-    @if (userStats() && (userStats()!.allTags.length > 0 || userStats()!.allCartelle.length > 0)) {
+    @if (userStats()) {
       <div class="quick-filters">
         <!-- Tags -->
         @if (userStats()!.allTags.length > 0) {
@@ -125,6 +124,73 @@
           </div>
         }
 
+        <!-- Filtro Autore -->
+        @if (availableAutori().length > 0) {
+          <div class="filter-section">
+            <h4>👤 Autore</h4>
+            <div class="author-filter-container">
+              <select
+                class="form-select"
+                [value]="selectedAutore()"
+                (change)="onAutoreFilter($any($event.target).value)">
+                <option value="">Tutti gli autori</option>
+                @for (autore of availableAutori(); track autore) {
+                  <option [value]="autore">{{ autore }}</option>
+                }
+              </select>
+              @if (selectedAutore()) {
+                <button
+                  class="clear-filter-btn"
+                  (click)="clearAutoreFilter()"
+                  title="Rimuovi filtro autore">
+                  ✕
+                </button>
+              }
+            </div>
+          </div>
+
+
+        }
+
+
+
+        <!-- Filtri Data -->
+        <div class="filter-section">
+          <h4>📅 Filtro Date</h4>
+          <div class="date-filter-container">
+            <div class="date-input-group">
+              <label for="data-inizio">Creata dal:</label>
+              <input
+                id="data-inizio"
+                type="date"
+                class="form-input date-input"
+                [value]="selectedDataInizio()"
+                (change)="onDataFilter('inizio', $any($event.target).value)"
+                placeholder="Data inizio">
+            </div>
+            <div class="date-input-group">
+              <label for="data-fine">Creata fino al:</label>
+              <input
+                id="data-fine"
+                type="date"
+                class="form-input date-input"
+                [value]="selectedDataFine()"
+                (change)="onDataFilter('fine', $any($event.target).value)"
+                placeholder="Data fine">
+            </div>
+            @if (selectedDataInizio() || selectedDataFine()) {
+              <button
+                class="clear-filter-btn date-clear"
+                (click)="clearDateFilters()"
+                title="Rimuovi filtri data">
+                ✕ Date
+              </button>
+            }
+          </div>
+        </div>
+
+
+
         <!-- Clear Filters -->
         @if (hasActiveFilters()) {
           <button class="clear-filters-btn" (click)="clearFilters()">
@@ -135,52 +201,80 @@
     }
 
     <!-- Active Filter Info -->
-    @if (selectedTag() || selectedCartella() || searchQuery()) {
-    <div class="active-filter-info">
-      @if (selectedCartella()) {
-        <div class="filter-info cartella-filter">
-          <span class="filter-icon">📁</span>
-          <span class="filter-text">
-            Visualizzando note della cartella: <strong>{{ selectedCartella() }}</strong>
-          </span>
-          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
-            ✕
-          </button>
-        </div>
-      }
-      @if (selectedTag()) {
-        <div class="filter-info tag-filter">
-          <span class="filter-icon">🏷️</span>
-          <span class="filter-text">
-            Filtro per tag: <strong>{{ selectedTag() }}</strong>
-          </span>
-          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
-            ✕
-          </button>
-        </div>
-      }
-      @if (searchQuery()) {
-        <div class="filter-info search-filter">
-          <span class="filter-icon">🔍</span>
-          <span class="filter-text">
-            Ricerca: <strong>{{ searchQuery() }}</strong>
-          </span>
-          <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">
-            ✕
-          </button>
-        </div>
-      }
+    @if (selectedTag() || selectedCartella() || searchQuery() || selectedAutore() || selectedDataInizio() || selectedDataFine()) {
+      <div class="active-filter-info">
 
-      <!-- Pulsante per tornare alle cartelle se filtro attivo -->
-      @if (selectedCartella()) {
-        <div class="navigation-helper">
-          <button class="back-to-cartelle-btn" (click)="router.navigate(['/cartelle'])">
-            ← Torna alle Cartelle
-          </button>
-        </div>
-      }
-    </div>
-  }
+        <!-- Filtro Cartella -->
+        @if (selectedCartella()) {
+          <div class="filter-info cartella-filter">
+            <span class="filter-icon">📁</span>
+            <span class="filter-text">
+          Visualizzando note della cartella: <strong>{{ selectedCartella() }}</strong>
+        </span>
+            <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">✕</button>
+          </div>
+        }
+
+        <!-- Filtro Tag -->
+        @if (selectedTag()) {
+          <div class="filter-info tag-filter">
+            <span class="filter-icon">🏷️</span>
+            <span class="filter-text">
+          Filtro per tag: <strong>{{ selectedTag() }}</strong>
+        </span>
+            <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">✕</button>
+          </div>
+        }
+
+        <!-- Filtro Ricerca -->
+        @if (searchQuery()) {
+          <div class="filter-info search-filter">
+            <span class="filter-icon">🔍</span>
+            <span class="filter-text">
+          Ricerca: <strong>{{ searchQuery() }}</strong>
+        </span>
+            <button class="filter-remove-btn" (click)="clearFilters()" title="Rimuovi filtro">✕</button>
+          </div>
+        }
+
+        <!-- Filtro Autore -->
+        @if (selectedAutore()) {
+          <div class="filter-info author-filter">
+            <span class="filter-icon">👤</span>
+            <span class="filter-text">
+          Autore: <strong>{{ selectedAutore() }}</strong>
+        </span>
+            <button class="filter-remove-btn" (click)="clearAutoreFilter()" title="Rimuovi filtro">✕</button>
+          </div>
+        }
+
+        <!-- Filtro Date -->
+        @if (selectedDataInizio() || selectedDataFine()) {
+          <div class="filter-info date-filter">
+            <span class="filter-icon">📅</span>
+            <span class="filter-text">
+          @if (selectedDataInizio() && selectedDataFine()) {
+            Periodo: <strong>{{ selectedDataInizio() }} - {{ selectedDataFine() }}</strong>
+          } @else if (selectedDataInizio()) {
+            Dal: <strong>{{ selectedDataInizio() }}</strong>
+          } @else {
+            Fino al: <strong>{{ selectedDataFine() }}</strong>
+          }
+        </span>
+            <button class="filter-remove-btn" (click)="clearDateFilters()" title="Rimuovi filtro">✕</button>
+          </div>
+        }
+
+        <!-- Pulsante per tornare alle cartelle se filtro attivo -->
+        @if (selectedCartella()) {
+          <div class="navigation-helper">
+            <button class="back-to-cartelle-btn" (click)="router.navigate(['/cartelle'])">
+              ← Torna alle Cartelle
+            </button>
+          </div>
+        }
+      </div>
+    }
     <!-- Error Message -->
     @if (error()) {
       <div class="error-message">

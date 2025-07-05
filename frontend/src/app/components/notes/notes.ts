@@ -1,4 +1,4 @@
-// notes.component.ts -
+// notes.component.ts
 
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -54,6 +54,12 @@ export class NotesComponent implements OnInit {
   versionRestoreSuccess = signal<string | null>(null);
   versionRestoreError = signal<string | null>(null);
 
+  // NUOVI SIGNALS per filtri autore e data
+  selectedAutore = signal<string>('');
+  selectedDataInizio = signal<string>('');
+  selectedDataFine = signal<string>('');
+  availableAutori = signal<string[]>([]);
+
   searchForm: FormGroup;
 
   //  COMPUTED PROPERTIES
@@ -103,10 +109,18 @@ export class NotesComponent implements OnInit {
       return;
     }
 
+    console.log('*************** ngOnInit - availableAutori iniziale:', this.availableAutori());
+
     // Carica note e statistiche
     this.loadNotes();
     this.loadUserStats();
     this.loadCartelle();
+    this.loadAvailableAutori(); // Carica gli autori disponibili
+
+
+    setTimeout(() => {
+      console.log('************* availableAutori dopo 1 secondo:', this.availableAutori());
+    }, 1000);
 
     // Gestisci query parameters per filtri automatici
     this.handleQueryParams();
@@ -152,13 +166,38 @@ export class NotesComponent implements OnInit {
     });
   }
 
+  //  Carica gli autori disponibili per il filtro
+  loadAvailableAutori(): void {
+    console.log('*************** loadAvailableAutori chiamato');
+    console.log('***************  availableAutori prima della chiamata:', this.availableAutori());
+
+    this.notesService.getAvailableAutori().subscribe({
+      next: (autori: string[]) => {
+        console.log('***************  Autori ricevuti dal service:', autori);
+        console.log('***************  Tipo di autori:', typeof autori);
+        console.log('***************  È array?', Array.isArray(autori));
+        console.log('***************  Lunghezza array:', autori.length);
+
+        this.availableAutori.set(autori);
+
+        console.log('***************  availableAutori dopo set:', this.availableAutori());
+        console.log('***************  availableAutori().length:', this.availableAutori().length);
+      },
+      error: (error) => {
+        console.error('***************  Errore caricamento autori:', error);
+        console.error('***************  Status:', error.status);
+        console.error('***************  Message:', error.message);
+        console.error('***************  URL chiamata:', error.url);
+      }
+    });
+  }
+
   // ============= GESTIONE FORM NOTE =============
   showCreateForm(): void {
     this.selectedNote.set(null);
     this.showNoteForm.set(true);
   }
 
-  //  Metodo mancante che causava errore nel template
   showEditForm(note: Note): void {
     console.log('Modifica nota richiesta:', note);
 
@@ -187,11 +226,9 @@ export class NotesComponent implements OnInit {
     this.selectedNote.set(null);
   }
 
-
   showCreateNoteForm(): void {
     this.showCreateForm();
   }
-
 
   getEmptyStateTitle(): string {
     const filter = this.currentFilter();
@@ -216,129 +253,6 @@ export class NotesComponent implements OnInit {
         return 'Non sono state trovate note che corrispondono ai tuoi criteri di ricerca.';
     }
   }
-
-/*
-  onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest | UpdateNoteRequestWithPermissions): void {
-    const selectedNote = this.selectedNote();
-
-    if (selectedNote) {
-      // Aggiorna nota esistente
-
-      // Controlla se ha permessi (UpdateNoteRequestWithPermissions)
-      if ('permessi' in noteData) {
-        console.log(' Aggiornamento nota CON permessi');
-        const updateWithPermissions = noteData as UpdateNoteRequestWithPermissions;
-
-        // Prima aggiorna il contenuto della nota (se necessario)
-        const contentUpdate: UpdateNoteRequest = {
-          id: selectedNote.id,
-          titolo: updateWithPermissions.titolo,
-          contenuto: updateWithPermissions.contenuto,
-          tags: updateWithPermissions.tags,
-          cartelle: updateWithPermissions.cartelle
-        };
-
-        // Aggiorna prima il contenuto
-        this.notesService.updateNote(selectedNote.id, contentUpdate).subscribe({
-          next: (contentResponse: any) => {
-            console.log(' Contenuto nota aggiornato:', contentResponse);
-
-            // Poi aggiorna i permessi
-            const permissionsRequest: PermissionsRequest = {
-              tipoPermesso: updateWithPermissions.permessi.tipoPermesso,
-              utentiLettura: updateWithPermissions.permessi.utentiLettura,
-              utentiScrittura: updateWithPermissions.permessi.utentiScrittura
-            };
-
-            console.log(' Aggiornamento permessi:', permissionsRequest);
-
-            this.notesService.updateNotePermissions(selectedNote.id, permissionsRequest).subscribe({
-              next: (permissionsResponse: any) => {
-                console.log(' Permessi aggiornati:', permissionsResponse);
-
-                const finalNote = permissionsResponse.data || permissionsResponse.note || permissionsResponse;
-
-                if (finalNote?.versionNumber) {
-                  this.versionRestoreSuccess.set(
-                    `Nota e permessi aggiornati con successo! Versione ${finalNote.versionNumber}`
-                  );
-                  setTimeout(() => this.versionRestoreSuccess.set(null), 3000);
-                }
-
-                this.hideNoteForm();
-                this.loadNotes();
-              },
-              error: (error) => {
-                console.error(' Errore aggiornamento permessi:', error);
-                this.versionRestoreError.set('Errore durante l\'aggiornamento dei permessi');
-                setTimeout(() => this.versionRestoreError.set(null), 5000);
-              }
-            });
-          },
-          error: (error) => {
-            console.error(' Errore aggiornamento contenuto:', error);
-            this.versionRestoreError.set('Errore durante l\'aggiornamento della nota');
-            setTimeout(() => this.versionRestoreError.set(null), 5000);
-          }
-        });
-
-      } else {
-        // Aggiornamento normale SENZA permessi
-        console.log(' Aggiornamento nota SENZA permessi');
-        const updateRequest: UpdateNoteRequest = {
-          id: selectedNote.id,
-          titolo: (noteData as UpdateNoteRequest).titolo,
-          contenuto: (noteData as UpdateNoteRequest).contenuto,
-          tags: (noteData as UpdateNoteRequest).tags,
-          cartelle: (noteData as UpdateNoteRequest).cartelle
-        };
-
-        this.notesService.updateNote(selectedNote.id, updateRequest).subscribe({
-          next: (response: any) => {
-            console.log(' Nota aggiornata (solo contenuto):', response);
-
-            const updatedNote = response.data || response.note || response;
-
-            if (updatedNote?.versionNumber) {
-              this.versionRestoreSuccess.set(
-                `Nota aggiornata con successo! Versione ${updatedNote.versionNumber}`
-              );
-              setTimeout(() => this.versionRestoreSuccess.set(null), 3000);
-            }
-
-            this.hideNoteForm();
-            this.loadNotes();
-          },
-          error: (error) => {
-            console.error(' Errore aggiornamento nota:', error);
-            this.versionRestoreError.set('Errore durante l\'aggiornamento della nota');
-            setTimeout(() => this.versionRestoreError.set(null), 5000);
-          }
-        });
-      }
-
-    } else {
-      // Creazione nuova nota
-      console.log(' Creazione nuova nota');
-      const createRequest = noteData as CreateNoteRequest;
-
-      this.notesService.createNote(createRequest).subscribe({
-        next: (response: any) => {
-          console.log(' Nota creata:', response);
-          this.hideNoteForm();
-          this.loadNotes();
-        },
-        error: (error) => {
-          console.error(' Errore creazione nota:', error);
-          this.versionRestoreError.set('Errore durante la creazione della nota');
-          setTimeout(() => this.versionRestoreError.set(null), 5000);
-        }
-      });
-    }
-  }
-
- */
-
 
   onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest | UpdateNoteRequestWithPermissions): void {
     const selectedNote = this.selectedNote();
@@ -460,7 +374,7 @@ export class NotesComponent implements OnInit {
     }
   }
 
-// AGGIUNGI questi metodi helper:
+
   private showSuccessMessage(response: any): void {
     const updatedNote = response.data || response.note || response;
 
@@ -575,6 +489,275 @@ export class NotesComponent implements OnInit {
     this.versionRestoreError.set(null);
   }
 
+  // ============= GESTIONE QUERY PARAMETERS =============
+  private handleQueryParams(): void {
+    this.route.queryParams.subscribe(params => {
+      console.log('Query params ricevuti:', params);
+
+      // Reset dei filtri prima di applicare i nuovi
+      this.resetFiltersState();
+
+      // Gestisci cartella con autoFilter
+      if (params['cartella'] && params['autoFilter'] === 'true') {
+        const cartellaNome = params['cartella'];
+        console.log('Filtro automatico per cartella:', cartellaNome);
+
+        this.selectedCartella.set(cartellaNome);
+        this.loadNotesByCartella(cartellaNome);
+
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { cartella: cartellaNome },
+          replaceUrl: true
+        });
+      }
+      // Gestisci cartella normale
+      else if (params['cartella']) {
+        const cartellaNome = params['cartella'];
+        this.selectedCartella.set(cartellaNome);
+        this.loadNotesByCartella(cartellaNome);
+      }
+      // Gestisci tag
+      else if (params['tag']) {
+        const tagNome = params['tag'];
+        this.selectedTag.set(tagNome);
+        this.loadNotesByTag(tagNome);
+      }
+      // Gestisci search
+      else if (params['search']) {
+        const searchQuery = params['search'];
+        this.searchQuery.set(searchQuery);
+        this.searchForm.patchValue({ query: searchQuery }, { emitEvent: false });
+        this.loadNotesBySearch(searchQuery);
+      }
+      // Gestisci filtro autore
+      else if (params['autore']) {
+        const autore = params['autore'];
+        this.selectedAutore.set(autore);
+        this.loadNotesByAutore(autore);
+      }
+      // Gestisci filtri data
+      else if (params['dataInizio'] || params['dataFine']) {
+        this.selectedDataInizio.set(params['dataInizio'] || '');
+        this.selectedDataFine.set(params['dataFine'] || '');
+        this.loadNotesByDate(params['dataInizio'], params['dataFine']);
+      }
+      // Nessun filtro - carica tutte le note
+      else {
+        this.loadNotes();
+      }
+
+      // Aggiorna i signals per i filtri attivi (importante per l'UI)
+      this.selectedAutore.set(params['autore'] || '');
+      this.selectedDataInizio.set(params['dataInizio'] || '');
+      this.selectedDataFine.set(params['dataFine'] || '');
+    });
+  }
+
+  //  METODI DI CARICAMENTO SEPARATI
+  private loadNotesByCartella(cartellaNome: string): void {
+    this.notesService.getNotesByCartella(cartellaNome).subscribe({
+      next: () => {
+        console.log(`Note filtrate per cartella "${cartellaNome}" caricate`);
+      },
+      error: (error) => {
+        console.error('Errore filtro per cartella:', error);
+        this.loadNotes(); // Fallback
+      }
+    });
+  }
+
+  // Carica note per autore
+  private loadNotesByAutore(autore: string): void {
+    this.notesService.getNotesByAutore(autore).subscribe({
+      next: () => {
+        console.log(`Note filtrate per autore "${autore}" caricate`);
+      },
+      error: (error) => {
+        console.error('Errore filtro per autore:', error);
+        this.loadNotes(); // Fallback
+      }
+    });
+  }
+
+  //  Carica note per range di date
+  private loadNotesByDate(dataInizio?: string, dataFine?: string): void {
+  console.log('COMPONENT: loadNotesByDate chiamato con:', { dataInizio, dataFine, currentFilter: this.currentFilter() });
+  
+  this.notesService.getNotesByDateRange(dataInizio, dataFine, this.currentFilter()).subscribe({
+    next: () => {
+      console.log(`COMPONENT: Note filtrate per data (${dataInizio} - ${dataFine}) caricate`);
+    },
+    error: (error) => {
+      console.error('COMPONENT: Errore filtro per data:', error);
+      this.loadNotes(); // Fallback
+    }
+  });
+}
+
+  private loadNotesByTag(tagNome: string): void {
+    this.notesService.getNotesByTag(tagNome).subscribe({
+      next: () => {
+        console.log(`Note filtrate per tag "${tagNome}" caricate`);
+      },
+      error: (error) => {
+        console.error('Errore filtro per tag:', error);
+        this.loadNotes(); // Fallback
+      }
+    });
+  }
+
+  private loadNotesBySearch(searchQuery: string): void {
+    this.notesService.searchNotes(searchQuery).subscribe({
+      next: () => {
+        console.log(`Note trovate per ricerca "${searchQuery}"`);
+      },
+      error: (error) => {
+        console.error('Errore ricerca:', error);
+        this.loadNotes(); // Fallback
+      }
+    });
+  }
+
+  //  Reset di tutti i filtri
+  private resetFiltersState(): void {
+    this.selectedTag.set(null);
+    this.selectedCartella.set(null);
+    this.searchQuery.set('');
+    this.selectedAutore.set('');
+    this.selectedDataInizio.set('');
+    this.selectedDataFine.set('');
+    this.searchForm.patchValue({ query: '' }, { emitEvent: false });
+  }
+
+  // ============= METODI DI FILTRO =============
+  onFilterChange(filter: 'all' | 'own' | 'shared'): void {
+    console.log('Cambio filtro a:', filter);
+    this.currentFilter.set(filter);
+
+    // Pulisci URL e stati
+    this.clearFiltersAndUrl();
+    this.loadNotes();
+  }
+
+  onTagFilter(tag: string): void {
+    console.log('Filtro per tag:', tag);
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tag: tag },
+      replaceUrl: true
+    });
+  }
+
+  onCartellaFilter(cartella: string): void {
+    console.log('Filtro per cartella:', cartella);
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { cartella: cartella },
+      replaceUrl: true
+    });
+  }
+
+  onSearch(): void {
+    const query = this.searchQuery().trim();
+    console.log('Ricerca avviata:', query);
+
+    if (query) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { search: query },
+        replaceUrl: true
+      });
+    } else {
+      this.clearFilters();
+    }
+  }
+
+  //  Filtro per autore
+  onAutoreFilter(autore: string): void {
+    console.log('Filtro per autore:', autore);
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        ...this.route.snapshot.queryParams,
+        autore: autore || undefined
+      },
+      replaceUrl: true
+    });
+  }
+
+  //  Filtro per date
+  onDataFilter(tipo: 'inizio' | 'fine', data: string): void {
+    console.log(`Filtro per data ${tipo}:`, data);
+
+    const queryParams: any = { ...this.route.snapshot.queryParams };
+
+    if (tipo === 'inizio') {
+      if (data) queryParams.dataInizio = data;
+      else delete queryParams.dataInizio;
+    } else {
+      if (data) queryParams.dataFine = data;
+      else delete queryParams.dataFine;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: queryParams,
+      replaceUrl: true
+    });
+  }
+
+  //  Pulisci filtro autore
+  clearAutoreFilter(): void {
+    this.onAutoreFilter('');
+  }
+
+  //  Pulisci filtri data
+  clearDateFilters(): void {
+    const queryParams: any = { ...this.route.snapshot.queryParams };
+    delete queryParams['dataInizio'];
+    delete queryParams['dataFine'];
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: queryParams,
+      replaceUrl: true
+    });
+  }
+
+  clearFilters(): void {
+    console.log('Pulizia filtri');
+    this.clearFiltersAndUrl();
+    this.loadNotes();
+  }
+
+  private clearFiltersAndUrl(): void {
+    // Reset stato
+    this.resetFiltersState();
+
+    // Pulisci URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {},
+      replaceUrl: true
+    });
+  }
+
+  // AGGIORNATO: Verifica se ci sono filtri attivi
+  hasActiveFilters(): boolean {
+    return !!(
+      this.selectedTag() ||
+      this.selectedCartella() ||
+      this.searchQuery() ||
+      this.selectedAutore() ||
+      this.selectedDataInizio() ||
+      this.selectedDataFine()
+    );
+  }
+
   // ============= METODI UTILITY =============
   private hasPermissionsChanged(originalNote: Note, newPermissions: any): boolean {
     if (!newPermissions) return false;
@@ -604,181 +787,5 @@ export class NotesComponent implements OnInit {
     }
     this.authService.logout();
     this.router.navigate(['/auth']);
-  }
-
-
-
-  //GESTIONE QUERY PARAMETERS
-  private handleQueryParams(): void {
-    this.route.queryParams.subscribe(params => {
-      console.log('Query params ricevuti:', params);
-
-      // Reset dei filtri prima di applicare i nuovi
-      this.resetFiltersState();
-
-      // Gestisci cartella con autoFilter
-      if (params['cartella'] && params['autoFilter'] === 'true') {
-        const cartellaNome = params['cartella'];
-        console.log('Filtro automatico per cartella:', cartellaNome);
-
-        // Applica il filtro
-        this.selectedCartella.set(cartellaNome);
-        this.loadNotesByCartella(cartellaNome);
-
-        // Pulisci l'URL da autoFilter
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { cartella: cartellaNome },
-          replaceUrl: true
-        });
-      }
-      // Gestisci cartella normale
-      else if (params['cartella']) {
-        const cartellaNome = params['cartella'];
-        this.selectedCartella.set(cartellaNome);
-        this.loadNotesByCartella(cartellaNome);
-      }
-      // Gestisci tag
-      else if (params['tag']) {
-        const tagNome = params['tag'];
-        this.selectedTag.set(tagNome);
-        this.loadNotesByTag(tagNome);
-      }
-      // Gestisci search
-      else if (params['search']) {
-        const searchQuery = params['search'];
-        this.searchQuery.set(searchQuery);
-        this.searchForm.patchValue({ query: searchQuery }, { emitEvent: false });
-        this.loadNotesBySearch(searchQuery);
-      }
-      // Nessun filtro - carica tutte le note
-      else {
-        this.loadNotes();
-      }
-    });
-  }
-
-// ============= METODI DI CARICAMENTO SEPARATI =============
-  private loadNotesByCartella(cartellaNome: string): void {
-    this.notesService.getNotesByCartella(cartellaNome).subscribe({
-      next: () => {
-        console.log(`Note filtrate per cartella "${cartellaNome}" caricate`);
-      },
-      error: (error) => {
-        console.error('Errore filtro per cartella:', error);
-        this.loadNotes(); // Fallback
-      }
-    });
-  }
-
-  private loadNotesByTag(tagNome: string): void {
-    this.notesService.getNotesByTag(tagNome).subscribe({
-      next: () => {
-        console.log(`Note filtrate per tag "${tagNome}" caricate`);
-      },
-      error: (error) => {
-        console.error('Errore filtro per tag:', error);
-        this.loadNotes(); // Fallback
-      }
-    });
-  }
-
-  private loadNotesBySearch(searchQuery: string): void {
-    this.notesService.searchNotes(searchQuery).subscribe({
-      next: () => {
-        console.log(`Note trovate per ricerca "${searchQuery}"`);
-      },
-      error: (error) => {
-        console.error('Errore ricerca:', error);
-        this.loadNotes(); // Fallback
-      }
-    });
-  }
-
-  private resetFiltersState(): void {
-    // Reset senza emettere eventi per evitare loop
-    this.selectedTag.set(null);
-    this.selectedCartella.set(null);
-    this.searchQuery.set('');
-    this.searchForm.patchValue({ query: '' }, { emitEvent: false });
-  }
-
-// METODI DI FILTRO
-  onFilterChange(filter: 'all' | 'own' | 'shared'): void {
-    console.log('Cambio filtro a:', filter);
-    this.currentFilter.set(filter);
-
-    // Pulisci URL e stati
-    this.clearFiltersAndUrl();
-    this.loadNotes();
-  }
-
-  onTagFilter(tag: string): void {
-    console.log('Filtro per tag:', tag);
-
-    // Aggiorna URL
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tag: tag },
-      replaceUrl: true
-    });
-
-    // Il caricamento sarà gestito da handleQueryParams()
-  }
-
-  onCartellaFilter(cartella: string): void {
-    console.log('Filtro per cartella:', cartella);
-
-    // Aggiorna URL
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { cartella: cartella },
-      replaceUrl: true
-    });
-
-    // Il caricamento sarà gestito da handleQueryParams()
-  }
-
-  onSearch(): void {
-    const query = this.searchQuery().trim();
-    console.log('Ricerca avviata:', query);
-
-    if (query) {
-      // Aggiorna URL
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { search: query },
-        replaceUrl: true
-      });
-
-      // Il caricamento sarà gestito da handleQueryParams()
-    } else {
-      this.clearFilters();
-    }
-  }
-
-  clearFilters(): void {
-    console.log('Pulizia filtri');
-    this.clearFiltersAndUrl();
-    this.loadNotes();
-  }
-
-  private clearFiltersAndUrl(): void {
-    // Reset stato
-    this.resetFiltersState();
-
-    // Pulisci URL
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: {},
-      replaceUrl: true
-    });
-  }
-
-// ============= METODO APPLICACARTELLAFILTER RIMOSSO =============
-// Non serve più perché usiamo loadNotesByCartella()
-
-  hasActiveFilters(): boolean {
-    return !!(this.selectedTag() || this.selectedCartella() || this.searchQuery());
   }
 }

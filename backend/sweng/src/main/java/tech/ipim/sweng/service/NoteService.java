@@ -1,26 +1,28 @@
 package tech.ipim.sweng.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tech.ipim.sweng.dto.CreateNoteRequest;
-import tech.ipim.sweng.dto.NoteDto;
-import tech.ipim.sweng.dto.UpdateNoteRequest;
-import tech.ipim.sweng.dto.PermissionDto;
-import tech.ipim.sweng.dto.NoteVersionDto;
-import tech.ipim.sweng.model.Note;
-import tech.ipim.sweng.model.NoteVersion;
-import tech.ipim.sweng.dto.VersionComparisonDto;
-import tech.ipim.sweng.model.TipoPermesso;
-import tech.ipim.sweng.model.User;
-import tech.ipim.sweng.repository.NoteRepository;
-import tech.ipim.sweng.repository.UserRepository;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import tech.ipim.sweng.dto.CreateNoteRequest;
+import tech.ipim.sweng.dto.NoteDto;
+import tech.ipim.sweng.dto.NoteVersionDto;
+import tech.ipim.sweng.dto.PermissionDto;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.dto.VersionComparisonDto;
+import tech.ipim.sweng.model.Note;
+import tech.ipim.sweng.model.NoteVersion;
+import tech.ipim.sweng.model.TipoPermesso;
+import tech.ipim.sweng.model.User;
+import tech.ipim.sweng.repository.NoteRepository;
+import tech.ipim.sweng.repository.UserRepository;
 
 @Service
 @Transactional
@@ -31,7 +33,6 @@ public class NoteService {
     private final NoteVersionService noteVersionService;
 
     @Autowired
-
     public NoteService(NoteRepository noteRepository, UserRepository userRepository, NoteVersionService noteVersionService) {
         this.noteRepository = noteRepository;
         this.userRepository = userRepository;
@@ -167,9 +168,9 @@ public class NoteService {
         Note originalNote = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
 
-        boolean hasAccess = originalNote.getAutore().getUsername().equals(username) ||
-                originalNote.getPermessiLettura().contains(username) ||
-                originalNote.getPermessiScrittura().contains(username);
+        boolean hasAccess = originalNote.getAutore().getUsername().equals(username)
+                || originalNote.getPermessiLettura().contains(username)
+                || originalNote.getPermessiScrittura().contains(username);
 
         if (!hasAccess) {
             throw new RuntimeException("Non hai accesso a questa nota");
@@ -179,7 +180,7 @@ public class NoteService {
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
         Note duplicatedNote = new Note(
-                originalNote.getTitolo() + " (Copia)",
+                originalNote.getTitolo() + " (copia)",
                 originalNote.getContenuto(),
                 user
         );
@@ -198,46 +199,18 @@ public class NoteService {
 
     @Transactional
     public boolean deleteNote(Long noteId, String username) {
-        System.out.println("=== INIZIO ELIMINAZIONE NOTA ===");
-        System.out.println("Note ID: " + noteId + ", Username: " + username);
-
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata: " + noteId));
 
-        System.out.println("Nota trovata - Autore: " + note.getAutore().getUsername());
-        System.out.println("Utente richiedente: " + username);
-        System.out.println("È proprietario? " + note.isAutore(username));
-
         if (!note.isAutore(username)) {
-            System.err.println(" ERRORE: L'utente " + username + " non è il proprietario della nota " + noteId);
             throw new RuntimeException("Non hai i permessi per eliminare questa nota");
         }
 
-        try {
-            // STEP 1: Elimina PRIMA tutte le versioni della nota
-            System.out.println("STEP 1: Eliminazione versioni...");
-            noteVersionService.deleteAllVersionsForNote(noteId);
-            System.out.println("Versioni eliminate con successo");
+        noteVersionService.deleteAllVersionsForNote(noteId);
 
-            // STEP 2: Elimina la nota principale
-            System.out.println("STEP 2: Eliminazione nota principale...");
-            noteRepository.delete(note);
-            System.out.println(" Nota principale eliminata con successo");
-
-            // STEP 3: Flush per assicurarsi che tutto sia committed
-            noteRepository.flush();
-            System.out.println("Operazioni committed nel database");
-
-            System.out.println("=== ELIMINAZIONE COMPLETATA CON SUCCESSO ===");
-            System.out.println("Nota eliminata: " + noteId + " da " + username);
-
-            return true;
-
-        } catch (Exception e) {
-            System.err.println(" ERRORE durante l'eliminazione della nota " + noteId + ": " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Errore durante l'eliminazione della nota: " + e.getMessage());
-        }
+        noteRepository.delete(note);
+        System.out.println("Nota eliminata: " + noteId + " da " + username);
+        return true;
     }
 
     @Transactional
@@ -249,8 +222,8 @@ public class NoteService {
             throw new RuntimeException("Il proprietario non può rimuoversi dalla propria nota");
         }
 
-        boolean hasAccess = note.getPermessiLettura().contains(username) ||
-                note.getPermessiScrittura().contains(username);
+        boolean hasAccess = note.getPermessiLettura().contains(username)
+                || note.getPermessiScrittura().contains(username);
 
         if (!hasAccess) {
             throw new RuntimeException("L'utente non ha accesso a questa nota");
@@ -269,8 +242,8 @@ public class NoteService {
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata"));
 
-        boolean canEdit = note.getAutore().getUsername().equals(username) ||
-                note.getPermessiScrittura().contains(username);
+        boolean canEdit = note.getAutore().getUsername().equals(username)
+                || note.getPermessiScrittura().contains(username);
 
         if (!canEdit) {
             throw new RuntimeException("Non hai i permessi per modificare questa nota");
@@ -332,7 +305,7 @@ public class NoteService {
         System.out.println("DOPO CONFIG - Permessi lettura: " + note.getPermessiLettura());
         System.out.println("DOPO CONFIG - Permessi scrittura: " + note.getPermessiScrittura());
 
-        // IMPORTANTE: Usa saveAndFlush per forzare il salvataggio immediato
+        //  Usa saveAndFlush per forzare il salvataggio immediato
         Note savedNote = noteRepository.saveAndFlush(note);
 
         // Log stato DOPO il salvataggio
@@ -351,7 +324,6 @@ public class NoteService {
         }
 
          */
-
         System.out.println("Permessi aggiornati per nota: " + noteId + " da " + username);
         System.out.println("=== FINE updateNotePermissions ===");
 
@@ -395,8 +367,8 @@ public class NoteService {
                 .orElseThrow(() -> new RuntimeException("Nota non trovata"));
 
         // Verifica che l'utente abbia i permessi di scrittura
-        boolean canEdit = note.isAutore(username) ||
-                note.getPermessiScrittura().contains(username);
+        boolean canEdit = note.isAutore(username)
+                || note.getPermessiScrittura().contains(username);
 
         if (!canEdit) {
             throw new RuntimeException("Non hai i permessi per ripristinare versioni di questa nota");
@@ -426,8 +398,8 @@ public class NoteService {
         String changeDescription = String.format("Ripristino alla versione %d", versionNumber);
         noteVersionService.createVersion(savedNote, username, changeDescription);
 
-        System.out.println("Versione " + versionNumber + " ripristinata per nota " + noteId +
-                " da " + username + " (nuova versione " + note.getVersionNumber() + ")");
+        System.out.println("Versione " + versionNumber + " ripristinata per nota " + noteId
+                + " da " + username + " (nuova versione " + note.getVersionNumber() + ")");
 
         return NoteDto.fromNote(savedNote, username);
     }
@@ -462,11 +434,11 @@ public class NoteService {
         boolean titleChanged = !v1.get().getTitolo().equals(v2.get().getTitolo());
         boolean contentChanged = !v1.get().getContenuto().equals(v2.get().getContenuto());
 
-        String titleDiff = titleChanged ?
-                String.format("'%s' → '%s'", v1.get().getTitolo(), v2.get().getTitolo()) : null;
+        String titleDiff = titleChanged
+                ? String.format("'%s' → '%s'", v1.get().getTitolo(), v2.get().getTitolo()) : null;
 
-        String contentDiff = contentChanged ?
-                generateContentDiff(v1.get().getContenuto(), v2.get().getContenuto()) : null;
+        String contentDiff = contentChanged
+                ? generateContentDiff(v1.get().getContenuto(), v2.get().getContenuto()) : null;
 
         VersionComparisonDto.DifferenceDto differences = new VersionComparisonDto.DifferenceDto(
                 titleChanged, contentChanged, titleDiff, contentDiff
@@ -494,6 +466,152 @@ public class NoteService {
             return String.format("Contenuto ampliato (%d → %d caratteri)", length1, length2);
         }
     }
+
+    /**
+     * Recupera tutti gli autori disponibili per l'utente corrente
+     */
+    public List<String> getAvailableAutori(String username) {
+        System.out.println("Recupero autori disponibili per utente: " + username);
+
+        try {
+            // Recupera gli autori delle note accessibili all'utente
+            List<String> autori = noteRepository.findDistinctAutoriByAccessibleToUser(username);
+
+            System.out.println("Autori trovati: " + autori.size());
+            return autori;
+
+        } catch (Exception e) {
+            System.err.println("Errore recupero autori: " + e.getMessage());
+            throw new RuntimeException("Errore durante il recupero degli autori");
+        }
+    }
+
+    // Aggiungi questo metodo al NoteService.java
+
+/**
+ * Recupera le note filtrate per autore
+ */
+public List<NoteDto> getNotesByAutore(String username, String autore, String filter) {
+    System.out.println("Recupero note per autore: " + autore + ", filtro: " + filter);
+
+    try {
+        List<Note> notes;
+
+        switch (filter.toLowerCase()) {
+            case "own":
+                notes = noteRepository.findByAutoreUsernameAndAutoreUsernameOrderByDataModificaDesc(autore, username);
+                break;
+            case "shared":
+                notes = noteRepository.findSharedNotesByAutore(username, autore);
+                break;
+            default: // "all"
+                notes = noteRepository.findAccessibleNotesByAutore(username, autore);
+                break;
+        }
+
+        System.out.println("Note trovate per autore " + autore + ": " + notes.size());
+
+        return notes.stream()
+                .map(note -> NoteDto.fromNote(note, username))
+                .collect(Collectors.toList());
+
+    } catch (Exception e) {
+        System.err.println("Errore ricerca per autore: " + e.getMessage());
+        throw new RuntimeException("Errore durante la ricerca per autore");
+    }
+}
+
+    /**
+     * Recupera le note filtrate per autore
+     */
+
+// Sostituisci il metodo getNotesByDateRange nel NoteService con questa versione
+
+public List<NoteDto> getNotesByDateRange(String username, String dataInizio, String dataFine, String filter) {
+    System.out.println("Ricerca note per periodo: " + dataInizio + " - " + dataFine + ", filtro: " + filter);
+
+    try {
+        final LocalDateTime finalStartDate;
+        final LocalDateTime finalEndDate;
+        
+        if (dataInizio != null && !dataInizio.trim().isEmpty()) {
+            finalStartDate = LocalDate.parse(dataInizio).atStartOfDay();
+        } else {
+            finalStartDate = null;
+        }
+        
+        if (dataFine != null && !dataFine.trim().isEmpty()) {
+            finalEndDate = LocalDate.parse(dataFine).atTime(23, 59, 59);
+        } else {
+            finalEndDate = null;
+        }
+
+        List<Note> notes;
+
+        // Gestione condizionale basata sui parametri delle date
+        if (finalStartDate == null && finalEndDate == null) {
+            // Nessun filtro data - usa query normali esistenti
+            switch (filter.toLowerCase()) {
+                case "own":
+                    // Cerca note proprie dell'utente
+                    User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new RuntimeException("Utente non trovato"));
+                    notes = noteRepository.findByAutoreOrderByDataModificaDesc(user);
+                    break;
+                case "shared":
+                    // Note condivise a cui l'utente ha accesso (escluse quelle proprie)
+                    List<Note> allAccessible = noteRepository.findAllAccessibleNotes(username);
+                    notes = allAccessible.stream()
+                            .filter(note -> !note.getAutore().getUsername().equals(username))
+                            .collect(Collectors.toList());
+                    break;
+                default: // "all"
+                    notes = noteRepository.findAllAccessibleNotes(username);
+                    break;
+            }
+        } else {
+            // Applica filtro manuale sui risultati
+            // Prima recupera tutte le note in base al filtro
+            List<Note> allNotes;
+            switch (filter.toLowerCase()) {
+                case "own":
+                    User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new RuntimeException("Utente non trovato"));
+                    allNotes = noteRepository.findByAutoreOrderByDataModificaDesc(user);
+                    break;
+                case "shared":
+                    List<Note> allAccessible = noteRepository.findAllAccessibleNotes(username);
+                    allNotes = allAccessible.stream()
+                            .filter(note -> !note.getAutore().getUsername().equals(username))
+                            .collect(Collectors.toList());
+                    break;
+                default: // "all"
+                    allNotes = noteRepository.findAllAccessibleNotes(username);
+                    break;
+            }
+
+            // Poi filtra per date in memoria
+            notes = allNotes.stream()
+                    .filter(note -> {
+                        LocalDateTime dataCreazione = note.getDataCreazione();
+                        boolean afterStart = finalStartDate == null || !dataCreazione.isBefore(finalStartDate);
+                        boolean beforeEnd = finalEndDate == null || !dataCreazione.isAfter(finalEndDate);
+                        return afterStart && beforeEnd;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        System.out.println("Note trovate per periodo: " + notes.size());
+
+        return notes.stream()
+                .map(note -> NoteDto.fromNote(note, username))
+                .collect(Collectors.toList());
+
+    } catch (Exception e) {
+        System.err.println("Errore ricerca per date: " + e.getMessage());
+        throw new RuntimeException("Errore durante la ricerca per date: " + e.getMessage());
+    }
+}
 
     public UserStatsDto getUserStats(String username) {
         User user = userRepository.findByUsername(username)
@@ -606,6 +724,7 @@ public class NoteService {
     }
 
     public static class UserStatsDto {
+
         private final long noteCreate;
         private final long noteCondivise;
         private final long tagUtilizzati;
@@ -622,11 +741,29 @@ public class NoteService {
             this.allCartelle = allCartelle;
         }
 
-        public long getNoteCreate() { return noteCreate; }
-        public long getNoteCondivise() { return noteCondivise; }
-        public long getTagUtilizzati() { return tagUtilizzati; }
-        public long getCartelleCreate() { return cartelleCreate; }
-        public List<String> getAllTags() { return allTags; }
-        public List<String> getAllCartelle() { return allCartelle; }
+        public long getNoteCreate() {
+            return noteCreate;
+        }
+
+        public long getNoteCondivise() {
+            return noteCondivise;
+        }
+
+        public long getTagUtilizzati() {
+            return tagUtilizzati;
+        }
+
+        public long getCartelleCreate() {
+            return cartelleCreate;
+        }
+
+        public List<String> getAllTags() {
+            return allTags;
+        }
+
+        public List<String> getAllCartelle() {
+            return allCartelle;
+        }
     }
+
 }

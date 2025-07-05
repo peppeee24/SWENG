@@ -128,4 +128,16 @@ export interface VersionComparisonDto {
     titleDiff?: string;
     contentDiff?: string;
   };
+
+
+}
+
+export interface SearchFilters {
+  search?: string;
+  tag?: string;
+  cartella?: string;
+  autore?: string;
+  dataInizio?: string;
+  dataFine?: string;
+  filter?: 'all' | 'own' | 'shared';
 }
