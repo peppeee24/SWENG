@@ -941,4 +941,199 @@ class NoteServiceTest {
         verify(noteVersionService).deleteAllVersionsForNote(1L);
         verify(noteRepository).delete(testNote);
     }
+
+
+
+    @Test
+    @DisplayName("UC4.S13 - Test modifica nota con permessi scrittura")
+    void testUpdateNoteWithWritePermission() {
+        // Arrange
+        User collaborator = new User("collaborator", "password123");
+        collaborator.setId(2L);
+
+        Note note = new Note("Test Note", "Test content", testUser);
+        note.setId(1L);
+        note.setPermessiScrittura(Set.of("collaborator"));
+        note.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Titolo Modificato");
+        updateRequest.setContenuto("Contenuto modificato da collaboratore");
+        updateRequest.setTags(Set.of("updated", "collaboration"));
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+      //  when(userRepository.findByUsername("collaborator")).thenReturn(Optional.of(collaborator));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, updateRequest, "collaborator");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Titolo Modificato", result.getTitolo());
+        assertEquals("Contenuto modificato da collaboratore", result.getContenuto());
+        assertTrue(result.getTags().contains("updated"));
+        assertTrue(result.getTags().contains("collaboration"));
+
+        verify(noteRepository).save(any(Note.class));
+    }
+
+    @Test
+    @DisplayName("UC4.S14 - Test rifiuto modifica senza permessi")
+    void testRejectUpdateWithoutPermission() {
+        // Arrange
+        Note note = new Note("Private Note", "Private content", testUser);
+        note.setId(1L);
+        note.setTipoPermesso(TipoPermesso.PRIVATA);
+        note.setPermessiScrittura(new HashSet<>());
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Tentativo Modifica");
+        updateRequest.setContenuto("Contenuto non autorizzato");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // Act & Assert
+        assertThatThrownBy(() -> noteService.updateNote(1L, updateRequest, "unauthorized"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Non hai i permessi per modificare questa nota");
+
+        verify(noteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("UC4.S15 - Test modifica nota da proprietario sempre consentita")
+    void testOwnerCanAlwaysUpdate() {
+        // Arrange
+        Note note = new Note("Owner Note", "Owner content", testUser);
+        note.setId(1L);
+        note.setTipoPermesso(TipoPermesso.PRIVATA);
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Modifica Proprietario");
+        updateRequest.setContenuto("Il proprietario può sempre modificare");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, updateRequest, "testuser");
+
+        // Assert
+        assertNotNull(result);
+        verify(noteRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("UC4.S16 - Test modifica nota con permessi solo lettura fallisce")
+    void testUpdateNoteWithReadOnlyPermission() {
+        // Arrange
+        Note note = new Note("Shared Note", "Shared content", testUser);
+        note.setId(1L);
+        note.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
+        note.setPermessiLettura(Set.of("reader"));
+        note.setPermessiScrittura(new HashSet<>());
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Tentativo Modifica");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+
+        // Act & Assert
+        assertThatThrownBy(() -> noteService.updateNote(1L, updateRequest, "reader"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Non hai i permessi per modificare questa nota");
+
+        verify(noteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("UC4.S17 - Test aggiornamento campi specifici")
+    void testPartialUpdate() {
+        // Arrange
+        Note note = new Note("Original Title", "Original content", testUser);
+        note.setId(1L);
+        note.setTags(Set.of("original-tag"));
+        note.setCartelle(Set.of("original-folder"));
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Solo Nuovo Titolo");
+        updateRequest.setContenuto("");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, updateRequest, "testuser");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Solo Nuovo Titolo", result.getTitolo());
+
+        verify(noteRepository).save(argThat(savedNote ->
+                savedNote.getTitolo().equals("Solo Nuovo Titolo")
+        ));
+    }
+
+    @Test
+    @DisplayName("UC4.S18 - Test gestione permessi condivisa scrittura")
+    void testSharedWritePermissions() {
+        // Arrange
+        User owner = new User("owner", "pass123");
+        owner.setId(1L);
+
+        Note sharedNote = new Note("Shared Note", "Shared content", owner);
+        sharedNote.setId(1L);
+        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
+        sharedNote.setPermessiScrittura(Set.of("writer1", "writer2"));
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Modified by Writer");
+        updateRequest.setContenuto("Content modified by authorized writer");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(sharedNote));
+        when(noteRepository.save(any(Note.class))).thenReturn(sharedNote);
+
+        // Act
+        NoteDto result = noteService.updateNote(1L, updateRequest, "writer1");
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Modified by Writer", result.getTitolo());
+        verify(noteRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("UC4.S19 - Test conservazione permessi durante modifica")
+    void testPermissionsPreservedDuringUpdate() {
+        // Arrange
+        Note note = new Note("Shared Note", "Content", testUser);
+        note.setId(1L);
+        note.setTipoPermesso(TipoPermesso.CONDIVISA_SCRITTURA);
+        note.setPermessiLettura(Set.of("reader1", "reader2"));
+        note.setPermessiScrittura(Set.of("writer1"));
+
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Updated Title");
+        updateRequest.setContenuto("Updated content");
+
+        when(noteRepository.findById(1L)).thenReturn(Optional.of(note));
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        // Act
+        noteService.updateNote(1L, updateRequest, "testuser");
+
+        // Assert
+        verify(noteRepository).save(argThat(savedNote ->
+                savedNote.getPermessiLettura().contains("reader1") &&
+                        savedNote.getPermessiLettura().contains("reader2") &&
+                        savedNote.getPermessiScrittura().contains("writer1") &&
+                        savedNote.getTipoPermesso() == TipoPermesso.CONDIVISA_SCRITTURA
+        ));
+    }
+
+
+
+
+
 }
