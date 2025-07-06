@@ -452,7 +452,7 @@ export class NotesService {
     );
   }
 
-  // ============= NUOVI METODI PER FILTRI AUTORE E DATA =============
+  // =============  METODI PER FILTRI AUTORE E DATA =============
 
   /**
    * Recupera le note filtrate per autore
@@ -483,7 +483,7 @@ export class NotesService {
    */
   getNotesByDateRange(dataInizio?: string, dataFine?: string, filter: string = 'all'): Observable<NotesListResponse> {
   console.log('SERVICE: getNotesByDateRange chiamato con:', { dataInizio, dataFine, filter });
-  
+
   this.isLoading.set(true);
   this.error.set(null);
 
