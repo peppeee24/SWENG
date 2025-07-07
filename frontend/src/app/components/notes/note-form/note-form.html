@@ -98,6 +98,7 @@
             @if (isEditMode() && isOwner()) {
               <div class="edit-permissions-note">
                 <p><strong>Nota:</strong> Stai modificando i permessi di una nota esistente. Le modifiche ai permessi avranno effetto immediato.</p>
+                <p>Non è possibile ripristinare permessi precedenti dalla coronoligia del versionamento, ma solo titolo e descrizione</p>
               </div>
             }
 
@@ -168,7 +169,6 @@
                   }
                 </div>
 
-                <!-- Selected users display - Corretta per entrambi i tipi -->
                 @if (permissionType() === 'CONDIVISA_LETTURA' && selectedUsersForReading().length > 0) {
                   <div class="selected-users">
                     <h4>Utenti con accesso in lettura:</h4>

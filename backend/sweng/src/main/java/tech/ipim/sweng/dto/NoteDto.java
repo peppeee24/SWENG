@@ -1,8 +1,10 @@
 package tech.ipim.sweng.dto;
 
-import tech.ipim.sweng.model.Note;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
+
+import tech.ipim.sweng.model.Note;
 
 public class NoteDto {
     
@@ -19,24 +21,46 @@ public class NoteDto {
     private Set<String> permessiScrittura;
     private boolean canEdit;
     private boolean canDelete;
+    private Long versionNumber;
+    private boolean canView;
+    private boolean isOwner;
     
     public NoteDto() {}
     
-    public NoteDto(Note note, String currentUsername) {
-        this.id = note.getId();
-        this.titolo = note.getTitolo();
-        this.contenuto = note.getContenuto();
-        this.autore = note.getAutore().getUsername();
-        this.dataCreazione = note.getDataCreazione();
-        this.dataModifica = note.getDataModifica();
-        this.tags = note.getTags();
+    // Modifica nel costruttore di NoteDto.java
+
+public NoteDto(Note note, String currentUsername) {
+    boolean isAutore = note.isAutore(currentUsername);
+    boolean hasReadAccess = note.hasReadAccess(currentUsername);
+    boolean hasWriteAccess = note.hasWriteAccess(currentUsername);
+
+    this.id = note.getId();
+    this.titolo = note.getTitolo();
+    this.contenuto = note.getContenuto();
+    this.autore = note.getAutore().getUsername();
+    this.dataCreazione = note.getDataCreazione();
+    this.dataModifica = note.getDataModifica();
+    this.tags = note.getTags();
+    
+    // === FILTRO PRIVACY CARTELLE ===
+    // Se l'utente è il proprietario della nota, mostra tutte le cartelle
+    // Se non è il proprietario, non mostrare alcuna cartella (privacy)
+    if (isAutore) {
         this.cartelle = note.getCartelle();
-        this.tipoPermesso = note.getTipoPermesso().name();
-        this.permessiLettura = note.getPermessiLettura();
-        this.permessiScrittura = note.getPermessiScrittura();
-        this.canEdit = note.haPermessoScrittura(currentUsername);
-        this.canDelete = note.isAutore(currentUsername);
+    } else {
+        // Utenti che vedono note condivise non vedono le cartelle private del proprietario
+        this.cartelle = new HashSet<>();
     }
+    
+    this.tipoPermesso = note.getTipoPermesso().name();
+    this.permessiLettura = note.getPermessiLettura();
+    this.permessiScrittura = note.getPermessiScrittura();
+    this.canView = hasReadAccess;
+    this.canEdit = hasWriteAccess;
+    this.canDelete = isAutore;
+    this.isOwner = isAutore;
+    this.versionNumber = note.getVersionNumber();
+}
     
     public static NoteDto fromNote(Note note, String currentUsername) {
         return new NoteDto(note, currentUsername);
@@ -145,5 +169,29 @@ public class NoteDto {
 
     public void setCanDelete(boolean canDelete) {
         this.canDelete = canDelete;
+    }
+
+    public Long getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Long versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    public boolean canView() {
+        return canView;
+    }
+
+    public void setCanView(boolean canView) {
+        this.canView = canView;
+    }
+
+    public boolean isOwner() {
+        return isOwner;
+    }
+
+    public void setIsOwner(boolean isOwner) {
+        this.isOwner = isOwner;
     }
 }

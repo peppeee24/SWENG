@@ -75,47 +75,7 @@ public class NoteController {
         }
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllNotes(@RequestHeader("Authorization") String authHeader,
-                                         @RequestParam(value = "filter", defaultValue = "all") String filter) {
 
-        System.out.println("GET /api/notes - Filter: " + filter);
-
-        String username = extractUsernameFromAuth(authHeader);
-        if (username == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(NoteResponse.error("Token non valido"));
-        }
-
-        try {
-            List<NoteDto> notes;
-
-            switch (filter) {
-                case "own":
-                    notes = noteService.getUserNotes(username);
-                    break;
-                case "shared":
-                    notes = noteService.getAllAccessibleNotes(username)
-                            .stream()
-                            .filter(note -> !note.getAutore().equals(username))
-                            .toList();
-                    break;
-                default:
-                    notes = noteService.getAllAccessibleNotes(username);
-            }
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "notes", notes,
-                    "count", notes.size()
-            ));
-
-        } catch (Exception e) {
-            System.err.println("Errore recupero note: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(NoteResponse.error("Errore durante il recupero delle note"));
-        }
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getNoteById(@PathVariable Long id,
@@ -449,6 +409,51 @@ public class NoteController {
         }
     }
 
+    @GetMapping("/{id}/compare/{version1}/{version2}")
+    public ResponseEntity<?> compareNoteVersions(@PathVariable Long id,
+                                                 @PathVariable Integer version1,
+                                                 @PathVariable Integer version2,
+                                                 @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("GET /api/notes/" + id + "/compare/" + version1 + "/" + version2 + " - Confronto versioni");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            VersionComparisonDto comparison = noteService.compareNoteVersions(id, version1, version2, username);
+            System.out.println("Confronto versioni completato con successo");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Confronto completato con successo",
+                    "data", comparison
+            ));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore confronto versioni: " + e.getMessage());
+            if (e.getMessage().contains("accesso")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else if (e.getMessage().contains("non trovata")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(NoteResponse.error("Errore durante il confronto delle versioni"));
+            }
+        } catch (Exception e) {
+            System.err.println("Errore interno confronto versioni: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore interno del server"));
+        }
+    }
+
+
     @PostMapping("/{id}/lock")
     public ResponseEntity<?> lockNote(@PathVariable Long id,
                                       @RequestHeader("Authorization") String authHeader) {
@@ -566,6 +571,165 @@ public class NoteController {
         }
     }
 
+
+
+    /**
+     * Recupera la cronologia delle versioni di una nota
+     */
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<?> getNoteVersionHistory(@PathVariable Long id,
+                                                   @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("GET /api/notes/" + id + "/versions - Recupero cronologia versioni");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            List<NoteVersionDto> versions = noteService.getNoteVersionHistory(id, username);
+            System.out.println("Cronologia versioni recuperata: " + versions.size() + " versioni");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Cronologia recuperata con successo",
+                    "data", versions
+            ));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore recupero cronologia: " + e.getMessage());
+            if (e.getMessage().contains("accesso")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else if (e.getMessage().contains("non trovata")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(NoteResponse.error("Errore durante il recupero della cronologia"));
+            }
+        } catch (Exception e) {
+            System.err.println("Errore interno recupero cronologia: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore interno del server"));
+        }
+    }
+
+    /**
+     * Recupera una versione specifica di una nota
+     */
+    @GetMapping("/{id}/versions/{versionNumber}")
+    public ResponseEntity<?> getNoteVersion(@PathVariable Long id,
+                                            @PathVariable Integer versionNumber,
+                                            @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("GET /api/notes/" + id + "/versions/" + versionNumber + " - Recupero versione specifica");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            Optional<NoteVersionDto> version = noteService.getNoteVersion(id, versionNumber, username);
+
+            if (version.isPresent()) {
+                System.out.println("Versione " + versionNumber + " recuperata con successo");
+
+
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Versione recuperata con successo",
+                        "data", version.get()
+                ));
+
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error("Versione non trovata"));
+            }
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore recupero versione: " + e.getMessage());
+            if (e.getMessage().contains("accesso")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else if (e.getMessage().contains("non trovata")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(NoteResponse.error("Errore durante il recupero della versione"));
+            }
+        } catch (Exception e) {
+            System.err.println("Errore interno recupero versione: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore interno del server"));
+        }
+    }
+
+    /**
+     * Ripristina una versione precedente di una nota
+     */
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<?> restoreNoteVersion(@PathVariable Long id,
+                                                @Valid @RequestBody RestoreVersionRequest request,
+                                                BindingResult bindingResult,
+                                                @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("POST /api/notes/" + id + "/restore - Ripristino versione " + request.getVersionNumber());
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        if (bindingResult.hasErrors()) {
+            Map<String, String> errors = new HashMap<>();
+            bindingResult.getFieldErrors().forEach(error ->
+                    errors.put(error.getField(), error.getDefaultMessage())
+            );
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Errori di validazione",
+                    "errors", errors
+            ));
+        }
+
+        try {
+            NoteDto restoredNote = noteService.restoreNoteVersion(id, request.getVersionNumber(), username);
+            System.out.println("Versione " + request.getVersionNumber() + " ripristinata con successo");
+
+            return ResponseEntity.ok(NoteResponse.success("Versione ripristinata con successo", restoredNote));
+
+        } catch (RuntimeException e) {
+            System.err.println("Errore ripristino versione: " + e.getMessage());
+            if (e.getMessage().contains("permessi") || e.getMessage().contains("proprietario")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else if (e.getMessage().contains("non trovata")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(NoteResponse.error(e.getMessage()));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(NoteResponse.error(e.getMessage()));
+            }
+        } catch (Exception e) {
+            System.err.println("Errore interno confronto versioni: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore interno del server"));
+        }
+    }
+
+    // METODI HELPER
+
+
     private String extractUsernameFromAuth(String authHeader) {
         try {
             String token = jwtUtil.extractTokenFromHeader(authHeader);
@@ -577,4 +741,121 @@ public class NoteController {
         }
         return null;
     }
+
+
+
+
+    @GetMapping
+    public ResponseEntity<?> getAllNotes(
+            @RequestParam(defaultValue = "all") String filter,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String cartella,
+            @RequestParam(required = false) String autore,
+            @RequestParam(required = false) String dataInizio,
+            @RequestParam(required = false) String dataFine,
+            @RequestHeader("Authorization") String authHeader) {
+
+        System.out.println("GET /api/notes - Filtri: " +
+                "filter=" + filter +
+                ", search=" + search +
+                ", tag=" + tag +
+                ", cartella=" + cartella +
+                ", autore=" + autore +
+                ", dataInizio=" + dataInizio +
+                ", dataFine=" + dataFine);
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            List<NoteDto> notes;
+
+            // Verifica se ci sono filtri specifici
+            if (search != null && !search.trim().isEmpty()) {
+                notes = noteService.searchNotes(username, search);
+            } else if (tag != null && !tag.trim().isEmpty()) {
+                notes = noteService.getNotesByTag(username, tag);
+            } else if (cartella != null && !cartella.trim().isEmpty()) {
+                notes = noteService.getNotesByCartella(username, cartella);
+            } else if (autore != null && !autore.trim().isEmpty()) {
+
+                notes = noteService.getNotesByAutore(username, autore, filter);
+            } else if (dataInizio != null || dataFine != null) {
+
+                notes = noteService.getNotesByDateRange(username, dataInizio, dataFine, filter);
+            } else {
+                // Nessun filtro specifico - usa il filtro standard
+                switch (filter) {
+                    case "own":
+                        notes = noteService.getUserNotes(username);
+                        break;
+                    case "shared":
+                        notes = noteService.getAllAccessibleNotes(username)
+                                .stream()
+                                .filter(note -> !note.getAutore().equals(username))
+                                .toList();
+                        break;
+                    default:
+                        notes = noteService.getAllAccessibleNotes(username);
+                }
+            }
+
+            System.out.println("Note trovate: " + notes.size());
+
+            // Prepara la risposta
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("notes", notes);
+            response.put("count", notes.size());
+
+
+            if (search != null) response.put("keyword", search);
+            if (tag != null) response.put("tag", tag);
+            if (cartella != null) response.put("cartella", cartella);
+            if (autore != null) response.put("autore", autore);
+            if (dataInizio != null) response.put("dataInizio", dataInizio);
+            if (dataFine != null) response.put("dataFine", dataFine);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Errore recupero note: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il recupero delle note"));
+        }
+    }
+
+
+    @GetMapping("/autori")
+    public ResponseEntity<?> getAvailableAutori(@RequestHeader("Authorization") String authHeader) {
+        System.out.println("GET /api/notes/autori - Recupero autori disponibili");
+
+        String username = extractUsernameFromAuth(authHeader);
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(NoteResponse.error("Token non valido"));
+        }
+
+        try {
+            List<String> autori = noteService.getAvailableAutori(username);
+            System.out.println("Autori disponibili trovati: " + autori.size());
+
+            return ResponseEntity.ok(autori);
+
+        } catch (Exception e) {
+            System.err.println("Errore recupero autori: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(NoteResponse.error("Errore durante il recupero degli autori"));
+        }
+    }
+
+
+
 }
+
+
+

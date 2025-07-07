@@ -264,6 +264,334 @@
 }
 */
 
+
+/* note-card.component.css - Stili aggiornati con versionamento */
+
+/* Stili esistenti della nota card */
+.note-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.note-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.note-card.shared-note {
+  border-left: 4px solid #667eea;
+}
+
+/* Header con titolo e versione */
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.note-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  flex: 1;
+  line-height: 1.4;
+  transition: color 0.2s;
+}
+
+.note-title:hover {
+  color: #667eea;
+}
+
+/* Stili per le informazioni di versione */
+.version-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.version-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 24px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.multiple-versions-indicator {
+  font-size: 14px;
+  opacity: 0.8;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* Contenuto della nota */
+.note-content {
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.note-content p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+/* Tags e cartelle */
+.note-tags, .note-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tag, .folder {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Azioni della nota */
+.note-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.edit-btn:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.duplicate-btn:hover {
+  background: #e0f2fe;
+  border-color: #0ea5e9;
+}
+
+/* stile per il pulsante cronologia */
+.history-btn {
+  position: relative;
+}
+
+.history-btn:hover {
+  background: #f0f4ff;
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.history-btn.has-multiple-versions {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.remove-btn:hover {
+  background: #fdf4ff;
+  border-color: #a855f7;
+}
+
+/* Badge permessi */
+.note-permission {
+  margin-bottom: 12px;
+}
+
+.permission-badge {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Footer */
+.note-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-badge {
+  background: #10b981;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.note-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.modified-date {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.created-date {
+  color: #9ca3af;
+}
+
+/* Indicatore caratteri */
+.character-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.char-bar {
+  flex: 1;
+  height: 4px;
+  background: #f3f4f6;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.char-fill {
+  height: 100%;
+  background: #10b981;
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.char-fill.warning {
+  background: #f59e0b;
+}
+
+.char-fill.danger {
+  background: #ef4444;
+}
+
+.char-text {
+  font-weight: 500;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .note-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-group {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .note-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .note-dates {
+    align-self: stretch;
+    text-align: left;
+  }
+
+  .version-info {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* Animazioni */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.note-card {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Stili per quando la cronologia è aperta */
+.note-card.history-open {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.note-card.history-open .history-btn {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+
 .remove-sharing-btn:hover {
   background: rgba(255, 0, 0, 0.1);
   transform: scale(1.1);

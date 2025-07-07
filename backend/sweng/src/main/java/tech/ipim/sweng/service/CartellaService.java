@@ -54,7 +54,7 @@ public class CartellaService {
         System.out.println("Cartella creata: " + savedCartella.getNome() + " da " + username);
         
         CartellaDto dto = CartellaDto.fromCartella(savedCartella);
-        dto.setNumeroNote(0); // Nuova cartella non ha note
+        dto.setNumeroNote(0); //  cartella non ha note
         return dto;
     }
 

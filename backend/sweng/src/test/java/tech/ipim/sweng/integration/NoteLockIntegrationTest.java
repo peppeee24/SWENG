@@ -114,7 +114,6 @@ public class NoteLockIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        // Usa il path corretto per estrarre l'ID dalla risposta
         return objectMapper.readTree(response).get("note").get("id").asLong();
     }
 

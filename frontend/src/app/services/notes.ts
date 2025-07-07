@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import {HttpClient, HttpHeaders, HttpErrorResponse, HttpParams} from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { AuthService } from './auth';
 import {
@@ -9,7 +9,8 @@ import {
   UpdateNoteRequest,
   NoteResponse,
   NotesListResponse,
-  UserStats, PermissionsRequest
+  UserStats,
+  PermissionsRequest
 } from '../models/note.model';
 
 @Injectable({
@@ -82,11 +83,9 @@ export class NotesService {
       tap(response => {
         this.isLoading.set(false);
         if (response.success) {
-          // Rimuove la nota dall'elenco delle note accessibili
           const currentNotes = this.notes();
           this.notes.set(currentNotes.filter(note => note.id !== id));
 
-          // Se è la nota attualmente selezionata, deselezionala
           if (this.selectedNote()?.id === id) {
             this.selectedNote.set(null);
           }
@@ -102,69 +101,121 @@ export class NotesService {
     this.isLoading.set(true);
     this.error.set(null);
 
+    console.log('Aggiornamento permessi per nota:', id);
+    console.log('Nuovi permessi:', permessi);
+
     return this.http.put<NoteResponse>(`${this.API_URL}/${id}/permissions`, permessi, {
       headers: this.getHeaders()
     }).pipe(
       tap(response => {
         this.isLoading.set(false);
-        if (response.success && response.note) {
+        console.log('Risposta aggiornamento permessi:', response);
+
+        if (response.success && (response.note || response.data)) {
+          const updatedNote = response.note || response.data;
+
+          console.log('Nota aggiornata ricevuta:', updatedNote);
+          console.log('Nuovi permessi dal server:', {
+            tipo: updatedNote?.tipoPermesso,
+            lettura: updatedNote?.permessiLettura,
+            scrittura: updatedNote?.permessiScrittura
+          });
+
           const currentNotes = this.notes();
           const updatedNotes = currentNotes.map(note =>
-            note.id === id ? response.note! : note
+            note.id === id ? { ...note, ...updatedNote } : note
           );
           this.notes.set(updatedNotes);
-          this.selectedNote.set(response.note);
-          console.log('Permessi nota aggiornati:', id);
+
+          const selectedNote = this.selectedNote();
+          if (selectedNote && selectedNote.id === id) {
+            this.selectedNote.set({ ...selectedNote, ...updatedNote });
+          }
+
+          console.log('Cache locale aggiornata per nota:', id);
+        } else {
+          console.error('Risposta non valida dal server:', response);
         }
       }),
-      catchError(this.handleError.bind(this))
+      catchError(error => {
+        console.error('Errore aggiornamento permessi:', error);
+        return this.handleError(error);
+      })
     );
   }
 
-  // SISTEMA DI LOCK - METODI CORRETTI
+  refreshNote(noteId: number): void {
+    console.log('Refresh manuale della nota:', noteId);
+
+    this.http.get<NoteResponse>(`${this.API_URL}/${noteId}`, {
+      headers: this.getHeaders()
+    }).subscribe({
+      next: (response) => {
+        if (response.success && (response.note || response.data)) {
+          const refreshedNote = response.note || response.data;
+
+          const currentNotes = this.notes();
+          const updatedNotes = currentNotes.map(note =>
+            note.id === noteId ? { ...note, ...refreshedNote } : note
+          );
+          this.notes.set(updatedNotes);
+
+          console.log('Nota refreshed:', refreshedNote);
+        }
+      },
+      error: (error) => {
+        console.error('Errore refresh nota:', error);
+      }
+    });
+  }
+
+  // SISTEMA DI LOCK
   lockNote(noteId: number): Observable<any> {
-    console.log('🔒 Chiamata API lockNote per nota:', noteId);
+    console.log('Chiamata API lockNote per nota:', noteId);
     return this.http.post(`${this.API_URL}/${noteId}/lock`, {}, {
       headers: this.getHeaders()
     }).pipe(
       tap(response => {
-        console.log('✅ Lock acquisito per nota:', noteId, response);
+        console.log('Lock acquisito per nota:', noteId, response);
       }),
       catchError(this.handleError.bind(this))
     );
   }
 
   getLockStatus(noteId: number): Observable<any> {
-    console.log('🔍 Chiamata API getLockStatus per nota:', noteId);
+    console.log('Chiamata API getLockStatus per nota:', noteId);
+
     return this.http.get(`${this.API_URL}/${noteId}/lock-status`, {
       headers: this.getHeaders()
     }).pipe(
       tap(response => {
-        console.log('📊 Stato lock nota:', noteId, response);
+        console.log('Stato lock nota:', noteId, response);
       }),
       catchError(this.handleError.bind(this))
     );
   }
 
   unlockNote(noteId: number): Observable<any> {
-    console.log('🔓 Chiamata API unlockNote per nota:', noteId);
+    console.log('Chiamata API unlockNote per nota:', noteId);
+
     return this.http.delete(`${this.API_URL}/${noteId}/lock`, {
       headers: this.getHeaders()
     }).pipe(
       tap(response => {
-        console.log('✅ Lock rilasciato per nota:', noteId, response);
+        console.log('Lock rilasciato per nota:', noteId, response);
       }),
       catchError(this.handleError.bind(this))
     );
   }
 
   refreshLock(noteId: number): Observable<any> {
-    console.log('🔄 Chiamata API refreshLock per nota:', noteId);
+    console.log('Chiamata API refreshLock per nota:', noteId);
+
     return this.http.put(`${this.API_URL}/${noteId}/lock/refresh`, {}, {
       headers: this.getHeaders()
     }).pipe(
       tap(response => {
-        console.log('✅ Lock rinnovato per nota:', noteId, response);
+        console.log('Lock rinnovato per nota:', noteId, response);
       }),
       catchError(this.handleError.bind(this))
     );
@@ -334,6 +385,205 @@ export class NotesService {
       }),
       catchError(this.handleError.bind(this))
     );
+  }
+
+  getNoteVersionHistory(noteId: number): Observable<any> {
+    console.log('Service: richiesta cronologia versioni per nota:', noteId);
+
+    if (!noteId || noteId <= 0) {
+      console.error('Service: noteId non valido:', noteId);
+      return of([]);
+    }
+
+    return this.http.get(`${this.API_URL}/${noteId}/versions`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('Service: risposta cronologia ricevuta:', response);
+        console.log('Service: tipo risposta:', typeof response);
+        console.log('Service: è array:', Array.isArray(response));
+      }),
+      catchError(error => {
+        console.error('Service: errore cronologia versioni:', error);
+        console.error('Service: status code:', error.status);
+
+        // Se l'endpoint non esiste o la nota non ha versioni, restituisci array vuoto
+        if (error.status === 404) {
+          console.log('Service: nessuna versione trovata, restituisco array vuoto');
+          return of([]);
+        }
+
+        // Per altri errori, propagali
+        return this.handleError(error);
+      })
+    );
+  }
+
+  restoreNoteVersion(noteId: number, versionNumber: number): Observable<any> {
+    console.log('Service: ripristino versione', versionNumber, 'per nota:', noteId);
+
+    if (!noteId || noteId <= 0 || !versionNumber || versionNumber <= 0) {
+      console.error('Service: parametri non validi:', { noteId, versionNumber });
+      return throwError(() => new Error('Parametri non validi per il ripristino'));
+    }
+
+    return this.http.post(`${this.API_URL}/${noteId}/restore`,
+      { versionNumber },
+      { headers: this.getHeaders() }
+    ).pipe(
+      tap((response: any) => {
+        console.log('Service: versione ripristinata:', response);
+
+        // Aggiorna la lista delle note dopo il ripristino
+        if (response && (response.data || response.note)) {
+          const restoredNote = response.data || response.note;
+          const currentNotes = this.notes();
+          const updatedNotes = currentNotes.map(note =>
+            note.id === noteId ? { ...note, ...restoredNote } : note
+          );
+          this.notes.set(updatedNotes);
+          console.log('Service: note aggiornate dopo ripristino');
+        }
+      }),
+      catchError(error => {
+        console.error('Service: errore ripristino versione:', error);
+        return this.handleError(error);
+      })
+    );
+  }
+
+  // =============  METODI PER FILTRI AUTORE E DATA =============
+
+  /**
+   * Recupera le note filtrate per autore
+   */
+  getNotesByAutore(autore: string): Observable<NotesListResponse> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    const params = new HttpParams().set('autore', autore);
+
+    return this.http.get<NotesListResponse>(`${this.API_URL}`, {
+      params,
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        this.isLoading.set(false);
+        if (response.success && response.notes) {
+          this.notes.set(response.notes);
+          console.log(`Note filtrate per autore "${autore}":`, response.notes.length);
+        }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  /**
+   * Recupera le note filtrate per range di date
+   */
+  getNotesByDateRange(dataInizio?: string, dataFine?: string, filter: string = 'all'): Observable<NotesListResponse> {
+  console.log('SERVICE: getNotesByDateRange chiamato con:', { dataInizio, dataFine, filter });
+
+  this.isLoading.set(true);
+  this.error.set(null);
+
+  let params = new HttpParams();
+
+  if (dataInizio) {
+    params = params.set('dataInizio', dataInizio);
+  }
+  if (dataFine) {
+    params = params.set('dataFine', dataFine);
+  }
+  params = params.set('filter', filter);
+
+  console.log('SERVICE: Parametri finali:', params.toString());
+  console.log('SERVICE: URL completa:', `${this.API_URL}?${params.toString()}`);
+
+  return this.http.get<NotesListResponse>(`${this.API_URL}`, {
+    params,
+    headers: this.getHeaders()
+  }).pipe(
+    tap(response => {
+      this.isLoading.set(false);
+      if (response.success && response.notes) {
+        this.notes.set(response.notes);
+        console.log(`SERVICE: Note filtrate per date (${dataInizio} - ${dataFine}) con filtro ${filter}:`, response.notes.length);
+        console.log('SERVICE: Note ricevute:', response.notes.map(n => ({ id: n.id, titolo: n.titolo, dataCreazione: n.dataCreazione })));
+      }
+    }),
+    catchError(this.handleError.bind(this))
+  );
+}
+
+  /**
+   * Recupera la lista degli autori disponibili per il filtro
+   */
+
+  getAvailableAutori(): Observable<string[]> {
+    console.log('////////// Service: getAvailableAutori chiamato');
+    console.log('////////// Service: URL:', `${this.API_URL}/autori`);
+
+    return this.http.get<string[]>(`${this.API_URL}/autori`, {
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        console.log('///////// Service: Autori ricevuti:', response);
+        console.log('///////// Service: Lunghezza array:', response.length);
+      }),
+      catchError(error => {
+        console.error('//////// Service: Errore recupero autori:', error);
+        console.error('//////// Service: Status:', error.status);
+        console.error('//////// Service: Message:', error.message);
+
+        // Restituisci array vuoto in caso di errore
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Metodo di ricerca avanzata che supporta tutti i filtri
+   */
+  searchNotesAdvanced(filters: {
+    search?: string;
+    tag?: string;
+    cartella?: string;
+    autore?: string;
+    dataInizio?: string;
+    dataFine?: string;
+  }): Observable<NotesListResponse> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    let params = new HttpParams();
+
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.tag) params = params.set('tag', filters.tag);
+    if (filters.cartella) params = params.set('cartella', filters.cartella);
+    if (filters.autore) params = params.set('autore', filters.autore);
+    if (filters.dataInizio) params = params.set('dataInizio', filters.dataInizio);
+    if (filters.dataFine) params = params.set('dataFine', filters.dataFine);
+
+    return this.http.get<NotesListResponse>(`${this.API_URL}`, {
+      params,
+      headers: this.getHeaders()
+    }).pipe(
+      tap(response => {
+        this.isLoading.set(false);
+        if (response.success && response.notes) {
+          this.notes.set(response.notes);
+          console.log('Ricerca avanzata completata:', response.notes.length, 'note trovate');
+        }
+      }),
+      catchError(this.handleError.bind(this))
+    );
+  }
+
+  // ============= METODI UTILITY =============
+
+  clearCache(): void {
+    console.log('Cache cleared');
   }
 
   clearNotes(): void {

@@ -16,7 +16,7 @@ public class RegistrationRequest {
     @Size(min = 6, message = "Password deve essere almeno 6 caratteri")
     private String password;
 
-    // Nuovi campi opzionali per la registrazione
+    //  campi opzionali per la registrazione
     @Size(max = 100, message = "Nome deve essere massimo 100 caratteri")
     private String nome;
 
@@ -63,7 +63,7 @@ public class RegistrationRequest {
         this.password = password;
     }
 
-    // Nuovi Getters e Setters
+    //  Getters e Setters
     public String getNome() {
         return nome;
     }

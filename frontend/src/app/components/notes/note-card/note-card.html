@@ -1,52 +1,21 @@
-<div class="note-card" [class.can-edit]="note.canEdit" (click)="onView()">
-  <!-- Header della nota -->
+<!-- note-card.component.html -->
+<div class="note-card" [class.shared-note]="!isOwner()" [class.history-open]="isVersionHistoryVisible()">
+
+  <!-- Header con titolo e versione -->
   <div class="note-header">
-    <h3 class="note-title">{{ note.titolo }}</h3>
-    <div class="note-actions">
-      <span class="permission-indicator" [title]="getPermissionText()">
-        {{ getPermissionIcon() }}
-      </span>
+    <h3 class="note-title" (click)="onView()">{{ note.titolo }}</h3>
 
-      <div class="action-buttons" (click)="$event.stopPropagation()">
-        <!-- Duplica -->
-        <button
-          class="action-btn duplicate-btn"
-          (click)="onDuplicate()"
-          title="Duplica nota">
-          📋
-        </button>
-
-        <!-- Modifica (solo se ha permessi) -->
-        @if (note.canEdit) {
-          <button
-            class="action-btn edit-btn"
-            (click)="onEdit()"
-            title="Modifica nota">
-            🖋
-          </button>
-        }
-
-        <!-- Elimina (solo se proprietario) -->
-        @if (note.canDelete) {
-          <button
-            class="action-btn delete-btn"
-            (click)="onDelete()"
-            title="Elimina nota">
-            🗑️
-          </button>
-        }
-
-        <!-- Rimuovi dalla condivisione (solo se utente invitato) -->
-        @if (isSharedUser()) {
-          <button
-            class="action-btn remove-sharing-btn"
-            (click)="onRemoveFromSharing()"
-            title="Rimuoviti dalla condivisione">
-            ❌
-          </button>
+    <!-- Badge versione -->
+    @if (shouldShowVersionIndicator()) {
+      <div class="version-info">
+        <span class="version-badge" [title]="'Versione ' + note.versionNumber">
+          {{ getVersionBadgeText() }}
+        </span>
+        @if (hasMultipleVersions()) {
+          <span class="multiple-versions-indicator" title="Questa nota ha versioni multiple">📚</span>
         }
       </div>
-    </div>
+    }
   </div>
 
   <!-- Indicatore se è una nota condivisa (solo per utenti invitati) -->
@@ -57,7 +26,7 @@
   }
 
   <!-- Contenuto della nota -->
-  <div class="note-content">
+  <div class="note-content" (click)="onView()">
     <p class="note-text">{{ note.contenuto }}</p>
   </div>
 
@@ -78,6 +47,57 @@
       }
     </div>
   }
+
+  <!-- Azioni della nota -->
+  <div class="note-actions" (click)="$event.stopPropagation()">
+    <div class="action-group primary-actions">
+      <!-- Duplica -->
+      <button class="action-btn duplicate-btn" (click)="onDuplicate()" title="Duplica nota">
+        📋
+      </button>
+
+      <!-- Modifica (solo se ha permessi) -->
+      @if (note.canEdit) {
+        <button class="action-btn edit-btn" (click)="onEdit()" title="Modifica nota">
+          ✏️
+        </button>
+      }
+
+      <!--  pulsante per cronologia versioni -->
+      @if (canViewHistory()) {
+        <button
+          class="action-btn history-btn"
+          [class.has-multiple-versions]="hasMultipleVersions()"
+          (click)="onShowVersionHistory()"
+          [title]="hasMultipleVersions() ? 'Visualizza cronologia versioni (' + note.versionNumber + ' versioni)' : 'Visualizza cronologia versioni'">
+          📚
+        </button>
+      }
+    </div>
+
+    <div class="action-group secondary-actions">
+      <!-- Elimina (solo se proprietario) -->
+      @if (note.canDelete && isOwner()) {
+        <button class="action-btn delete-btn" (click)="onDelete()" title="Elimina nota">
+          🗑️
+        </button>
+      }
+
+      <!-- Rimuovi dalla condivisione (solo se utente invitato) -->
+      @if (isSharedUser()) {
+        <button class="action-btn remove-btn" (click)="onRemoveFromSharing()" title="Rimuoviti dalla condivisione">
+          ❌
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Permessi e tipo -->
+  <div class="note-permission">
+    <span class="permission-badge" [title]="getPermissionText()">
+      {{ getPermissionIcon() }} {{ getPermissionText() }}
+    </span>
+  </div>
 
   <!-- Footer con metadati -->
   <div class="note-footer">
@@ -113,3 +133,15 @@
     <span class="char-text">{{ note.contenuto.length }}/280</span>
   </div>
 </div>
+
+<!-- Componente Cronologia Versioni -->
+<app-note-version-history
+  [noteId]="note.id"
+  [isVisible]="isVersionHistoryVisible()"
+  (close)="onCloseVersionHistory()"
+  (restoreVersion)="onRestoreVersion($event)">
+</app-note-version-history>
+
+
+
+

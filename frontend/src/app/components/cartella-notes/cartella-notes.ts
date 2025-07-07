@@ -37,11 +37,11 @@ export class CartellaNoteComponent implements OnInit {
   searchForm: FormGroup;
 
   currentUser = computed(() => this.authService.currentUser());
-  
+
   displayName = computed(() => {
     const user = this.currentUser();
     if (!user) return 'Utente';
-    
+
     if (user.nome && user.cognome) {
       return `${user.nome} ${user.cognome}`;
     } else if (user.nome) {
@@ -53,16 +53,16 @@ export class CartellaNoteComponent implements OnInit {
 
   filteredNotes = computed(() => {
     let filtered = this.notes();
-    
+
     const search = this.searchQuery().toLowerCase();
     if (search) {
-      filtered = filtered.filter(note => 
+      filtered = filtered.filter(note =>
         note.titolo.toLowerCase().includes(search) ||
         note.contenuto.toLowerCase().includes(search) ||
         note.tags.some(tag => tag.toLowerCase().includes(search))
       );
     }
-    
+
     return filtered;
   });
 
@@ -97,7 +97,7 @@ export class CartellaNoteComponent implements OnInit {
 
   loadCartellaInfo(): void {
     const nome = this.cartellaNome();
-    
+
     // Trova la cartella nelle cartelle caricate
     this.cartelleService.getAllCartelle().subscribe({
       next: () => {
@@ -162,7 +162,7 @@ export class CartellaNoteComponent implements OnInit {
 
   onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest): void {
     const selectedNote = this.selectedNote();
-    
+
     if (selectedNote) {
       this.notesService.updateNote(selectedNote.id, noteData as UpdateNoteRequest).subscribe({
         next: (response) => {
@@ -176,7 +176,7 @@ export class CartellaNoteComponent implements OnInit {
         }
       });
     } else {
-      // Create new note - assicurati che sia assegnata alla cartella corrente
+      // Create new note
       const createData = noteData as CreateNoteRequest;
       if (!createData.cartelle) {
         createData.cartelle = [];
