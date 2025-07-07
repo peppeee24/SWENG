@@ -54,7 +54,7 @@ export class NotesComponent implements OnInit {
   versionRestoreSuccess = signal<string | null>(null);
   versionRestoreError = signal<string | null>(null);
 
-  // NUOVI SIGNALS per filtri autore e data
+  //  SIGNALS per filtri autore e data
   selectedAutore = signal<string>('');
   selectedDataInizio = signal<string>('');
   selectedDataFine = signal<string>('');
@@ -583,7 +583,7 @@ export class NotesComponent implements OnInit {
   //  Carica note per range di date
   private loadNotesByDate(dataInizio?: string, dataFine?: string): void {
   console.log('COMPONENT: loadNotesByDate chiamato con:', { dataInizio, dataFine, currentFilter: this.currentFilter() });
-  
+
   this.notesService.getNotesByDateRange(dataInizio, dataFine, this.currentFilter()).subscribe({
     next: () => {
       console.log(`COMPONENT: Note filtrate per data (${dataInizio} - ${dataFine}) caricate`);
