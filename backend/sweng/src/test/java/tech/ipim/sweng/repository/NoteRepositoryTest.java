@@ -48,7 +48,7 @@ class NoteRepositoryTest {
 
         // Crea nota condivisa
         sharedNote = new Note("Nota Condivisa", "Contenuto condiviso di test", testUser1);
-        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA); // CORREZIONE: Uso corretto dell'enum
+        sharedNote.setTipoPermesso(TipoPermesso.CONDIVISA_LETTURA);
         sharedNote.setPermessiLettura(Set.of("testuser2"));
         sharedNote.setTags(Set.of("condiviso", "team"));
         sharedNote.setCartelle(Set.of("Progetti Condivisi"));
@@ -200,7 +200,7 @@ class NoteRepositoryTest {
     @Test
     void shouldFindSharedNotesForUser() {
         // When
-        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testuser2"); // CORREZIONE: Metodo corretto
+        List<Note> sharedNotes = noteRepository.findAllAccessibleNotes("testuser2");
 
         // Then
         assertThat(sharedNotes).hasSize(1);

@@ -812,7 +812,7 @@ public class NoteController {
             response.put("notes", notes);
             response.put("count", notes.size());
 
-            // Aggiungi informazioni sui filtri applicati
+
             if (search != null) response.put("keyword", search);
             if (tag != null) response.put("tag", tag);
             if (cartella != null) response.put("cartella", cartella);
@@ -852,6 +852,8 @@ public class NoteController {
                     .body(NoteResponse.error("Errore durante il recupero degli autori"));
         }
     }
+
+
 
 }
 

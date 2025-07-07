@@ -488,7 +488,7 @@
   white-space: nowrap;
 }
 
-/* Assicurati che i filter-section siano visibili */
+
 .filter-section {
   display: flex;
   flex-direction: column;

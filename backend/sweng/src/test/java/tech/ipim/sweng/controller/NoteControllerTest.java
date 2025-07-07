@@ -24,6 +24,11 @@ import tech.ipim.sweng.dto.UpdateNoteRequest;
 import tech.ipim.sweng.dto.PermissionDto;
 import tech.ipim.sweng.dto.NoteVersionDto;
 import tech.ipim.sweng.dto.VersionComparisonDto;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.Mockito.doThrow;
+
+
+
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -111,6 +116,13 @@ class NoteControllerTest {
         when(jwtUtil.extractTokenFromHeader("Bearer invalid-token")).thenReturn("invalid-token");
         when(jwtUtil.isTokenValid("invalid-token")).thenReturn(false);
         when(jwtUtil.extractUsername("invalid-token")).thenReturn(null);
+
+
+        // Verificare -----------
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn(testUsername);
+        when(noteLockService.getNoteLockOwner(anyLong())).thenReturn("other-user");
     }
 
     @Test
@@ -368,6 +380,299 @@ class NoteControllerTest {
 
         verify(noteService, never()).updateNote(anyLong(), any(UpdateNoteRequest.class), anyString());
     }
+
+
+
+    @Test
+    @DisplayName("UC4.C16 - Test endpoint PUT /notes/{id} con permessi scrittura")
+    @WithMockUser(username = "testuser")
+    void testUpdateNoteWithWritePermissions() throws Exception {
+        // Arrange
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Titolo Aggiornato");
+        updateRequest.setContenuto("Contenuto aggiornato");
+        updateRequest.setTags(Set.of("updated"));
+
+        NoteDto updatedNote = new NoteDto();
+        updatedNote.setId(1L);
+        updatedNote.setTitolo("Titolo Aggiornato");
+        updatedNote.setContenuto("Contenuto aggiornato");
+        updatedNote.setTags(Set.of("updated"));
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+
+
+        LockStatusDto lockStatus = new LockStatusDto(false, null, null, true);
+        when(noteLockService.getLockStatus(1L, "testuser")).thenReturn(lockStatus);
+        when(noteLockService.tryLockNote(1L, "testuser")).thenReturn(true);
+        doNothing().when(noteLockService).unlockNote(1L, "testuser");
+
+
+        when(noteService.updateNote(eq(1L), any(UpdateNoteRequest.class), eq("testuser")))
+                .thenReturn(updatedNote);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/notes/1")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.note.titolo", is("Titolo Aggiornato")))
+                .andExpect(jsonPath("$.note.contenuto", is("Contenuto aggiornato")));
+
+        verify(noteService).updateNote(eq(1L), any(UpdateNoteRequest.class), eq("testuser"));
+    }
+
+
+    @Test
+    @DisplayName("UC4.C17 - Test endpoint PUT /notes/{id} senza permessi")
+    @WithMockUser(username = "testuser")
+    void testUpdateNoteWithoutPermissions() throws Exception {
+        // Arrange
+        UpdateNoteRequest updateRequest = new UpdateNoteRequest();
+        updateRequest.setTitolo("Tentativo");
+        updateRequest.setContenuto("Contenuto valido");
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+
+        // MOCK PER LOCK SERVICE
+        LockStatusDto lockStatus = new LockStatusDto(false, null, null, true);
+        when(noteLockService.getLockStatus(1L, "testuser")).thenReturn(lockStatus);
+        when(noteLockService.tryLockNote(1L, "testuser")).thenReturn(true);
+
+
+        when(noteService.updateNote(eq(1L), any(UpdateNoteRequest.class), eq("testuser")))
+                .thenThrow(new RuntimeException("Non hai i permessi per modificare questa nota"));
+
+        // Act & Assert
+        mockMvc.perform(put("/api/notes/1")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+
+        verify(noteService).updateNote(eq(1L), any(UpdateNoteRequest.class), eq("testuser"));
+    }
+
+
+    @Test
+    @DisplayName("UC7.C18 - Test endpoint GET /notes/search")
+    @WithMockUser(username = "testuser")
+    void testSearchNotesEndpoint() throws Exception {
+        // Arrange
+        List<NoteDto> searchResults = Arrays.asList(
+                createTestNoteDto(1L, "Found Note 1"),
+                createTestNoteDto(2L, "Found Note 2")
+        );
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteService.searchNotes("testuser", "test")).thenReturn(searchResults);
+
+        // Act & Assert - USA IL PARAMETRO GIUSTO
+        mockMvc.perform(get("/api/notes/search")
+                        .param("q", "test")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes", hasSize(2)))
+                .andExpect(jsonPath("$.notes[0].titolo", is("Found Note 1")))
+                .andExpect(jsonPath("$.notes[1].titolo", is("Found Note 2")));
+
+        verify(noteService).searchNotes("testuser", "test");
+    }
+
+
+    @Test
+    @DisplayName("UC7.C19 - Test endpoint GET /notes/filter/tag/{tag}")
+    @WithMockUser(username = "testuser")
+    void testGetNotesByTag() throws Exception {
+        // Arrange
+        List<NoteDto> tagResults = Arrays.asList(createTestNoteDto(1L, "Tagged Note"));
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteService.getNotesByTag("testuser", "important")).thenReturn(tagResults);
+
+
+        mockMvc.perform(get("/api/notes/filter/tag/important")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes", hasSize(1)))
+                .andExpect(jsonPath("$.notes[0].titolo", is("Tagged Note")));
+
+        verify(noteService).getNotesByTag("testuser", "important");
+    }
+
+
+
+
+    @Test
+    @DisplayName("UC7.C20 - Test endpoint GET /notes/filter/cartella/{cartella}")
+    @WithMockUser(username = "testuser")
+    void testGetNotesByCartella() throws Exception {
+        // Arrange
+        List<NoteDto> cartellaResults = Arrays.asList(createTestNoteDto(1L, "Folder Note"));
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteService.getNotesByCartella("testuser", "work")).thenReturn(cartellaResults);
+
+
+        mockMvc.perform(get("/api/notes/filter/cartella/work")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notes", hasSize(1)))
+                .andExpect(jsonPath("$.notes[0].titolo", is("Folder Note")));
+
+        verify(noteService).getNotesByCartella("testuser", "work");
+    }
+
+    @Test
+    @DisplayName("LOCK.C21 - Test endpoint POST /notes/{id}/lock")
+    @WithMockUser(username = "testuser")
+    void testLockNote() throws Exception {
+        // Arrange
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteLockService.tryLockNote(1L, "testuser")).thenReturn(true);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/notes/1/lock")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Nota bloccata per la modifica")));
+
+        verify(noteLockService).tryLockNote(1L, "testuser");
+    }
+
+    @Test
+    @DisplayName("LOCK.C22 - Test endpoint POST /notes/{id}/lock - conflitto")
+    @WithMockUser(username = "testuser")
+    void testLockNoteConflict() throws Exception {
+        // Arrange
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteLockService.tryLockNote(1L, "testuser")).thenReturn(false);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/notes/1/lock")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Nota già in modifica da other-user")));
+
+        verify(noteLockService).tryLockNote(1L, "testuser");
+    }
+
+    @Test
+    @DisplayName("LOCK.C23 - Test endpoint DELETE /notes/{id}/lock")
+    @WithMockUser(username = "testuser")
+    void testUnlockNote() throws Exception {
+        // Arrange
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        doNothing().when(noteLockService).unlockNote(1L, "testuser");
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/notes/1/lock")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Nota sbloccata con successo")));
+
+        verify(noteLockService).unlockNote(1L, "testuser");
+    }
+
+    @Test
+    @DisplayName("LOCK.C24 - Test endpoint GET /notes/{id}/lock-status")
+    @WithMockUser(username = "testuser")
+    void testGetLockStatus() throws Exception {
+        // Arrange
+        LockStatusDto lockStatus = new LockStatusDto(true, "otheruser",
+                LocalDateTime.now().plusMinutes(5), false);
+
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteLockService.getLockStatus(1L, "testuser")).thenReturn(lockStatus);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/notes/1/lock-status")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.locked", is(true)))
+                .andExpect(jsonPath("$.lockedBy", is("otheruser")))
+                .andExpect(jsonPath("$.canEdit", is(false)));
+
+        verify(noteLockService).getLockStatus(1L, "testuser");
+    }
+
+    @Test
+    @DisplayName("UC5.C25 - Test endpoint POST /notes/{id}/duplicate")
+    @WithMockUser(username = "testuser")
+    void testDuplicateNote() throws Exception {
+        // Arrange
+        NoteDto duplicatedNote = createTestNoteDto(2L, "Original (Copia)");
+
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteService.duplicateNote(1L, "testuser")).thenReturn(duplicatedNote);
+
+
+        mockMvc.perform(post("/api/notes/1/duplicate")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.note.titolo", is("Original (Copia)")))  // USA "note" NON "data"
+                .andExpect(jsonPath("$.note.id", is(2)));  // USA "note" NON "data"
+
+        verify(noteService).duplicateNote(1L, "testuser");
+    }
+
+    @Test
+    @DisplayName("UC6.C26 - Test endpoint DELETE /notes/{id}")
+    @WithMockUser(username = "testuser")
+    void testDeleteNote() throws Exception {
+        // Arrange
+        when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
+        when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("testuser");
+        when(noteService.deleteNote(1L, "testuser")).thenReturn(true);
+
+        // Act & Assert
+        mockMvc.perform(delete("/api/notes/1")
+                        .header("Authorization", "Bearer valid-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", containsString("eliminata")));
+
+        verify(noteService).deleteNote(1L, "testuser");
+    }
+
+
+
 
     @Test
     @DisplayName("PUT /api/notes/{id} - Dovrebbe fallire quando l'utente non ha permessi")
@@ -824,6 +1129,23 @@ class NoteControllerTest {
         verify(noteLockService).refreshLock(1L, "testuser");
     }
 
+
+
+    // Helper method
+    private NoteDto createTestNoteDto(Long id, String titolo) {
+        NoteDto note = new NoteDto();
+        note.setId(id);
+        note.setTitolo(titolo);
+        note.setContenuto("Test content");
+        note.setAutore("testuser");
+        note.setTags(Set.of("test"));
+        note.setCartelle(Set.of("test-folder"));
+        note.setTipoPermesso(TipoPermesso.PRIVATA.name());
+        note.setDataCreazione(LocalDateTime.now());
+        note.setDataModifica(LocalDateTime.now());
+        return note;
+    }
+
     private void assertDoesNotThrow(Runnable action) {
         try {
             action.run();
@@ -831,4 +1153,7 @@ class NoteControllerTest {
             throw new AssertionError("Expected no exception but got: " + e.getMessage(), e);
         }
     }
+
+
+
 }

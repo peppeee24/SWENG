@@ -795,7 +795,7 @@ class NoteServiceTest {
 
         assertThatThrownBy(() -> noteService.restoreNoteVersion(1L, 2, "altrouser"))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Non hai i permessi per ripristinare versioni di questa nota"); // Messaggio corretto
+                .hasMessage("Non hai i permessi per ripristinare versioni di questa nota");
 
         verify(noteRepository).findById(1L);
         verify(noteVersionService, never()).getVersion(anyLong(), anyInt());
@@ -918,7 +918,7 @@ class NoteServiceTest {
         verify(noteRepository).findById(1L);
         verify(noteRepository).saveAndFlush(any(Note.class));
 
-        // IMPORTANTE: Verifica che NON venga creata una versione per le modifiche dei permessi
+
         verify(noteVersionService, never()).createVersion(
                 any(Note.class),
                 anyString(),

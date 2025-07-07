@@ -66,7 +66,7 @@ public class NoteService {
             System.out.println("Utenti lettura ricevuti: " + request.getPermessi().getUtentiLettura());
             System.out.println("Utenti scrittura ricevuti: " + request.getPermessi().getUtentiScrittura());
 
-            // IMPORTANTE: Assicurati che i set siano inizializzati PRIMA della configurazione
+
             if (note.getPermessiLettura() == null) {
                 note.setPermessiLettura(new HashSet<>());
             }
@@ -486,7 +486,7 @@ public class NoteService {
         }
     }
 
-    // Aggiungi questo metodo al NoteService.java
+
 
 /**
  * Recupera le note filtrate per autore
@@ -659,7 +659,7 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
         System.out.println("Utenti lettura ricevuti: " + permissionDto.getUtentiLettura());
         System.out.println("Utenti scrittura ricevuti: " + permissionDto.getUtentiScrittura());
 
-        // CRITICO: Assicurati che i set esistano e siano inizializzati
+
         if (note.getPermessiLettura() == null) {
             note.setPermessiLettura(new HashSet<>());
             System.out.println("Inizializzato permessiLettura (era null)");
