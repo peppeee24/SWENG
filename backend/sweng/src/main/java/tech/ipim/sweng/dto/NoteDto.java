@@ -25,9 +25,9 @@ public class NoteDto {
     private boolean canView;
     private boolean isOwner;
     
-    public NoteDto() {}
+    public NoteDto() { }
     
-    // Modifica nel costruttore di NoteDto.java
+
 
 public NoteDto(Note note, String currentUsername) {
     boolean isAutore = note.isAutore(currentUsername);
@@ -42,7 +42,7 @@ public NoteDto(Note note, String currentUsername) {
     this.dataModifica = note.getDataModifica();
     this.tags = note.getTags();
     
-    // === FILTRO PRIVACY CARTELLE ===
+
     // Se l'utente è il proprietario della nota, mostra tutte le cartelle
     // Se non è il proprietario, non mostrare alcuna cartella (privacy)
     if (isAutore) {

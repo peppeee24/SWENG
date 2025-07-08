@@ -39,7 +39,7 @@ public class RegistrationRequest {
     private LocalDate dataNascita;
 
     // Costruttori
-    public RegistrationRequest() {}
+    public RegistrationRequest() { }
 
     public RegistrationRequest(String username, String password) {
         this.username = username;
@@ -122,12 +122,12 @@ public class RegistrationRequest {
 
     @Override
     public String toString() {
-        return "RegistrationRequest{" +
-                "username='" + username + '\'' +
-                ", nome='" + nome + '\'' +
-                ", cognome='" + cognome + '\'' +
-                ", email='" + email + '\'' +
-                ", citta='" + citta + '\'' +
-                '}';
+        return "RegistrationRequest{"
+                + "username='" + username + '\''
+                + ", nome='" + nome + '\''
+                + ", cognome='" + cognome + '\''
+                + ", email='" + email + '\''
+                + ", citta='" + citta + '\''
+                + '}';
     }
 }

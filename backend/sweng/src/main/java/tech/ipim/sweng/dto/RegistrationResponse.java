@@ -17,7 +17,7 @@ public class RegistrationResponse {
     private LocalDateTime createdAt;
 
 
-    public RegistrationResponse() {}
+    public RegistrationResponse() { }
 
     public RegistrationResponse(boolean success, String message) {
         this.success = success;

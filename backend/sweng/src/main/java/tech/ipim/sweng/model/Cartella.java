@@ -125,11 +125,11 @@ public class Cartella {
 
     @Override
     public String toString() {
-        return "Cartella{" +
-                "id=" + id +
-                ", nome='" + nome + '\'' +
-                ", proprietario=" + (proprietario != null ? proprietario.getUsername() : "null") +
-                ", dataCreazione=" + dataCreazione +
-                '}';
+        return "Cartella{"
+                + "id=" + id
+                + ", nome='" + nome + '\''
+                + ", proprietario=" + (proprietario != null ? proprietario.getUsername() : "null")
+                + ", dataCreazione=" + dataCreazione
+                + '}';
     }
 }

@@ -6,7 +6,7 @@ public class NoteResponse {
     private String message;
     private NoteDto note;
     
-    public NoteResponse() {}
+    public NoteResponse() { }
     
     public NoteResponse(boolean success, String message) {
         this.success = success;
