@@ -25,7 +25,6 @@ import tech.ipim.sweng.dto.PermissionDto;
 import tech.ipim.sweng.dto.NoteVersionDto;
 import tech.ipim.sweng.dto.VersionComparisonDto;
 import static org.hamcrest.Matchers.containsString;
-import static org.mockito.Mockito.doThrow;
 
 
 
