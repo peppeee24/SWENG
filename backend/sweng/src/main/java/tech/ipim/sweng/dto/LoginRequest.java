@@ -14,7 +14,7 @@ public class LoginRequest {
     private String password;
     
     // Costruttori
-    public LoginRequest() {}
+    public LoginRequest() { }
     
     public LoginRequest(String username, String password) {
         this.username = username;
@@ -41,7 +41,7 @@ public class LoginRequest {
     @Override
     public String toString() {
         return "LoginRequest{" +
-                "username='" + username + '\'' +
-                '}'; // Non loggare la password!
+                "username='" + username + '\''
+                + '}'; // Non loggare la password!
     }
 }

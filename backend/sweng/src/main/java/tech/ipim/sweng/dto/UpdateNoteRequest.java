@@ -21,7 +21,7 @@ public class UpdateNoteRequest {
     private Set<String> cartelle;
 
     // Constructors
-    public UpdateNoteRequest() {}
+    public UpdateNoteRequest() { }
 
     public UpdateNoteRequest(Long id, String titolo, String contenuto, Set<String> tags, Set<String> cartelle) {
         this.id = id;
@@ -74,12 +74,12 @@ public class UpdateNoteRequest {
 
     @Override
     public String toString() {
-        return "UpdateNoteRequest{" +
-                "id=" + id +
-                ", titolo='" + titolo + '\'' +
-                ", contenuto='" + contenuto + '\'' +
-                ", tags=" + tags +
-                ", cartelle=" + cartelle +
-                '}';
+        return "UpdateNoteRequest{"
+                + "id=" + id
+                + ", titolo='" + titolo + '\''
+                + ", contenuto='" + contenuto + '\''
+                + ", tags=" + tags
+                + ", cartelle=" + cartelle
+                + '}';
     }
 }

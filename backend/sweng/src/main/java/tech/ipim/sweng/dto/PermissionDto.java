@@ -9,7 +9,7 @@ public class PermissionDto {
     private List<String> utentiLettura;
     private List<String> utentiScrittura;
 
-    public PermissionDto() {}
+    public PermissionDto() { }
 
     public PermissionDto(TipoPermesso tipoPermesso, List<String> utentiLettura, List<String> utentiScrittura) {
         this.tipoPermesso = tipoPermesso;

@@ -11,7 +11,7 @@ public class LoginResponse {
     private LocalDateTime loginTime;
     
     // Costruttori
-    public LoginResponse() {}
+    public LoginResponse() { }
     
     public LoginResponse(boolean success, String message) {
         this.success = success;
@@ -38,6 +38,7 @@ public class LoginResponse {
     
     // Getters e Setters
     public boolean isSuccess() {
+
         return success;
     }
     
