@@ -108,23 +108,8 @@ jobs:
       - name: Build Angular application
         working-directory: ./frontend
         run: |
-          echo "Building Angular application..."
-          # Prova diversi comandi di build
-          if npm run build:prod 2>/dev/null; then
-            echo "Built with npm run build:prod"
-          elif npm run build -- --configuration=production 2>/dev/null; then
-            echo "Built with npm run build -- --configuration=production"
-          elif npm run build -- --prod 2>/dev/null; then
-            echo "Built with npm run build -- --prod"
-          elif npm run build 2>/dev/null; then
-            echo "Built with npm run build"
-          else
-            echo "All build commands failed"
-            exit 1
-          fi
-          
-          echo "Build completed, checking dist directory:"
-          ls -la dist/ || echo "No dist directory found"
+          echo "Building Angular production build..."
+          ng build --configuration=production
 
       - name: Create Frontend Archive
         working-directory: ./frontend
