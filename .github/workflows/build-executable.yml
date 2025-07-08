@@ -1,15 +1,6 @@
 # .github/workflows/build-executable.yml
 # GitHub Action per creare automaticamente un eseguibile
-name: Build Executable Fixed
-
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-env:# .github/workflows/build-executable.yml
-# GitHub Action per creare automaticamente un eseguibile
-name: Build Executable Fixed
+name: Build Executable
 
 on:
   push:
