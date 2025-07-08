@@ -6,6 +6,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class SwengApplication {
 
+	private SwengApplication() {
+		// Utility class
+	}
+
+
 	public static void main(String[] args) {
 		SpringApplication.run(SwengApplication.class, args);
 		System.out.println("\n=== SWENG Backend Started ===");

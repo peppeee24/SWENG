@@ -1,4 +1,4 @@
-/* ===== MODAL STYLES ===== */
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -80,7 +80,7 @@
   transform: scale(1.1);
 }
 
-/* ===== FORM STYLES ===== */
+/
 .note-form {
   padding: 1rem 2rem 2rem 2rem;
   display: flex;
@@ -138,7 +138,7 @@
   margin-top: 0.25rem;
 }
 
-/* ===== CHARACTER COUNTER ===== */
+
 .character-counter {
   display: flex;
   align-items: center;
@@ -185,7 +185,7 @@
   color: #f56565;
 }
 
-/* ===== PERMISSION OPTIONS ===== */
+
 .permission-options {
   display: flex;
   gap: 1rem;
@@ -245,7 +245,7 @@
   color: #664d03;
 }
 
-/* ===== USERS SELECTION ===== */
+
 .users-selection {
   margin-top: 1rem;
   padding: 1rem;
@@ -402,7 +402,7 @@
   box-shadow: 0 2px 6px rgba(33, 150, 243, 0.25);
 }
 
-/* ===== TAG INPUT ===== */
+
 .tag-input-container {
   display: flex;
   gap: 8px;
@@ -491,7 +491,7 @@
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
-/* ===== CARTELLE DROPDOWN ===== */
+
 .cartelle-dropdown {
   position: relative;
 }
@@ -584,7 +584,7 @@
   animation: tagSlideIn 0.3s ease;
 }
 
-/* ===== UNIFIED BUTTON STYLES FOR REMOVAL ===== */
+
 .tag-chip button,
 .user-tag button,
 .cartella-tag button {
@@ -613,7 +613,7 @@
   transform: scale(1.1);
 }
 
-/* ===== FORM ACTIONS ===== */
+
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -709,7 +709,7 @@
   }
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
+
 @media (max-width: 768px) {
   .modal-content {
     margin: 0.5rem;
