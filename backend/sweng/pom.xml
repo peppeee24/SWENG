@@ -16,6 +16,7 @@
 		<java.version>17</java.version>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
+		<checkstyle.config.location>${project.basedir}/checkstyle.xml</checkstyle.config.location>
 	</properties>
 	<dependencies>
 		<!-- Spring Boot Core -->
@@ -75,14 +76,14 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<!-- Spring Security Test -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<!-- TestContainers (opzionale per test con database reale) -->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
@@ -102,7 +103,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			
+
 			<!-- Plugin per i test -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -118,7 +119,7 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			
+
 			<!-- Plugin per i test di integrazione -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -139,7 +140,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- Plugin per il coverage -->
 			<plugin>
 				<groupId>org.jacoco</groupId>
@@ -160,7 +161,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
 			<!-- Plugin per il checkstyle -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
