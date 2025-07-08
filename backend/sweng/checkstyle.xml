@@ -60,7 +60,6 @@
             <property name="severity" value="ignore"/>
         </module>
         <module name="FinalClass"/>
-        <module name="HideUtilityClassConstructor"/>
         <module name="InterfaceIsType"/>
         <module name="VisibilityModifier"/>
         <module name="ArrayTypeStyle"/>
