@@ -17,7 +17,6 @@ import tech.ipim.sweng.dto.CreateCartellaRequest;
 import tech.ipim.sweng.dto.UpdateCartellaRequest;
 import tech.ipim.sweng.service.CartellaService;
 import tech.ipim.sweng.util.JwtUtil;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
