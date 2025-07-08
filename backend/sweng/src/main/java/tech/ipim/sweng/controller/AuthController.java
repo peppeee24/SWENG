@@ -33,8 +33,7 @@ import tech.ipim.sweng.service.UserService;
     allowCredentials = "true"
 )
 
-public class AuthController
-{
+public class AuthController {
 
     private final UserService userService;
 

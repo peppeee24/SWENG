@@ -18,7 +18,7 @@ public class CreateNoteRequest {
     private Set<String> cartelle;
     private PermissionDto permessi;
 
-    public CreateNoteRequest() {}
+    public CreateNoteRequest() { }
 
     public CreateNoteRequest(String titolo, String contenuto) {
         this.titolo = titolo;
@@ -67,13 +67,13 @@ public class CreateNoteRequest {
 
     @Override
     public String toString() {
-        return "CreateNoteRequest{" +
-                "titolo='" + titolo + '\'' +
-                ", contenuto='" + contenuto + '\'' +
-                ", tags=" + tags +
-                ", cartelle=" + cartelle +
-                ", permessi=" + permessi +
-                '}';
+        return "CreateNoteRequest{"
+                + "titolo='" + titolo + '\''
+                + ", contenuto='" + contenuto + '\''
+                + ", tags=" + tags
+                + ", cartelle=" + cartelle
+                + ", permessi=" + permessi
+                + '}';
     }
 }
 

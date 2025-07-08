@@ -452,7 +452,7 @@ export class NotesService {
     );
   }
 
-  // =============  METODI PER FILTRI AUTORE E DATA =============
+  //  METODI PER FILTRI AUTORE E DATA
 
   /**
    * Recupera le note filtrate per autore
@@ -580,7 +580,7 @@ export class NotesService {
     );
   }
 
-  // ============= METODI UTILITY =============
+  // METODI UTILITY
 
   clearCache(): void {
     console.log('Cache cleared');

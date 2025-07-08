@@ -90,7 +90,7 @@ public class NoteService {
             note.setPermessiScrittura(new HashSet<>());
         }
 
-        // === SALVATAGGIO CON FLUSH ===
+
         System.out.println("=== PRIMA DEL SALVATAGGIO ===");
         System.out.println("Tipo permesso PRE-save: " + note.getTipoPermesso());
         System.out.println("Permessi lettura PRE-save: " + note.getPermessiLettura());
@@ -107,7 +107,7 @@ public class NoteService {
         // Crea la prima versione
         noteVersionService.createVersion(savedNote, username, "Creazione nota");
 
-        // === VERIFICA FINALE CON RICARICAMENTO ===
+
         Note reloadedNote = noteRepository.findById(savedNote.getId()).orElse(null);
         if (reloadedNote != null) {
             System.out.println("=== VERIFICA RICARICAMENTO ===");

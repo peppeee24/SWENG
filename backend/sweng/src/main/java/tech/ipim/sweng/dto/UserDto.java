@@ -22,7 +22,7 @@ public class UserDto {
     private LocalDateTime createdAt;
     
     // Costruttori
-    public UserDto() {}
+    public UserDto() { }
     
     public UserDto(User user) {
         this.id = user.getId();

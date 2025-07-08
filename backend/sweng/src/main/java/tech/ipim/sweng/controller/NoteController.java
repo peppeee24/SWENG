@@ -4,13 +4,31 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
-import tech.ipim.sweng.dto.*;
+import tech.ipim.sweng.dto.CreateNoteRequest;
+import tech.ipim.sweng.dto.LockStatusDto;
+import tech.ipim.sweng.dto.NoteDto;
+import tech.ipim.sweng.dto.NoteResponse;
+import tech.ipim.sweng.dto.NoteVersionDto;
+import tech.ipim.sweng.dto.PermissionDto;
+import tech.ipim.sweng.dto.RestoreVersionRequest;
+import tech.ipim.sweng.dto.UpdateNoteRequest;
+import tech.ipim.sweng.dto.VersionComparisonDto;
 import tech.ipim.sweng.service.NoteLockService;
 import tech.ipim.sweng.service.NoteService;
 import tech.ipim.sweng.util.JwtUtil;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -756,14 +774,14 @@ public class NoteController {
             @RequestParam(required = false) String dataFine,
             @RequestHeader("Authorization") String authHeader) {
 
-        System.out.println("GET /api/notes - Filtri: " +
-                "filter=" + filter +
-                ", search=" + search +
-                ", tag=" + tag +
-                ", cartella=" + cartella +
-                ", autore=" + autore +
-                ", dataInizio=" + dataInizio +
-                ", dataFine=" + dataFine);
+        System.out.println("GET /api/notes - Filtri: "
+                + "filter=" + filter
+                + ", search=" + search
+                + ", tag=" + tag
+                + ", cartella=" + cartella
+                + ", autore=" + autore
+                + ", dataInizio=" + dataInizio
+                + ", dataFine=" + dataFine);
 
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
@@ -813,12 +831,24 @@ public class NoteController {
             response.put("count", notes.size());
 
 
-            if (search != null) response.put("keyword", search);
-            if (tag != null) response.put("tag", tag);
-            if (cartella != null) response.put("cartella", cartella);
-            if (autore != null) response.put("autore", autore);
-            if (dataInizio != null) response.put("dataInizio", dataInizio);
-            if (dataFine != null) response.put("dataFine", dataFine);
+            if (search != null) {
+                response.put("keyword", search);
+            }
+            if (tag != null) {
+                response.put("tag", tag);
+            }
+            if (cartella != null) {
+                response.put("cartella", cartella);
+            }
+            if (autore != null) {
+                response.put("autore", autore);
+            }
+            if (dataInizio != null) {
+                response.put("dataInizio", dataInizio);
+            }
+            if (dataFine != null) {
+                response.put("dataFine", dataFine);
+            }
 
             return ResponseEntity.ok(response);
 

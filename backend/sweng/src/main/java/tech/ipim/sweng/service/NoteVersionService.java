@@ -87,8 +87,8 @@ public class NoteVersionService {
         }
 
         if (latestVersion.get().getVersionNumber() > baseVersion) {
-            return !latestVersion.get().getContenuto().equals(currentContent) ||
-                    !latestVersion.get().getTitolo().equals(currentTitle);
+            return !latestVersion.get().getContenuto().equals(currentContent)
+                    || !latestVersion.get().getTitolo().equals(currentTitle);
         }
 
         return false;

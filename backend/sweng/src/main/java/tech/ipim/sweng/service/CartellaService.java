@@ -38,7 +38,6 @@ public class CartellaService {
         User proprietario = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
 
-
         if (cartellaRepository.existsByNomeAndProprietario(request.getNome(), proprietario)) {
             throw new RuntimeException("Esiste già una cartella con il nome: " + request.getNome());
         }
@@ -176,7 +175,12 @@ public class CartellaService {
             this.nomiCartelle = nomiCartelle;
         }
 
-        public long getNumeroCartelle() { return numeroCartelle; }
-        public List<String> getNomiCartelle() { return nomiCartelle; }
+        public long getNumeroCartelle() { 
+            return numeroCartelle; 
+        }
+        
+        public List<String> getNomiCartelle() {
+             return nomiCartelle; 
+        }
     }
 }

@@ -192,7 +192,7 @@ export class NotesComponent implements OnInit {
     });
   }
 
-  // ============= GESTIONE FORM NOTE =============
+  // GESTIONE FORM NOTE
   showCreateForm(): void {
     this.selectedNote.set(null);
     this.showNoteForm.set(true);
@@ -438,7 +438,7 @@ export class NotesComponent implements OnInit {
     });
   }
 
-  // ============= GESTIONE VERSIONAMENTO =============
+  //  GESTIONE VERSIONAMENTO
   onRestoreVersion(event: { noteId: number, versionNumber: number }): void {
     console.log('Ripristino versione richiesto:', event);
 
@@ -489,7 +489,7 @@ export class NotesComponent implements OnInit {
     this.versionRestoreError.set(null);
   }
 
-  // ============= GESTIONE QUERY PARAMETERS =============
+
   private handleQueryParams(): void {
     this.route.queryParams.subscribe(params => {
       console.log('Query params ricevuti:', params);
@@ -630,7 +630,7 @@ export class NotesComponent implements OnInit {
     this.searchForm.patchValue({ query: '' }, { emitEvent: false });
   }
 
-  // ============= METODI DI FILTRO =============
+
   onFilterChange(filter: 'all' | 'own' | 'shared'): void {
     console.log('Cambio filtro a:', filter);
     this.currentFilter.set(filter);
@@ -758,7 +758,7 @@ export class NotesComponent implements OnInit {
     );
   }
 
-  // ============= METODI UTILITY =============
+
   private hasPermissionsChanged(originalNote: Note, newPermissions: any): boolean {
     if (!newPermissions) return false;
 

@@ -8,8 +8,6 @@ import tech.ipim.sweng.dto.LockStatusDto;
 import tech.ipim.sweng.model.Note;
 import tech.ipim.sweng.repository.NoteRepository;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -43,8 +41,8 @@ public class NoteLockService {
         note.lockFor(username, lockDurationMinutes);
         noteRepository.save(note);
 
-        System.out.println("Nota " + noteId + " bloccata per utente " + username +
-                " fino a " + note.getLockExpiresAt());
+        System.out.println("Nota " + noteId + " bloccata per utente " + username
+                + " fino a " + note.getLockExpiresAt());
 
         return true;
     }

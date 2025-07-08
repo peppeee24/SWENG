@@ -3,7 +3,6 @@ package tech.ipim.sweng.dto;
 import java.time.LocalDateTime;
 
 public class VersionComparisonDto {
-
     private Long noteId;
     private Integer version1Number;
     private Integer version2Number;
@@ -20,7 +19,7 @@ public class VersionComparisonDto {
     private String changesSummary;
     private DifferenceDto differences;
 
-    public VersionComparisonDto() {}
+    public VersionComparisonDto() { }
 
     public VersionComparisonDto(Long noteId, Integer v1Number, Integer v2Number) {
         this.noteId = noteId;
@@ -28,7 +27,6 @@ public class VersionComparisonDto {
         this.version2Number = v2Number;
     }
 
-    // Costruttore con DTO delle versioni e differenze
     public VersionComparisonDto(NoteVersionDto dto1, NoteVersionDto dto2, DifferenceDto differences) {
         this.noteId = dto1.getNoteId();
         this.version1Number = dto1.getVersionNumber();
@@ -47,61 +45,129 @@ public class VersionComparisonDto {
         updateChangesSummary();
     }
 
-    // Getters e Setters
-    public Long getNoteId() { return noteId; }
-    public void setNoteId(Long noteId) { this.noteId = noteId; }
+    public Long getNoteId() {
+        return noteId;
+    }
 
-    public Integer getVersion1Number() { return version1Number; }
-    public void setVersion1Number(Integer version1Number) { this.version1Number = version1Number; }
+    public void setNoteId(Long noteId) {
+        this.noteId = noteId;
+    }
 
-    public Integer getVersion2Number() { return version2Number; }
-    public void setVersion2Number(Integer version2Number) { this.version2Number = version2Number; }
+    public Integer getVersion1Number() { 
+        return version1Number; 
+    }
 
-    public String getVersion1Title() { return version1Title; }
+    public void setVersion1Number(Integer version1Number) { 
+        this.version1Number = version1Number; 
+    }
+
+    public Integer getVersion2Number() { 
+        return version2Number; 
+    }
+
+    public void setVersion2Number(Integer version2Number) { 
+        this.version2Number = version2Number; 
+    }
+
+    public String getVersion1Title() { 
+        return version1Title; 
+    }
+
     public void setVersion1Title(String version1Title) {
         this.version1Title = version1Title;
     }
 
-    public String getVersion2Title() { return version2Title; }
+    public String getVersion2Title() { 
+        return version2Title; 
+    }
+
     public void setVersion2Title(String version2Title) {
         this.version2Title = version2Title;
         updateTitleChanged();
     }
 
-    public String getVersion1Content() { return version1Content; }
+    public String getVersion1Content() { 
+        return version1Content; 
+    }
+    
     public void setVersion1Content(String version1Content) {
         this.version1Content = version1Content;
     }
 
-    public String getVersion2Content() { return version2Content; }
+    public String getVersion2Content() { 
+        return version2Content; 
+    }
+
     public void setVersion2Content(String version2Content) {
         this.version2Content = version2Content;
         updateContentChanged();
     }
 
-    public String getVersion1CreatedBy() { return version1CreatedBy; }
-    public void setVersion1CreatedBy(String version1CreatedBy) { this.version1CreatedBy = version1CreatedBy; }
+    public String getVersion1CreatedBy() { 
+        return version1CreatedBy; 
+    }
 
-    public String getVersion2CreatedBy() { return version2CreatedBy; }
-    public void setVersion2CreatedBy(String version2CreatedBy) { this.version2CreatedBy = version2CreatedBy; }
+    public void setVersion1CreatedBy(String version1CreatedBy) { 
+        this.version1CreatedBy = version1CreatedBy; 
+    }
 
-    public LocalDateTime getVersion1CreatedAt() { return version1CreatedAt; }
-    public void setVersion1CreatedAt(LocalDateTime version1CreatedAt) { this.version1CreatedAt = version1CreatedAt; }
+    public String getVersion2CreatedBy() { 
+        return version2CreatedBy; 
+    }
 
-    public LocalDateTime getVersion2CreatedAt() { return version2CreatedAt; }
-    public void setVersion2CreatedAt(LocalDateTime version2CreatedAt) { this.version2CreatedAt = version2CreatedAt; }
+    public void setVersion2CreatedBy(String version2CreatedBy) { 
+        this.version2CreatedBy = version2CreatedBy; 
+    }
 
-    public boolean isTitleChanged() { return titleChanged; }
-    public void setTitleChanged(boolean titleChanged) { this.titleChanged = titleChanged; }
+    public LocalDateTime getVersion1CreatedAt() { 
+        return version1CreatedAt; 
+    }
+    
+    public void setVersion1CreatedAt(LocalDateTime version1CreatedAt) { 
+        this.version1CreatedAt = version1CreatedAt; 
+    }
 
-    public boolean isContentChanged() { return contentChanged; }
-    public void setContentChanged(boolean contentChanged) { this.contentChanged = contentChanged; }
+    public LocalDateTime getVersion2CreatedAt() { 
+        return version2CreatedAt; 
+    }
 
-    public String getChangesSummary() { return changesSummary; }
-    public void setChangesSummary(String changesSummary) { this.changesSummary = changesSummary; }
+    public void setVersion2CreatedAt(LocalDateTime version2CreatedAt) { 
+        this.version2CreatedAt = version2CreatedAt; 
+    }
 
-    public DifferenceDto getDifferences() { return differences; }
-    public void setDifferences(DifferenceDto differences) { this.differences = differences; }
+    public boolean isTitleChanged() { 
+        return titleChanged; 
+    
+    }
+
+    public void setTitleChanged(boolean titleChanged) { 
+        this.titleChanged = titleChanged; 
+    }
+
+    public boolean isContentChanged() { 
+        return contentChanged; 
+    }
+    
+    public void setContentChanged(boolean contentChanged) { 
+        this.contentChanged = contentChanged; 
+    }
+
+    public String getChangesSummary() { 
+        return changesSummary; 
+    
+    }
+
+    public void setChangesSummary(String changesSummary) { 
+        this.changesSummary = changesSummary; 
+    }
+
+    public DifferenceDto getDifferences() { 
+        return differences; 
+    }
+
+    public void setDifferences(DifferenceDto differences) { 
+        this.differences = differences; 
+    }
 
     private void updateTitleChanged() {
         if (version1Title != null && version2Title != null) {
@@ -140,7 +206,7 @@ public class VersionComparisonDto {
         private String titleDiff;
         private String contentDiff;
 
-        public DifferenceDto() {}
+        public DifferenceDto() { }
 
         public DifferenceDto(boolean titleChanged, boolean contentChanged, String titleDiff, String contentDiff) {
             this.titleChanged = titleChanged;
@@ -150,16 +216,36 @@ public class VersionComparisonDto {
         }
 
         // Getters e Setters
-        public boolean isTitleChanged() { return titleChanged; }
-        public void setTitleChanged(boolean titleChanged) { this.titleChanged = titleChanged; }
+        public boolean isTitleChanged() { 
+            return titleChanged; 
+        }
 
-        public boolean isContentChanged() { return contentChanged; }
-        public void setContentChanged(boolean contentChanged) { this.contentChanged = contentChanged; }
+        public void setTitleChanged(boolean titleChanged) {
+             this.titleChanged = titleChanged; 
+        }
 
-        public String getTitleDiff() { return titleDiff; }
-        public void setTitleDiff(String titleDiff) { this.titleDiff = titleDiff; }
+        public boolean isContentChanged() { 
+            return contentChanged; 
+        }
+        
+        public void setContentChanged(boolean contentChanged) { 
+            this.contentChanged = contentChanged; 
+        }
 
-        public String getContentDiff() { return contentDiff; }
-        public void setContentDiff(String contentDiff) { this.contentDiff = contentDiff; }
+        public String getTitleDiff() { 
+            return titleDiff; 
+        }
+        
+        public void setTitleDiff(String titleDiff) { 
+            this.titleDiff = titleDiff; 
+        }
+
+        public String getContentDiff() { 
+            return contentDiff; 
+        }
+        
+        public void setContentDiff(String contentDiff) {
+             this.contentDiff = contentDiff; 
+        }
     }
 }
