@@ -774,14 +774,14 @@ public class NoteController {
             @RequestParam(required = false) String dataFine,
             @RequestHeader("Authorization") String authHeader) {
 
-        System.out.println("GET /api/notes - Filtri: " +
-                "filter=" + filter +
-                ", search=" + search +
-                ", tag=" + tag +
-                ", cartella=" + cartella +
-                ", autore=" + autore +
-                ", dataInizio=" + dataInizio +
-                ", dataFine=" + dataFine);
+        System.out.println("GET /api/notes - Filtri: "
+                + "filter=" + filter
+                + ", search=" + search
+                + ", tag=" + tag
+                + ", cartella=" + cartella
+                + ", autore=" + autore
+                + ", dataInizio=" + dataInizio
+                + ", dataFine=" + dataFine);
 
         String username = extractUsernameFromAuth(authHeader);
         if (username == null) {
@@ -831,12 +831,24 @@ public class NoteController {
             response.put("count", notes.size());
 
 
-            if (search != null) response.put("keyword", search);
-            if (tag != null) response.put("tag", tag);
-            if (cartella != null) response.put("cartella", cartella);
-            if (autore != null) response.put("autore", autore);
-            if (dataInizio != null) response.put("dataInizio", dataInizio);
-            if (dataFine != null) response.put("dataFine", dataFine);
+            if (search != null) {
+                response.put("keyword", search);
+            }
+            if (tag != null) {
+                response.put("tag", tag);
+            }
+            if (cartella != null) {
+                response.put("cartella", cartella);
+            }
+            if (autore != null) {
+                response.put("autore", autore);
+            }
+            if (dataInizio != null) {
+                response.put("dataInizio", dataInizio);
+            }
+            if (dataFine != null) {
+                response.put("dataFine", dataFine);
+            }
 
             return ResponseEntity.ok(response);
 
