@@ -24,12 +24,27 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.contains;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import tech.ipim.sweng.dto.PermissionDto;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -763,8 +778,8 @@ class NoteServiceTest {
         verify(noteRepository).findById(1L);
         verify(noteVersionService).getVersion(1L, 2);
         verify(noteRepository).save(argThat(note ->
-                note.getTitolo().equals("Titolo v2") &&
-                        note.getContenuto().equals("Contenuto v2")
+                note.getTitolo().equals("Titolo v2")
+                        && note.getContenuto().equals("Contenuto v2")
         ));
         verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), contains("Ripristino alla versione 2"));
     }
@@ -1125,10 +1140,10 @@ class NoteServiceTest {
 
         // Assert
         verify(noteRepository).save(argThat(savedNote ->
-                savedNote.getPermessiLettura().contains("reader1") &&
-                        savedNote.getPermessiLettura().contains("reader2") &&
-                        savedNote.getPermessiScrittura().contains("writer1") &&
-                        savedNote.getTipoPermesso() == TipoPermesso.CONDIVISA_SCRITTURA
+                savedNote.getPermessiLettura().contains("reader1")
+                        && savedNote.getPermessiLettura().contains("reader2")
+                        && savedNote.getPermessiScrittura().contains("writer1")
+                        && savedNote.getTipoPermesso() == TipoPermesso.CONDIVISA_SCRITTURA
         ));
     }
 
