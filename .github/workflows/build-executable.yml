@@ -104,6 +104,8 @@ jobs:
           echo ""
           echo "Checking Angular version:"
           npx ng version || echo "Angular CLI not found locally"
+      - name: Install Angular CLI
+        run: npm install -g @angular/cli
 
       - name: Build Angular application
         working-directory: ./frontend
