@@ -1,6 +1,20 @@
 package tech.ipim.sweng.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
@@ -289,9 +303,9 @@ public class Note {
     }
 
     public boolean isLocked() {
-        return Boolean.TRUE.equals(isLockedForEditing) &&
-                lockExpiresAt != null &&
-                LocalDateTime.now().isBefore(lockExpiresAt);
+        return Boolean.TRUE.equals(isLockedForEditing)
+                && lockExpiresAt != null
+                && LocalDateTime.now().isBefore(lockExpiresAt);
     }
 
     public boolean isLockedBy(String username) {
@@ -311,9 +325,9 @@ public class Note {
     }
 
     public boolean hasExpiredLock() {
-        return Boolean.TRUE.equals(isLockedForEditing) &&
-                lockExpiresAt != null &&
-                LocalDateTime.now().isAfter(lockExpiresAt);
+        return Boolean.TRUE.equals(isLockedForEditing)
+                && lockExpiresAt != null
+                && LocalDateTime.now().isAfter(lockExpiresAt);
     }
 
     // Metodi per il versionamento
@@ -338,15 +352,15 @@ public class Note {
 
     @Override
     public String toString() {
-        return "Note{" +
-                "id=" + id +
-                ", titolo='" + titolo + '\'' +
-                ", autore=" + (autore != null ? autore.getUsername() : "null") +
-                ", dataCreazione=" + dataCreazione +
-                ", tipoPermesso=" + tipoPermesso +
-                ", isLocked=" + isLocked() +
-                ", lockedBy='" + lockedByUser + '\'' +
-                ", versionNumber=" + versionNumber +
-                '}';
+        return "Note{"
+                + "id=" + id
+                + ", titolo='" + titolo + '\''
+                + ", autore=" + (autore != null ? autore.getUsername() : "null")
+                + ", dataCreazione=" + dataCreazione
+                + ", tipoPermesso=" + tipoPermesso
+                + ", isLocked=" + isLocked()
+                + ", lockedBy='" + lockedByUser + '\''
+                + ", versionNumber=" + versionNumber
+                + '}';
     }
 }
