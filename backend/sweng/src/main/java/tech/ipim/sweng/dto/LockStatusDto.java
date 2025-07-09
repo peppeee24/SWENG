@@ -2,6 +2,20 @@ package tech.ipim.sweng.dto;
 
 import java.time.LocalDateTime;
 
+/**
+ * DTO che rappresenta lo stato di blocco (lock) di una nota.
+ * <p>
+ * Utilizzato per informare il client se una nota è attualmente bloccata da un altro utente,
+ * chi ha effettuato il blocco, quando scadrà, e se l’utente corrente può modificarla.
+ * <p>
+ * Campi:
+ * <ul>
+ *   <li>{@code isLocked} - true se la nota è attualmente bloccata</li>
+ *   <li>{@code lockedBy} - username dell’utente che ha effettuato il lock</li>
+ *   <li>{@code lockExpiresAt} - data e ora di scadenza del blocco</li>
+ *   <li>{@code canEdit} - true se l’utente corrente ha diritto a modificare la nota</li>
+ * </ul>
+ */
 public class LockStatusDto {
     private boolean isLocked;
     private String lockedBy;

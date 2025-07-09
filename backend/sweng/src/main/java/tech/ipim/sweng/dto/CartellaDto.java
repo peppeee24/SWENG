@@ -4,7 +4,30 @@ import tech.ipim.sweng.model.Cartella;
 import java.time.LocalDateTime;
 
 /**
- * DTO per rappresentare una cartella
+ * DTO (Data Transfer Object) per rappresentare una cartella in modo sicuro e compatto,
+ * evitando di esporre direttamente l'entità di dominio {@link Cartella}.
+ * <p>
+ * Questo oggetto viene utilizzato per trasferire dati tra il backend e il frontend,
+ * includendo solo le informazioni rilevanti per la visualizzazione e la gestione
+ * lato client.
+ * <p>
+ * Campi principali:
+ * <ul>
+ *   <li>{@code id} - identificatore univoco della cartella</li>
+ *   <li>{@code nome} - nome della cartella</li>
+ *   <li>{@code descrizione} - descrizione opzionale</li>
+ *   <li>{@code proprietario} - username del creatore della cartella</li>
+ *   <li>{@code dataCreazione}, {@code dataModifica} - timestamp di creazione e modifica</li>
+ *   <li>{@code colore} - colore associato per uso grafico</li>
+ *   <li>{@code numeroNote} - numero di note contenute (settato esternamente)</li>
+ * </ul>
+ * <p>
+ * Include:
+ * <ul>
+ *   <li>Costruttore vuoto per la serializzazione</li>
+ *   <li>Costruttore che accetta un oggetto {@link Cartella}</li>
+ *   <li>Metodo statico {@code fromCartella()} per comodità</li>
+ * </ul>
  */
 public class CartellaDto {
 

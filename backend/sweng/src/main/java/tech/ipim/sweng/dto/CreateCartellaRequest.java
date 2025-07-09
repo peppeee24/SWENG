@@ -3,6 +3,21 @@ package tech.ipim.sweng.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * DTO per la richiesta di creazione di una nuova cartella.
+ * <p>
+ * Utilizzato nei controller per ricevere i dati in input dal client durante la creazione
+ * di una cartella.
+ * <p>
+ * Campi validati:
+ * <ul>
+ *   <li>{@code nome} - obbligatorio, tra 1 e 100 caratteri</li>
+ *   <li>{@code descrizione} - opzionale, massimo 500 caratteri</li>
+ *   <li>{@code colore} - opzionale, massimo 7 caratteri (es. codice HEX)</li>
+ * </ul>
+ * <p>
+ * Le annotazioni {@code @NotBlank} e {@code @Size} garantiscono la validità dei dati lato backend.
+ */
 public class CreateCartellaRequest {
 
     @NotBlank(message = "Nome cartella è obbligatorio")

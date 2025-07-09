@@ -19,11 +19,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
+    /**
+     * Costruttore che riceve un'istanza di JwtUtil per la gestione dei token.
+     *
+     * @param jwtUtil utility per parsing e validazione dei JWT
+     */
     public JwtAuthenticationFilter(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
 
-
+    /**
+     * Filtra ogni richiesta HTTP per verificare la presenza e la validità di un token JWT.
+     * Se il token è valido e l'utente non è ancora autenticato, imposta l'autenticazione nel SecurityContext.
+     *
+     * @param request      la richiesta HTTP in arrivo
+     * @param response     la risposta HTTP in uscita
+     * @param filterChain  la catena di filtri da proseguire
+     * @throws ServletException in caso di errore nella catena dei filtri
+     * @throws IOException      in caso di errore I/O
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {

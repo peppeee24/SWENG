@@ -55,6 +55,15 @@ public class NoteController {
         this.noteLockService = noteLockService;
     }
 
+    /**
+     * createNote
+     * Crea una nuova nota per l'utente autenticato.
+     *
+     * @param request dati per creare la nota
+     * @param bindingResult risultato della validazione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito della creazione
+     */
     @PostMapping
     public ResponseEntity<?> createNote(@Valid @RequestBody CreateNoteRequest request,
                                         BindingResult bindingResult,
@@ -94,7 +103,14 @@ public class NoteController {
     }
 
 
-
+    /**
+     * getNoteById
+     * Recupera una nota specifica per ID.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con nota trovata o errore
+     */
     @GetMapping("/{id}")
     public ResponseEntity<?> getNoteById(@PathVariable Long id,
                                          @RequestHeader("Authorization") String authHeader) {
@@ -122,6 +138,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * searchNotes
+     * Cerca note per parola chiave.
+     *
+     * @param keyword parola chiave
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con elenco note trovate
+     */
     @GetMapping("/search")
     public ResponseEntity<?> searchNotes(@RequestParam("q") String keyword,
                                          @RequestHeader("Authorization") String authHeader) {
@@ -149,6 +173,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * getNotesByTag
+     * Filtra le note per tag.
+     *
+     * @param tag tag da cercare
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con elenco note filtrate
+     */
     @GetMapping("/filter/tag/{tag}")
     public ResponseEntity<?> getNotesByTag(@PathVariable String tag,
                                            @RequestHeader("Authorization") String authHeader) {
@@ -176,6 +208,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * getNotesByCartella
+     * Filtra le note per nome cartella.
+     *
+     * @param cartella nome della cartella
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con elenco note filtrate
+     */
     @GetMapping("/filter/cartella/{cartella}")
     public ResponseEntity<?> getNotesByCartella(@PathVariable String cartella,
                                                 @RequestHeader("Authorization") String authHeader) {
@@ -203,6 +243,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * duplicateNote
+     * Duplica una nota esistente.
+     *
+     * @param id ID della nota da duplicare
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con nota duplicata o errore
+     */
     @PostMapping("/{id}/duplicate")
     public ResponseEntity<?> duplicateNote(@PathVariable Long id,
                                            @RequestHeader("Authorization") String authHeader) {
@@ -229,6 +277,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * deleteNote
+     * Elimina una nota dell’utente autenticato.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito eliminazione
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteNote(@PathVariable Long id,
                                         @RequestHeader("Authorization") String authHeader) {
@@ -259,6 +315,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * removeFromSharing
+     * Rimuove l’utente dalla condivisione di una nota.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito della rimozione
+     */
     @DeleteMapping("/{id}/sharing")
     public ResponseEntity<?> removeFromSharing(@PathVariable Long id,
                                                @RequestHeader("Authorization") String authHeader) {
@@ -288,6 +352,16 @@ public class NoteController {
         }
     }
 
+    /**
+     * updateNote
+     * Aggiorna il contenuto di una nota, gestendo anche i lock.
+     *
+     * @param id ID della nota
+     * @param request dati aggiornati
+     * @param bindingResult risultato validazione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con nota aggiornata o errore
+     */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateNote(@PathVariable Long id,
                                         @Valid @RequestBody UpdateNoteRequest request,
@@ -345,6 +419,13 @@ public class NoteController {
         }
     }
 
+    /**
+     * getUserStats
+     * Restituisce statistiche dell’utente su note, tag e cartelle.
+     *
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con statistiche utente
+     */
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats(@RequestHeader("Authorization") String authHeader) {
 
@@ -376,6 +457,16 @@ public class NoteController {
         }
     }
 
+    /**
+     * updateNotePermissions
+     * Modifica i permessi di una nota.
+     *
+     * @param id ID della nota
+     * @param permissionDto oggetto con i nuovi permessi
+     * @param bindingResult risultato validazione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito aggiornamento permessi
+     */
     @PutMapping("/{id}/permissions")
     public ResponseEntity<?> updateNotePermissions(@PathVariable Long id,
                                                    @Valid @RequestBody PermissionDto permissionDto,
@@ -427,6 +518,16 @@ public class NoteController {
         }
     }
 
+    /**
+     * compareNoteVersions
+     * Confronta due versioni di una nota.
+     *
+     * @param id ID della nota
+     * @param version1 prima versione
+     * @param version2 seconda versione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con risultato del confronto
+     */
     @GetMapping("/{id}/compare/{version1}/{version2}")
     public ResponseEntity<?> compareNoteVersions(@PathVariable Long id,
                                                  @PathVariable Integer version1,
@@ -472,6 +573,14 @@ public class NoteController {
     }
 
 
+    /**
+     * lockNote
+     * Tenta di bloccare una nota per la modifica.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito del blocco
+     */
     @PostMapping("/{id}/lock")
     public ResponseEntity<?> lockNote(@PathVariable Long id,
                                       @RequestHeader("Authorization") String authHeader) {
@@ -504,6 +613,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * unlockNote
+     * Sblocca una nota precedentemente bloccata.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito dello sblocco
+     */
     @DeleteMapping("/{id}/lock")
     public ResponseEntity<?> unlockNote(@PathVariable Long id,
                                         @RequestHeader("Authorization") String authHeader) {
@@ -529,6 +646,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * getLockStatus
+     * Recupera lo stato del blocco di una nota.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con stato del lock
+     */
     @GetMapping("/{id}/lock-status")
     public ResponseEntity<?> getLockStatus(@PathVariable Long id,
                                            @RequestHeader("Authorization") String authHeader) {
@@ -557,6 +682,14 @@ public class NoteController {
         }
     }
 
+    /**
+     * extendLock
+     * Estende il blocco temporale su una nota.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito estensione
+     */
     @PutMapping("/{id}/extend-lock")
     public ResponseEntity<?> extendLock(@PathVariable Long id,
                                         @RequestHeader("Authorization") String authHeader) {
@@ -592,7 +725,12 @@ public class NoteController {
 
 
     /**
-     * Recupera la cronologia delle versioni di una nota
+     * getNoteVersionHistory
+     * Recupera la cronologia delle versioni di una nota.
+     *
+     * @param id ID della nota
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con lista delle versioni
      */
     @GetMapping("/{id}/versions")
     public ResponseEntity<?> getNoteVersionHistory(@PathVariable Long id,
@@ -637,7 +775,13 @@ public class NoteController {
     }
 
     /**
-     * Recupera una versione specifica di una nota
+     * getNoteVersion
+     * Recupera una versione specifica di una nota.
+     *
+     * @param id ID della nota
+     * @param versionNumber numero versione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con i dati della versione
      */
     @GetMapping("/{id}/versions/{versionNumber}")
     public ResponseEntity<?> getNoteVersion(@PathVariable Long id,
@@ -691,7 +835,14 @@ public class NoteController {
     }
 
     /**
-     * Ripristina una versione precedente di una nota
+     * restoreNoteVersion
+     * Ripristina una versione precedente di una nota.
+     *
+     * @param id ID della nota
+     * @param request richiesta contenente il numero versione da ripristinare
+     * @param bindingResult risultato della validazione
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con esito del ripristino
      */
     @PostMapping("/{id}/restore")
     public ResponseEntity<?> restoreNoteVersion(@PathVariable Long id,
@@ -762,7 +913,7 @@ public class NoteController {
 
 
 
-
+//  Restituisce tutte le note accessibili dall’utente, con vari filtri.
     @GetMapping
     public ResponseEntity<?> getAllNotes(
             @RequestParam(defaultValue = "all") String filter,
@@ -860,6 +1011,13 @@ public class NoteController {
     }
 
 
+    /**
+     * getAvailableAutori
+     * Restituisce la lista di autori disponibili per filtrare le note.
+     *
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con elenco autori
+     */
     @GetMapping("/autori")
     public ResponseEntity<?> getAvailableAutori(@RequestHeader("Authorization") String authHeader) {
         System.out.println("GET /api/notes/autori - Recupero autori disponibili");
