@@ -102,11 +102,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: nota-bene-backend-jar
+          path: .
 
       - name: Download Frontend Artifact
         uses: actions/download-artifact@v4
         with:
           name: nota-bene-frontend-dist
+          path: .
+
+      - name: List downloaded files
+        run: ls -lh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
