@@ -42,6 +42,37 @@ import tech.ipim.sweng.model.TipoPermesso;
 import tech.ipim.sweng.repository.UserRepository;
 import tech.ipim.sweng.service.UserService;
 
+
+/**
+ * Test di integrazione end-to-end completi per il sistema NotaBene, focalizzati
+ * principalmente su UC8 (Crea Permessi) e scenari di collaborazione multi-utente.
+ * <p>
+ * Verifica il funzionamento completo dell'applicazione in ambiente {@link SpringBootTest}
+ * con database reale, autenticazione JWT, gestione permessi e workflow collaborativi.
+ * Include test di sicurezza, prestazioni, concorrenza e robustezza del sistema.
+ * <p>
+ * I test simulano scenari reali di utilizzo con multiple utenti, validando
+ * il comportamento end-to-end dalla registrazione utente alla collaborazione
+ * su note condivise, inclusi test di sicurezza e isolamento tra utenti.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code testCompleteFlow_RegistrationToUsersList} – Flusso completo registrazione-lista utenti</li>
+ *   <li>{@code testUserListExcludesOwner} – Verifica esclusione proprietario dalla lista</li>
+ *   <li>{@code testRealDatabase_UserPersistenceAndRetrieval} – Test persistenza database reale</li>
+ *   <li>{@code testSecurity_InvalidToken} – Test sicurezza con token invalidi</li>
+ *   <li>{@code testCors_ConfigurationForFrontend} – Verifica configurazione CORS</li>
+ *   <li>{@code testPerformance_ResponseTime} – Test prestazioni e tempi di risposta</li>
+ *   <li>{@code testConcurrency_SimultaneousAccess} – Test accessi concorrenti</li>
+ *   <li>{@code testJsonResponse_CorrectFormat} – Verifica formato JSON risposte</li>
+ *   <li>{@code testRobustness_SpecialCharacters} – Test robustezza con caratteri speciali</li>
+ *   <li>{@code testRealScenario_NoteCreationAndUserSelection} – Scenario reale condivisione nota</li>
+ *   <li>{@code testCompleteCollaborationFlow} – Flusso completo collaborazione multi-utente</li>
+ *   <li>{@code testUserSelfRemovalFromSharedNote} – Test auto-rimozione da condivisione (UC12)</li>
+ *   <li>{@code testPrivateNoteSecurityAccess} – Test sicurezza accesso note private</li>
+ * </ul>
+ */
 @SpringBootTest
 @TestPropertySource(locations = "classpath:application-test.properties")
 @Transactional
@@ -72,6 +103,13 @@ public class IntegrationTest {
         authToken = authenticateTestUser();
     }
 
+    /**
+     * Verifica il flusso completo dalla registrazione utenti alla richiesta
+     * della lista utenti disponibili per condivisione.
+     *
+     * Testa l'intero workflow di UC8 con autenticazione JWT e
+     * verifica che l'utente proprietario sia escluso dalla lista.
+     */
     @Test
     @DisplayName("UC8.I1 - Caricamento Utenti escludendo proprietario")
     void testCompleteFlow_RegistrationToUsersList() throws Exception {
@@ -85,6 +123,14 @@ public class IntegrationTest {
                 .andExpect(jsonPath("$[?(@.username == 'owner_user')]").doesNotExist());
     }
 
+
+    /**
+     * Verifica in dettaglio che l'utente proprietario autenticato
+     * sia correttamente escluso dalla lista degli utenti disponibili.
+     *
+     * Controlla la logica di business per la condivisione note,
+     * assicurando che un utente non possa condividere con se stesso.
+     */
     @Test
     @DisplayName("UC8.I2 - Verifica che l'utente proprietario sia escluso dalla lista")
     void testUserListExcludesOwner() throws Exception {
@@ -114,6 +160,14 @@ public class IntegrationTest {
         assertTrue(users.length >= 2, "Devono esserci almeno 2 utenti disponibili per la condivisione");
     }
 
+
+    /**
+     * Verifica la coerenza tra i dati persistiti nel database
+     * e quelli restituiti dall'endpoint della lista utenti.
+     *
+     * Testa l'integrità dei dati attraverso tutti i layer
+     * dell'applicazione (controller, service, repository).
+     */
     @Test
     @DisplayName("UC8.I3 - Test con database reale: Persistenza e recupero utenti")
     void testRealDatabase_UserPersistenceAndRetrieval() throws Exception {
@@ -137,6 +191,14 @@ public class IntegrationTest {
         assertEquals(userCount - 1, users.length, "La lista dovrebbe contenere tutti gli utenti tranne il proprietario");
     }
 
+
+    /**
+     * Verifica che gli endpoint richiedano autenticazione valida
+     * e respingano correttamente token invalidi o mancanti.
+     *
+     * Testa la sicurezza dell'applicazione contro accessi non autorizzati
+     * e validazione dei token JWT.
+     */
     @Test
     @DisplayName("UC8.I4 - Test sicurezza: Token scaduto/non valido")
     void testSecurity_InvalidToken() throws Exception {
@@ -152,6 +214,13 @@ public class IntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Verifica che la configurazione CORS sia corretta per
+     * permettere al frontend Angular di comunicare con il backend.
+     *
+     * Testa l'integrazione frontend-backend e la configurazione
+     * dei headers di sicurezza per le richieste cross-origin.
+     */
     @Test
     @DisplayName("UC8.I5 - Test CORS: Verifica configurazione per frontend")
     void testCors_ConfigurationForFrontend() throws Exception {
@@ -163,6 +232,14 @@ public class IntegrationTest {
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:4200"));
     }
 
+
+    /**
+     * Verifica che i tempi di risposta dell'API siano accettabili
+     * per garantire una buona esperienza utente.
+     *
+     * Testa le prestazioni dell'endpoint con soglia di 500ms
+     * per mantenere standard di usabilità appropriati.
+     */
     @Test
     @DisplayName("UC8.I6 - Test prestazioni: Tempo di risposta accettabile")
     void testPerformance_ResponseTime() throws Exception {
@@ -181,6 +258,14 @@ public class IntegrationTest {
         assertTrue(responseTime < 500, "Il tempo di risposta dovrebbe essere inferiore a 500ms");
     }
 
+
+    /**
+     * Verifica che l'applicazione gestisca correttamente
+     * multiple richieste simultanee senza conflitti o errori.
+     *
+     * Testa la robustezza del sistema sotto carico concorrente
+     * e la corretta gestione delle risorse condivise.
+     */
     @Test
     @DisplayName("UC8.I7 - Test concorrenza: Accessi simultanei")
     void testConcurrency_SimultaneousAccess() throws Exception {
@@ -219,6 +304,14 @@ public class IntegrationTest {
         }
     }
 
+
+    /**
+     * Verifica che il formato JSON delle risposte sia conforme
+     * alle specifiche e contenga tutti i campi necessari.
+     *
+     * Testa la serializzazione corretta dei DTO e l'assenza
+     * di informazioni sensibili come password nelle risposte.
+     */
     @Test
     @DisplayName("UC8.I8 - Test formato risposta JSON conforme alle specifiche")
     void testJsonResponse_CorrectFormat() throws Exception {
@@ -246,6 +339,14 @@ public class IntegrationTest {
         }
     }
 
+
+    /**
+     * Verifica la robustezza del sistema nella gestione di
+     * utenti con caratteri speciali in username e dati personali.
+     *
+     * Testa il supporto per caratteri unicode, apostrofi e trattini
+     * per garantire compatibilità internazionale.
+     */
     @Test
     @DisplayName("UC8.I9 - Test robustezza: Gestione utenti con dati speciali")
     void testRobustness_SpecialCharacters() throws Exception {
@@ -270,10 +371,18 @@ public class IntegrationTest {
                 .andExpect(jsonPath("$[?(@.username == 'test_àèìòù')]").exists());
     }
 
+
+    /**
+     * Simula uno scenario reale completo di condivisione nota:
+     * caricamento utenti, selezione destinatari e verifica esistenza.
+     *
+     * Testa il workflow completo di UC8 dalla prospettiva
+     * dell'utente finale nell'interfaccia di condivisione.
+     */
     @Test
     @DisplayName("UC8.I10 - Test scenario reale: Creazione nota e selezione utenti")
     void testRealScenario_NoteCreationAndUserSelection() throws Exception {
-        // Questo test simula il flusso completo UC8:
+
         // 1. Utente proprietario vuole condividere una nota
         // 2. Sistema carica lista utenti disponibili (ESCLUDENDO il proprietario)
         // 3. Utente seleziona destinatari della condivisione
@@ -316,6 +425,13 @@ public class IntegrationTest {
         }
     }
 
+    /**
+     * Verifica il flusso completo di collaborazione multi-utente:
+     * creazione nota con permessi, condivisione, modifica collaborativa.
+     *
+     * Testa l'integrazione tra UC3 (Crea Nota), UC4 (Modifica Nota)
+     * e UC8 (Crea Permessi) in uno scenario collaborativo reale.
+     */
     @Test
     @DisplayName("UC4+UC8.I11 - Test flusso completo: Condivisione -> Modifica")
     void testCompleteCollaborationFlow() throws Exception {
@@ -407,6 +523,14 @@ public class IntegrationTest {
                         hasItem("Nota Collaborativa - Modificata")));
     }
 
+
+    /**
+     * Verifica la funzionalità UC12 di auto-rimozione di un utente
+     * dalla condivisione di una nota e la corretta gestione dei permessi.
+     *
+     * Testa che dopo la rimozione l'utente non possa più accedere
+     * alla nota e che questa non appaia nella sua lista.
+     */
     @Test
     @DisplayName("UC12.I12 - Test rimozione utente da condivisione")
     void testUserSelfRemovalFromSharedNote() throws Exception {
@@ -475,6 +599,14 @@ public class IntegrationTest {
                 .andExpect(jsonPath("$.notes[?(@.id == " + noteId + ")]").doesNotExist());
     }
 
+
+    /**
+     * Verifica la sicurezza delle note private e l'isolamento
+     * tra utenti diversi per prevenire accessi non autorizzati.
+     *
+     * Testa che utenti non autorizzati non possano accedere o
+     * modificare note private di altri utenti (test di sicurezza critico).
+     */
     @Test
     @DisplayName("Security.I13 - Test sicurezza accesso note private")
     void testPrivateNoteSecurityAccess() throws Exception {
@@ -538,7 +670,14 @@ public class IntegrationTest {
                 .andExpect(jsonPath("$.titolo", is("Nota Privata")));
     }
 
-    // Metodi helper per i test
+
+    // METODI HELPER
+
+
+    /**
+     * Autentica un utente specifico e restituisce il token JWT.
+     * Metodo helper per semplificare l'autenticazione nei test.
+     */
     private String authenticateUser(String username, String password) throws Exception {
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setUsername(username);
@@ -556,6 +695,11 @@ public class IntegrationTest {
         return loginResponse.getToken();
     }
 
+
+    /**
+     * Estrae l'ID di una nota dalla risposta JSON.
+     * Metodo helper per il parsing delle risposte di creazione note.
+     */
     private Long extractNoteIdFromResponse(String response) throws Exception {
         // Parsing semplificato per estrarre l'ID
         // In un'implementazione reale useresti ObjectMapper per parsing completo
@@ -567,8 +711,11 @@ public class IntegrationTest {
         return 1L; // Fallback per i test
     }
 
-    // Helper Methods
 
+    /**
+     * Configura gli utenti di test necessari per i workflow di collaborazione.
+     * Crea utenti proprietario e target per i test di condivisione.
+     */
     private void setupTestUsers() throws Exception {
         // Crea utente proprietario
         RegistrationRequest ownerUser = new RegistrationRequest();
@@ -609,6 +756,11 @@ public class IntegrationTest {
                 .andExpect(status().isCreated());
     }
 
+
+    /**
+     * Autentica l'utente proprietario principale per i test.
+     * Restituisce il token JWT per l'utente owner_user.
+     */
     private String authenticateTestUser() throws Exception {
         // Login dell'utente proprietario
         LoginRequest loginRequest = new LoginRequest();
