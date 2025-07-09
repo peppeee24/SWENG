@@ -1,0 +1,159 @@
+# backend/sweng/Dockerfile
+# GitHub Action per containerizzazione
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+
+jobs:
+  build-and-push-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+
+    - name: Build Spring Boot JAR
+      working-directory: ./backend/sweng
+      run: mvn clean package -DskipTests
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for Backend
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Build and push Backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend/sweng
+        push: true
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        labels: ${{ steps.meta-backend.outputs.labels }}
+
+  build-and-push-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for Frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Build and push Frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+
+  # Deploy con docker-compose (opzionale)
+  deploy-compose:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-backend, build-and-push-frontend]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Create docker-compose.yml
+      run: |
+        cat > docker-compose.yml << EOF
+        version: '3.8'
+        services:
+          postgres:
+            image: postgres:13-alpine
+            environment:
+              POSTGRES_DB: sweng_db
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: root
+            ports:
+              - "5432:5432"
+            volumes:
+              - postgres_data:/var/lib/postgresql/data
+
+          backend:
+            image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:main
+            ports:
+              - "8080:8080"
+            environment:
+              SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sweng_db
+              SPRING_DATASOURCE_USERNAME: postgres
+              SPRING_DATASOURCE_PASSWORD: root
+            depends_on:
+              - postgres
+
+          frontend:
+            image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:main
+            ports:
+              - "80:80"
+            depends_on:
+              - backend
+
+        volumes:
+          postgres_data:
+        EOF
+
+    - name: Upload docker-compose as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose
+        path: docker-compose.yml
