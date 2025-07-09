@@ -37,6 +37,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
+
+/**
+ * Test di integrazione per {@link CartellaController}, eseguiti in ambiente di test
+ * tramite {@link WebMvcTest} con configurazione di sicurezza semplificata tramite {@link TestConfig}.
+ * <p>
+ * Verifica il comportamento delle API REST relative alla gestione delle cartelle,
+ * simulando le richieste HTTP e controllando le risposte JSON.
+ * <p>
+ * Le dipendenze come {@link CartellaService} e {@link JwtUtil} vengono mockate per isolare la logica del controller.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code shouldCreateCartellaSuccessfully} – Creazione corretta di una cartella</li>
+ *   <li>{@code shouldReturnConflictWhenCartellaAlreadyExists} – Errore 409 se il nome è già usato</li>
+ *   <li>{@code shouldGetAllCartelleSuccessfully} – Recupero di tutte le cartelle</li>
+ *   <li>{@code shouldGetCartellaByIdSuccessfully} – Recupero di una cartella tramite ID</li>
+ *   <li>{@code shouldReturnNotFoundWhenCartellaDoesNotExist} – Errore 404 se la cartella non esiste</li>
+ *   <li>{@code shouldUpdateCartellaSuccessfully} – Aggiornamento riuscito di una cartella</li>
+ *   <li>{@code shouldReturnConflictWhenUpdatingWithExistingName} – Errore 409 per nome duplicato in update</li>
+ *   <li>{@code shouldDeleteCartellaSuccessfully} – Eliminazione corretta della cartella</li>
+ *   <li>{@code shouldReturnConflictWhenDeletingCartellaWithNotes} – Errore 409 se contiene note</li>
+ *   <li>{@code shouldGetCartelleStatsSuccessfully} – Statistiche delle cartelle</li>
+ *   <li>{@code shouldReturnUnauthorizedWithoutValidToken} – Errore 401 per token JWT non valido</li>
+ *   <li>{@code shouldReturnBadRequestWithInvalidData} – Errore 400 per nome mancante</li>
+ *   <li>{@code shouldReturnBadRequestWithTooLongDescription} – Errore 400 per descrizione troppo lunga</li>
+ *   <li>{@code shouldHandleServiceException} – Gestione di eccezione generica del service</li>
+ *   <li>{@code shouldHandleInternalServerError} – Gestione di IllegalStateException</li>
+ *   <li>{@code shouldValidateCartellaNameLength} – Errore 400 per nome troppo lungo</li>
+ *   <li>{@code shouldReturnEmptyCartelleList} – Lista vuota di cartelle</li>
+ * </ul>
+ */
 @WebMvcTest(CartellaController.class)
 @Import(TestConfig.class)
 @ActiveProfiles("test")
@@ -87,6 +119,13 @@ class CartellaControllerTest {
         when(jwtUtil.extractUsername("valid.jwt.token")).thenReturn(testUsername);
     }
 
+    /**
+     * Verifica che la creazione di una cartella con dati validi restituisca
+     * una risposta 201 (Created) e includa correttamente i dettagli della cartella creata.
+     *
+     * Simula una richiesta POST con token JWT valido, verifica il corpo JSON e
+     * controlla che il service venga invocato una sola volta.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldCreateCartellaSuccessfully() throws Exception {
@@ -111,6 +150,10 @@ class CartellaControllerTest {
         verify(cartellaService).createCartella(any(CreateCartellaRequest.class), eq(testUsername));
     }
 
+    /**
+     * Verifica che venga restituito un errore 409 (Conflict) se si tenta di creare
+     * una cartella con un nome già esistente per lo stesso utente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnConflictWhenCartellaAlreadyExists() throws Exception {
@@ -129,6 +172,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.message").value("Esiste già una cartella con il nome: Nuova Cartella"));
     }
 
+    /**
+     * Verifica che la richiesta GET restituisca correttamente l’elenco
+     * delle cartelle dell’utente autenticato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetAllCartelleSuccessfully() throws Exception {
@@ -148,6 +195,10 @@ class CartellaControllerTest {
         verify(cartellaService).getUserCartelle(testUsername);
     }
 
+    /**
+     * Verifica che una cartella esistente venga restituita correttamente
+     * quando richiesta tramite il suo ID.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetCartellaByIdSuccessfully() throws Exception {
@@ -166,6 +217,11 @@ class CartellaControllerTest {
         verify(cartellaService).getCartellaById(1L, testUsername);
     }
 
+
+    /**
+     * Verifica che venga restituito un errore 404 se si cerca di accedere
+     * a una cartella inesistente o non appartenente all’utente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnNotFoundWhenCartellaDoesNotExist() throws Exception {
@@ -182,6 +238,10 @@ class CartellaControllerTest {
         verify(cartellaService).getCartellaById(999L, testUsername);
     }
 
+    /**
+     * Verifica che una cartella esistente venga aggiornata correttamente
+     * tramite una richiesta PUT con dati validi.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldUpdateCartellaSuccessfully() throws Exception {
@@ -203,6 +263,10 @@ class CartellaControllerTest {
         verify(cartellaService).updateCartella(eq(1L), any(UpdateCartellaRequest.class), eq(testUsername));
     }
 
+    /**
+     * Verifica che venga restituito un errore 409 se si prova ad aggiornare
+     * una cartella con un nome già utilizzato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnConflictWhenUpdatingWithExistingName() throws Exception {
@@ -221,6 +285,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.message").value("Esiste già una cartella con il nome: Cartella Aggiornata"));
     }
 
+    /**
+     * Verifica che una cartella venga eliminata correttamente quando non contiene note
+     * e appartiene all’utente autenticato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldDeleteCartellaSuccessfully() throws Exception {
@@ -238,6 +306,11 @@ class CartellaControllerTest {
         verify(cartellaService).deleteCartella(1L, testUsername);
     }
 
+
+    /**
+     * Verifica che venga restituito un errore 409 se si tenta di eliminare
+     * una cartella contenente note.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnConflictWhenDeletingCartellaWithNotes() throws Exception {
@@ -254,6 +327,11 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.message").value("Impossibile eliminare la cartella: contiene 5 note. Sposta prima le note."));
     }
 
+
+    /**
+     * Verifica che le statistiche delle cartelle dell’utente vengano recuperate correttamente
+     * (numero totale e nomi delle cartelle).
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetCartelleStatsSuccessfully() throws Exception {
@@ -273,6 +351,10 @@ class CartellaControllerTest {
         verify(cartellaService).getUserCartelleStats(testUsername);
     }
 
+    /**
+     * Verifica che venga restituito un errore 401 (Unauthorized) se il token JWT
+     * fornito non è valido.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnUnauthorizedWithoutValidToken() throws Exception {
@@ -293,6 +375,11 @@ class CartellaControllerTest {
         verify(cartellaService, never()).createCartella(any(), anyString());
     }
 
+
+    /**
+     * Verifica che la creazione di una cartella con dati non validi (es. nome vuoto)
+     * restituisca un errore 400 (Bad Request) e i relativi messaggi di validazione.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnBadRequestWithInvalidData() throws Exception {
@@ -313,6 +400,10 @@ class CartellaControllerTest {
         verify(cartellaService, never()).createCartella(any(), anyString());
     }
 
+    /**
+     * Verifica che una descrizione superiore a 500 caratteri venga respinta
+     * con errore 400 e messaggio di validazione appropriato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnBadRequestWithTooLongDescription() throws Exception {
@@ -333,6 +424,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.errors.descrizione").value("Descrizione deve essere massimo 500 caratteri"));
     }
 
+    /**
+     * Verifica la gestione di eccezioni lanciate dal service durante la creazione
+     * della cartella, restituendo errore 409 con messaggio custom.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldHandleServiceException() throws Exception {
@@ -351,6 +446,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.message").value("Errore generico del servizio"));
     }
 
+    /**
+     * Verifica la gestione di eccezioni non controllate (es. IllegalStateException),
+     * assicurando che venga restituito un errore coerente (409 in questo caso).
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldHandleInternalServerError() throws Exception {
@@ -369,6 +468,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.message").value("Errore di stato interno"));
     }
 
+    /**
+     * Verifica che venga bloccata la creazione di una cartella con nome superiore
+     * a 100 caratteri, restituendo errore 400 con messaggio di validazione.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldValidateCartellaNameLength() throws Exception {
@@ -387,6 +490,10 @@ class CartellaControllerTest {
                 .andExpect(jsonPath("$.errors.nome").value("Nome cartella deve essere tra 1 e 100 caratteri"));
     }
 
+    /**
+     * Verifica che una richiesta GET restituisca correttamente un elenco vuoto
+     * se l’utente non ha cartelle.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldReturnEmptyCartelleList() throws Exception {
