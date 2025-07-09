@@ -31,6 +31,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+
+/**
+ * Test di integrazione end-to-end per {@link CartellaController}, eseguiti in ambiente
+ * {@link SpringBootTest} con database reale e contesto applicativo completo.
+ * <p>
+ * Verifica il funzionamento completo delle API REST per la gestione delle cartelle,
+ * includendo persistenza dei dati, autenticazione JWT, validazione e sicurezza.
+ * Ogni test utilizza transazioni isolate e pulizia del contesto per garantire indipendenza.
+ * <p>
+ * I test simulano scenari reali di utilizzo con utenti autenticati, validando
+ * il comportamento end-to-end del sistema dalla richiesta HTTP alla persistenza nel database.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code shouldCreateAndRetrieveCartella} – Ciclo completo creazione e recupero cartella</li>
+ *   <li>{@code shouldCreateMultipleCartelleAndRetrieveAll} – Creazione e recupero multiple cartelle</li>
+ *   <li>{@code shouldUpdateCartellaSuccessfully} – Aggiornamento completo cartella con persistenza</li>
+ *   <li>{@code shouldDeleteEmptyCartellaSuccessfully} – Eliminazione cartella vuota e verifica persistenza</li>
+ *   <li>{@code shouldPreventDuplicateCartellaNames} – Prevenzione duplicati nomi cartelle per stesso utente</li>
+ *   <li>{@code shouldGetCartelleStatsAfterCreatingCartelle} – Statistiche cartelle dopo creazione multiple</li>
+ *   <li>{@code shouldRejectRequestWithoutAuthentication} – Rifiuto richieste senza autenticazione</li>
+ *   <li>{@code shouldRejectInvalidCartellaData} – Validazione dati cartella e gestione errori</li>
+ *   <li>{@code shouldAllowSameCartellaNameForDifferentUsers} – Permesso stesso nome per utenti diversi</li>
+ *   <li>{@code shouldNotAllowAccessToOtherUsersCartelle} – Isolamento cartelle tra utenti diversi</li>
+ * </ul>
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -77,6 +104,17 @@ class CartellaIntegrationTest {
         authToken = "Bearer " + loginResponse.getToken();
     }
 
+
+    /**
+     * Verifica il ciclo completo di creazione e recupero di una cartella,
+     * testando persistenza dei dati e corretta serializzazione JSON.
+     *
+     * Esegue:
+     * 1. Creazione cartella tramite POST con dati validi
+     * 2. Estrazione ID dalla risposta JSON
+     * 3. Recupero cartella tramite GET utilizzando l'ID
+     * 4. Verifica persistenza e coerenza dei dati
+     */
     @Test
     @Transactional
     void shouldCreateAndRetrieveCartella() throws Exception {
@@ -112,6 +150,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.cartella.nome").value("Cartella Test"));
     }
 
+
+    /**
+     * Verifica la creazione di multiple cartelle e il loro recupero
+     * in un'unica chiamata, testando la gestione di liste e contatori.
+     *
+     * Testa la capacità del sistema di gestire più cartelle per lo stesso
+     * utente e la corretta restituzione di tutte le cartelle associate.
+     */
     @Test
     @Transactional
     void shouldCreateMultipleCartelleAndRetrieveAll() throws Exception {
@@ -149,6 +195,17 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.cartelle[*].nome", hasItems("Lavoro", "Personale")));
     }
 
+
+    /**
+     * Verifica il ciclo completo di aggiornamento di una cartella esistente,
+     * inclusa la persistenza delle modifiche nel database.
+     *
+     * Esegue:
+     * 1. Creazione cartella iniziale
+     * 2. Aggiornamento con nuovi dati tramite PUT
+     * 3. Verifica immediata della risposta di aggiornamento
+     * 4. Verifica persistenza tramite GET successivo
+     */
     @Test
     @Transactional
     void shouldUpdateCartellaSuccessfully() throws Exception {
@@ -190,6 +247,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.cartella.nome").value("Cartella Aggiornata"));
     }
 
+
+    /**
+     * Verifica l'eliminazione di una cartella vuota e la corretta
+     * rimozione dalla persistenza del database.
+     *
+     * Testa che dopo l'eliminazione la cartella non sia più
+     * accessibile e restituisca errore 404 Not Found.
+     */
     @Test
     @Transactional
     void shouldDeleteEmptyCartellaSuccessfully() throws Exception {
@@ -220,6 +285,14 @@ class CartellaIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+
+    /**
+     * Verifica che il sistema impedisca la creazione di cartelle
+     * con nomi duplicati per lo stesso utente.
+     *
+     * Controlla che venga restituito errore 409 Conflict quando
+     * si tenta di creare una seconda cartella con nome già esistente.
+     */
     @Test
     @Transactional
     void shouldPreventDuplicateCartellaNames() throws Exception {
@@ -249,6 +322,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Esiste già una cartella con il nome: Cartella Unica"));
     }
 
+
+    /**
+     * Verifica che le statistiche delle cartelle vengano aggiornate
+     * correttamente dopo la creazione di multiple cartelle.
+     *
+     * Testa l'endpoint di statistiche e la corretta contabilizzazione
+     * del numero di cartelle e dei loro nomi.
+     */
     @Test
     @Transactional
     void shouldGetCartelleStatsAfterCreatingCartelle() throws Exception {
@@ -277,6 +358,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.stats.nomiCartelle", hasItems("Lavoro", "Personale", "Studio")));
     }
 
+
+    /**
+     * Verifica che le richieste senza token di autenticazione
+     * vengano respinte con errore di autorizzazione appropriato.
+     *
+     * Testa la sicurezza dell'endpoint assicurando che solo
+     * utenti autenticati possano accedere alle funzionalità.
+     */
     @Test
     void shouldRejectRequestWithoutAuthentication() throws Exception {
         // Tenta di creare cartella senza autenticazione
@@ -291,6 +380,14 @@ class CartellaIntegrationTest {
                 .andExpect(status().isForbidden()); // O isUnauthorized() a seconda della configurazione
     }
 
+
+    /**
+     * Verifica che la validazione dei dati cartella funzioni correttamente,
+     * respingendo richieste con dati non validi.
+     *
+     * Testa scenari come nome vuoto e descrizione troppo lunga,
+     * verificando che vengano restituiti errori 400 Bad Request.
+     */
     @Test
     void shouldRejectInvalidCartellaData() throws Exception {
         // Crea richiesta con dati non validi
@@ -308,6 +405,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.errors").exists());
     }
 
+
+    /**
+     * Verifica che utenti diversi possano creare cartelle con lo stesso nome
+     * senza conflitti, mantenendo l'isolamento tra utenti.
+     *
+     * Testa che la validazione dei nomi duplicati sia applicata
+     * solo all'interno dello scope del singolo utente.
+     */
     @Test
     @Transactional
     void shouldAllowSameCartellaNameForDifferentUsers() throws Exception {
@@ -345,6 +450,14 @@ class CartellaIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+
+    /**
+     * Verifica l'isolamento di sicurezza tra utenti diversi,
+     * assicurando che un utente non possa accedere alle cartelle di altri.
+     *
+     * Testa che il tentativo di accesso a cartelle di altri utenti
+     * restituisca errore 404 Not Found, mantenendo la privacy dei dati.
+     */
     @Test
     @Transactional
     void shouldNotAllowAccessToOtherUsersCartelle() throws Exception {
