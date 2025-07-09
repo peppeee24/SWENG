@@ -140,8 +140,7 @@ jobs:
               SPRING_DATASOURCE_PASSWORD: root
             depends_on:
               - postgres
-
-          frontend:
+              frontend:
             image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:main
             ports:
               - "80:80"
