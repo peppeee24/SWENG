@@ -25,6 +25,30 @@ import tech.ipim.sweng.dto.UserDto;
 import tech.ipim.sweng.service.UserService;
 import tech.ipim.sweng.util.JwtUtil;
 
+
+/**
+ * Test di integrazione per {@link UserController}, eseguiti in ambiente di test
+ * tramite {@link MockitoExtension} per la gestione delle dipendenze mockate.
+ * <p>
+ * Verifica il comportamento delle API REST relative alla gestione degli utenti
+ * per il caso d'uso UC8 - Crea Permessi, in particolare l'endpoint per recuperare
+ * la lista degli utenti disponibili per la condivisione di note.
+ * <p>
+ * Le dipendenze come {@link UserService} e {@link JwtUtil} vengono mockate per isolare la logica del controller.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code testGetAllUsersExcept_ExcludesCurrentUser} – Verifica esclusione del proprietario dalla lista</li>
+ *   <li>{@code testGetAllUsers_EmptyList} – Gestione lista vuota di utenti disponibili</li>
+ *   <li>{@code testGetAllUsers_Unauthorized} – Accesso negato senza token di autenticazione</li>
+ *   <li>{@code testGetAllUsers_InvalidToken} – Errore per token JWT malformato</li>
+ *   <li>{@code testGetAllUsers_NoBearerPrefix} – Errore per header Authorization senza Bearer prefix</li>
+ *   <li>{@code testGetAllUsers_ServiceError} – Gestione errore interno del servizio</li>
+ *   <li>{@code testGetAllUsers_CorrectDataFormat} – Verifica formato corretto dei dati UserDto</li>
+ *   <li>{@code testGetAllUsers_ValidToken} – Comportamento corretto con token valido</li>
+ * </ul>
+ */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UC8 - Test Suite per Gestione Permessi di Condivisione")
 public class UserControllerTest {
@@ -52,6 +76,16 @@ public class UserControllerTest {
                 .thenReturn("fedegambe");
     }
 
+    /**
+     * Verifica che la lista degli utenti restituita escluda correttamente
+     * l'utente proprietario (quello autenticato) dalla lista degli utenti
+     * disponibili per la condivisione.
+     *
+     * Simula una richiesta GET con token JWT valido e verifica che:
+     * - La risposta sia 200 OK
+     * - Il corpo contenga la lista degli utenti
+     * - L'utente proprietario sia escluso dalla lista
+     */
     @Test
     @DisplayName("UC8.1 - Lista utenti esclude il proprietario della nota")
     void testGetAllUsersExcept_ExcludesCurrentUser() throws Exception {
@@ -75,6 +109,13 @@ public class UserControllerTest {
         verify(jwtUtil, times(1)).extractUsername(anyString());
     }
 
+    /**
+     * Verifica la gestione corretta del caso in cui non ci siano utenti
+     * disponibili per la condivisione (lista vuota).
+     *
+     * Controlla che venga restituita una risposta 200 OK con lista vuota
+     * quando il service non trova utenti oltre al proprietario.
+     */
     @Test
     @DisplayName("UC8.2 - Gestione errore quando nessun utente disponibile")
     void testGetAllUsers_EmptyList() throws Exception {
@@ -90,6 +131,13 @@ public class UserControllerTest {
         verify(userService, times(1)).getAllUsersExcept("fedegambe");
     }
 
+
+    /**
+     * Verifica che venga restituito un errore 401 (Unauthorized) quando
+     * la richiesta viene effettuata senza fornire un token di autenticazione.
+     *
+     * Assicura che il service non venga mai invocato in assenza di autenticazione.
+     */
     @Test
     @DisplayName("UC8.3 - Accesso negato senza token di autenticazione")
     void testGetAllUsers_Unauthorized() throws Exception {
@@ -102,6 +150,13 @@ public class UserControllerTest {
         verify(jwtUtil, never()).extractUsername(anyString());
     }
 
+
+    /**
+     * Verifica la gestione di un token JWT malformato o non valido,
+     * controllando che venga restituito un errore 401 (Unauthorized).
+     *
+     * Simula il caso in cui JwtUtil lancia un'eccezione per token invalido.
+     */
     @Test
     @DisplayName("UC8.4 - Token JWT malformato restituisce errore")
     void testGetAllUsers_InvalidToken() throws Exception {
@@ -117,6 +172,13 @@ public class UserControllerTest {
         verify(userService, never()).getAllUsersExcept(anyString());
     }
 
+
+    /**
+     * Verifica che venga restituito un errore 401 (Unauthorized) quando
+     * l'header Authorization non contiene il prefisso "Bearer ".
+     *
+     * Testa la validazione del formato dell'header di autenticazione.
+     */
     @Test
     @DisplayName("UC8.5 - Header Authorization senza Bearer prefix")
     void testGetAllUsers_NoBearerPrefix() throws Exception {
@@ -130,6 +192,14 @@ public class UserControllerTest {
         verify(jwtUtil, never()).extractUsername(anyString());
     }
 
+
+    /**
+     * Verifica la gestione di errori interni del servizio durante
+     * il recupero della lista utenti.
+     *
+     * Simula un'eccezione dal UserService e controlla che venga restituito
+     * un errore 500 (Internal Server Error).
+     */
     @Test
     @DisplayName("UC8.6 - Errore interno del servizio")
     void testGetAllUsers_ServiceError() throws Exception {
@@ -143,6 +213,14 @@ public class UserControllerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
     }
 
+
+    /**
+     * Verifica che il formato dei dati UserDto restituiti sia corretto
+     * e contenga tutte le informazioni necessarie per il frontend.
+     *
+     * Controlla che ogni UserDto abbia: ID, username, nome, cognome, email
+     * e che la password non sia esposta nei dati di risposta.
+     */
     @Test
     @DisplayName("UC8.7 - Formato dati UserDto corretto per frontend")
     void testGetAllUsers_CorrectDataFormat() throws Exception {
@@ -166,6 +244,15 @@ public class UserControllerTest {
         }
     }
 
+    /**
+     * Verifica il comportamento complessivo con un token valido,
+     * controllando che vengano restituiti gli utenti attesi.
+     *
+     * Testa lo scenario completo di successo verificando:
+     * - Risposta 200 OK
+     * - Presenza degli utenti mock attesi
+     * - Corretta esclusione del proprietario
+     */
     @Test
     @DisplayName("UC8.8 - Comportamento corretto con token valido")
     void testGetAllUsers_ValidToken() throws Exception {

@@ -25,16 +25,11 @@ import tech.ipim.sweng.dto.PermissionDto;
 import tech.ipim.sweng.dto.NoteVersionDto;
 import tech.ipim.sweng.dto.VersionComparisonDto;
 import static org.hamcrest.Matchers.containsString;
-
-
-
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,6 +52,48 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Test di integrazione per {@link NoteController}, eseguiti in ambiente di test
+ * tramite {@link WebMvcTest} e configurazione {@link TestConfig}.
+ * <p>
+ * Verifica il comportamento delle API REST per la gestione delle note,
+ * compresi creazione, aggiornamento, cancellazione, duplicazione, filtri, versionamento
+ * e sistema di lock.
+ * <p>
+ * Le dipendenze come {@link NoteService}, {@link NoteLockService} e {@link JwtUtil} vengono mockate
+ * per isolare la logica del controller.
+ * <p>
+ * <strong>Riepilogo dei test:</strong>
+ * <ul>
+ *   <li>{@code shouldCreateNoteSuccessfully} – Creazione nota riuscita</li>
+ *   <li>{@code shouldGetUserStats} – Statistiche dell’utente</li>
+ *   <li>{@code shouldHandleServiceException} – Gestione eccezioni lato service</li>
+ *   <li>{@code shouldGetAllNotesSuccessfully} – Recupero note accessibili</li>
+ *   <li>{@code shouldDeleteNote} – Eliminazione nota</li>
+ *   <li>{@code shouldDuplicateNote} – Duplicazione nota</li>
+ *   <li>{@code shouldSearchNotes} – Ricerca per keyword</li>
+ *   <li>{@code shouldGetNoteById} – Recupero nota per ID</li>
+ *   <li>{@code shouldFilterNotesByTag} – Filtro per tag</li>
+ *   <li>{@code shouldFilterNotesByCartella} – Filtro per cartella</li>
+ *   <li>{@code shouldUpdateNoteSuccessfully} – Update con lock e permessi</li>
+ *   <li>{@code shouldFailUpdateWithInvalidToken} – Update con token non valido</li>
+ *   <li>{@code shouldFailUpdateWithValidationErrors} – Update con dati non validi</li>
+ *   <li>{@code testUpdateNoteWithWritePermissions} – Update con permessi scrittura</li>
+ *   <li>{@code testUpdateNoteWithoutPermissions} – Update senza permessi</li>
+ *   <li>{@code testSearchNotesEndpoint} – Ricerca endpoint test</li>
+ *   <li>{@code testGetNotesByTag} – Filtro tag endpoint test</li>
+ *   <li>{@code testGetNotesByCartella} – Filtro cartella endpoint test</li>
+ *   <li>{@code testLockNote}, {@code testLockNoteConflict}, {@code testUnlockNote}, {@code testGetLockStatus} – Test lock/sblocco note</li>
+ *   <li>{@code shouldUpdatePermissionsSuccessfully}, {@code shouldFailPermissionsUpdateWhenNotOwner} – Test aggiornamento permessi</li>
+ *   <li>{@code shouldGetNoteVersionHistory}, {@code shouldReturn404WhenNoteNotFoundForVersionHistory}, {@code shouldReturn403WhenUserHasNoAccessToVersionHistory} – Cronologia versioni</li>
+ *   <li>{@code shouldGetSpecificNoteVersion}, {@code shouldReturn404WhenVersionNotFound} – Recupero versione specifica</li>
+ *   <li>{@code shouldRestoreNoteVersion}, {@code shouldReturn404WhenRestoringNonExistentVersion}, {@code shouldReturn403WhenRestoringWithoutWriteAccess} – Ripristino versioni</li>
+ *   <li>{@code shouldCompareTwoVersions}, {@code shouldReturn404WhenComparingNonExistentVersion}, {@code shouldReturn400ForInvalidComparisonParameters} – Confronto versioni</li>
+ *   <li>{@code shouldHandleSecurityErrorsForVersioningEndpoints}, {@code shouldRequireAuthenticationForVersioningEndpoints} – Sicurezza e autenticazione</li>
+ *   <li>{@code testNoteLockServiceInjected}, {@code testTryLockNoteMock}, {@code testUnlockNoteMock}, {@code testGetLockStatusMock}, {@code testRefreshLockMock} – Mock LockService</li>
+ * </ul>
+ */
 
 @WebMvcTest(NoteController.class)
 @Import(TestConfig.class)
@@ -117,13 +154,17 @@ class NoteControllerTest {
         when(jwtUtil.extractUsername("invalid-token")).thenReturn(null);
 
 
-        // Verificare -----------
         when(jwtUtil.extractTokenFromHeader("Bearer valid-token")).thenReturn("valid-token");
         when(jwtUtil.isTokenValid("valid-token")).thenReturn(true);
         when(jwtUtil.extractUsername("valid-token")).thenReturn(testUsername);
         when(noteLockService.getNoteLockOwner(anyLong())).thenReturn("other-user");
     }
 
+
+    /**
+     * Verifica che la creazione di una nota con dati validi restituisca
+     * HTTP 201 e i dettagli corretti della nota creata.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldCreateNoteSuccessfully() throws Exception {
@@ -144,6 +185,10 @@ class NoteControllerTest {
         verify(noteService).createNote(any(CreateNoteRequest.class), eq(testUsername));
     }
 
+    /**
+     * Verifica che le statistiche utente vengano restituite correttamente,
+     * inclusi conteggi e tag/cartelle usati.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetUserStats() throws Exception {
@@ -168,6 +213,10 @@ class NoteControllerTest {
         verify(noteService).getUserStats(testUsername);
     }
 
+    /**
+     * Verifica che eventuali eccezioni sollevate dal service durante la creazione
+     * della nota vengano gestite con errore 500 e messaggio appropriato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldHandleServiceException() throws Exception {
@@ -184,6 +233,10 @@ class NoteControllerTest {
                 .andExpect(jsonPath("$.message").value("Errore durante la creazione della nota"));
     }
 
+    /**
+     * Verifica che il recupero di tutte le note accessibili dall’utente
+     * restituisca correttamente una lista JSON.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetAllNotesSuccessfully() throws Exception {
@@ -202,6 +255,10 @@ class NoteControllerTest {
         verify(noteService).getAllAccessibleNotes(testUsername);
     }
 
+    /**
+     * Verifica che la cancellazione di una nota esistente restituisca
+     * HTTP 200 e conferma del successo.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldDeleteNote() throws Exception {
@@ -217,6 +274,10 @@ class NoteControllerTest {
         verify(noteService).deleteNote(1L, testUsername);
     }
 
+    /**
+     * Verifica che la duplicazione di una nota funzioni correttamente,
+     * generando una nuova nota con ID e titolo modificato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldDuplicateNote() throws Exception {
@@ -240,6 +301,10 @@ class NoteControllerTest {
         verify(noteService).duplicateNote(1L, testUsername);
     }
 
+    /**
+     * Verifica che la ricerca di note tramite keyword restituisca
+     * le note corrispondenti e includa la parola chiave.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldSearchNotes() throws Exception {
@@ -255,6 +320,10 @@ class NoteControllerTest {
         verify(noteService).searchNotes(testUsername, "test");
     }
 
+    /**
+     * Verifica che il recupero di una nota tramite ID restituisca
+     * correttamente i dati se l’utente ha accesso.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldGetNoteById() throws Exception {
@@ -270,6 +339,10 @@ class NoteControllerTest {
         verify(noteService).getNoteById(1L, testUsername);
     }
 
+    /**
+     * Verifica che il filtro per tag restituisca le note corrette
+     * associate al tag specificato.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldFilterNotesByTag() throws Exception {
@@ -284,6 +357,10 @@ class NoteControllerTest {
         verify(noteService).getNotesByTag(testUsername, "test");
     }
 
+    /**
+     * Verifica che il filtro per cartella restituisca le note
+     * associate alla cartella specificata.
+     */
     @Test
     @WithMockUser(username = "testuser")
     void shouldFilterNotesByCartella() throws Exception {
@@ -298,6 +375,10 @@ class NoteControllerTest {
         verify(noteService).getNotesByCartella(testUsername, "Test Folder");
     }
 
+    /**
+     * Verifica che l'aggiornamento di una nota avvenga correttamente
+     * quando l’utente ha i permessi e la nota non è bloccata da altri.
+     */
     @Test
     @DisplayName("PUT /api/notes/{id} - Dovrebbe aggiornare una nota con successo")
     void shouldUpdateNoteSuccessfully() throws Exception {
@@ -339,6 +420,10 @@ class NoteControllerTest {
         verify(noteLockService).unlockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che una richiesta di update con token JWT non valido
+     * venga bloccata con HTTP 401.
+     */
     @Test
     @DisplayName("PUT /api/notes/{id} - Dovrebbe fallire con token non valido")
     void shouldFailUpdateWithInvalidToken() throws Exception {
@@ -359,6 +444,10 @@ class NoteControllerTest {
         verify(noteService, never()).updateNote(anyLong(), any(UpdateNoteRequest.class), anyString());
     }
 
+    /**
+     * Verifica che l’aggiornamento fallisca con errore 400 se i dati
+     * della nota non sono validi.
+     */
     @Test
     @DisplayName("PUT /api/notes/{id} - Dovrebbe fallire con dati di validazione errati")
     void shouldFailUpdateWithValidationErrors() throws Exception {
@@ -381,7 +470,10 @@ class NoteControllerTest {
     }
 
 
-
+    /**
+     * Verifica che l’update funzioni correttamente se l’utente ha permessi
+     * di scrittura sulla nota.
+     */
     @Test
     @DisplayName("UC4.C16 - Test endpoint PUT /notes/{id} con permessi scrittura")
     @WithMockUser(username = "testuser")
@@ -427,6 +519,10 @@ class NoteControllerTest {
     }
 
 
+    /**
+     * Verifica che l’update fallisca con errore 403 se l’utente
+     * non ha i permessi sulla nota.
+     */
     @Test
     @DisplayName("UC4.C17 - Test endpoint PUT /notes/{id} senza permessi")
     @WithMockUser(username = "testuser")
@@ -462,6 +558,10 @@ class NoteControllerTest {
     }
 
 
+    /**
+     * Verifica che venga restituito errore 403 se il service blocca
+     * l’update per mancanza di permessi.
+     */
     @Test
     @DisplayName("UC7.C18 - Test endpoint GET /notes/search")
     @WithMockUser(username = "testuser")
@@ -491,6 +591,10 @@ class NoteControllerTest {
     }
 
 
+    /**
+     * Verifica che venga restituito errore 409 se la nota è attualmente
+     * bloccata da un altro utente.
+     */
     @Test
     @DisplayName("UC7.C19 - Test endpoint GET /notes/filter/tag/{tag}")
     @WithMockUser(username = "testuser")
@@ -540,6 +644,10 @@ class NoteControllerTest {
         verify(noteService).getNotesByCartella("testuser", "work");
     }
 
+    /**
+     * Verifica che una nota venga correttamente bloccata per la modifica
+     * se non è già in uso da altri.
+     */
     @Test
     @DisplayName("LOCK.C21 - Test endpoint POST /notes/{id}/lock")
     @WithMockUser(username = "testuser")
@@ -560,6 +668,10 @@ class NoteControllerTest {
         verify(noteLockService).tryLockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che venga restituito un errore 409 se si prova a bloccare
+     * una nota già in modifica da un altro utente.
+     */
     @Test
     @DisplayName("LOCK.C22 - Test endpoint POST /notes/{id}/lock - conflitto")
     @WithMockUser(username = "testuser")
@@ -580,6 +692,9 @@ class NoteControllerTest {
         verify(noteLockService).tryLockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che una nota venga sbloccata correttamente dal proprietario.
+     */
     @Test
     @DisplayName("LOCK.C23 - Test endpoint DELETE /notes/{id}/lock")
     @WithMockUser(username = "testuser")
@@ -600,6 +715,10 @@ class NoteControllerTest {
         verify(noteLockService).unlockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che lo stato del lock di una nota venga recuperato correttamente,
+     * incluso il nome dell’utente che la sta modificando.
+     */
     @Test
     @DisplayName("LOCK.C24 - Test endpoint GET /notes/{id}/lock-status")
     @WithMockUser(username = "testuser")
@@ -722,6 +841,9 @@ class NoteControllerTest {
         verify(noteService, never()).updateNote(anyLong(), any(UpdateNoteRequest.class), anyString());
     }
 
+    /**
+     * Verifica aggiornamento dei permessi se utente è proprietario.
+     */
     @Test
     @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe aggiornare i permessi con successo")
     @WithMockUser(username = "testuser")
@@ -755,6 +877,9 @@ class NoteControllerTest {
         verify(noteService).updateNotePermissions(eq(1L), any(PermissionDto.class), eq(testUsername));
     }
 
+    /**
+     * Verifica errore 403 se l’utente tenta update permessi senza essere owner.
+     */
     @Test
     @DisplayName("PUT /api/notes/{id}/permissions - Dovrebbe fallire se non è il proprietario")
     @WithMockUser(username = "testuser")
@@ -778,7 +903,9 @@ class NoteControllerTest {
     }
 
     // TEST PER VERSIONAMENTO
-
+    /**
+     * Verifica che la cronologia delle versioni venga restituita correttamente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/versions - Dovrebbe restituire la cronologia delle versioni")
@@ -825,6 +952,9 @@ class NoteControllerTest {
         verify(noteService).getNoteVersionHistory(1L, "testuser");
     }
 
+    /**
+     * Verifica errore 404 per cronologia di nota inesistente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/versions - Dovrebbe restituire 404 per nota non trovata")
@@ -841,6 +971,9 @@ class NoteControllerTest {
         verify(noteService).getNoteVersionHistory(999L, "testuser");
     }
 
+    /**
+     * Verifica errore 403 se l’utente non ha accesso alla cronologia versioni.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/versions - Dovrebbe restituire 403 se utente non ha accesso")
@@ -857,6 +990,10 @@ class NoteControllerTest {
         verify(noteService).getNoteVersionHistory(1L, "testuser");
     }
 
+
+    /**
+     * Verifica che venga restituita una versione specifica corretta.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/versions/{version} - Dovrebbe restituire una versione specifica")
@@ -888,6 +1025,10 @@ class NoteControllerTest {
         verify(noteService).getNoteVersion(1L, 2, "testuser");
     }
 
+
+    /**
+     * Verifica errore 404 se si richiede una versione inesistente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/versions/{version} - Dovrebbe restituire 404 per versione non trovata")
@@ -903,6 +1044,11 @@ class NoteControllerTest {
         verify(noteService).getNoteVersion(1L, 999, "testuser");
     }
 
+
+
+    /**
+     * Verifica che una versione possa essere ripristinata correttamente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("POST /api/notes/{id}/restore - Dovrebbe ripristinare una versione")
@@ -935,6 +1081,9 @@ class NoteControllerTest {
         verify(noteService).restoreNoteVersion(1L, 2, "testuser");
     }
 
+    /**
+     * Verifica errore 404 se si tenta di ripristinare una versione non esistente.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("POST /api/notes/{id}/restore - Dovrebbe restituire 404 se versione non trovata")
@@ -954,6 +1103,10 @@ class NoteControllerTest {
         verify(noteService).restoreNoteVersion(1L, 999, "testuser");
     }
 
+    /**
+     * Verifica che venga restituito un errore 403 (Forbidden) quando
+     * un utente senza permessi di scrittura tenta di ripristinare una versione.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("POST /api/notes/{id}/restore - Dovrebbe restituire 403 se utente non ha accesso di scrittura")
@@ -973,6 +1126,11 @@ class NoteControllerTest {
         verify(noteService).restoreNoteVersion(1L, 2, "testuser");
     }
 
+
+    /**
+     * Verifica che il confronto tra due versioni di una nota funzioni
+     * correttamente restituendo le differenze tra titolo e contenuto.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/compare/{version1}/{version2} - Dovrebbe confrontare due versioni")
@@ -1010,6 +1168,11 @@ class NoteControllerTest {
         verify(noteService).compareNoteVersions(1L, 1, 2, "testuser");
     }
 
+
+    /**
+     * Verifica che venga restituito un errore 404 (Not Found) quando
+     * si tenta di confrontare versioni inesistenti di una nota.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/compare/{version1}/{version2} - Dovrebbe restituire 404 per versione non esistente")
@@ -1025,6 +1188,10 @@ class NoteControllerTest {
         verify(noteService).compareNoteVersions(1L, 1, 999, "testuser");
     }
 
+    /**
+     * Verifica che vengano restituiti errori 400 (Bad Request) quando
+     * i parametri di confronto versioni sono invalidi o non numerici.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("GET /api/notes/{id}/compare/{version1}/{version2} - Dovrebbe restituire 400 per parametri invalidi")
@@ -1040,6 +1207,10 @@ class NoteControllerTest {
         verify(noteService, never()).compareNoteVersions(anyLong(), anyInt(), anyInt(), anyString());
     }
 
+    /**
+     * Verifica che gli errori di sicurezza per gli endpoint di versionamento
+     * vengano gestiti correttamente restituendo errori 403 appropriati.
+     */
     @Test
     @WithMockUser(username = "testuser")
     @DisplayName("Dovrebbe gestire errori di sicurezza per endpoints di versionamento")
@@ -1054,6 +1225,10 @@ class NoteControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Verifica che tutti gli endpoint di versionamento richiedano
+     * autenticazione valida restituendo errori 400 se manca il token.
+     */
     @Test
     @DisplayName("Dovrebbe richiedere autenticazione per endpoints di versionamento")
     void shouldRequireAuthenticationForVersioningEndpoints() throws Exception {
@@ -1076,12 +1251,21 @@ class NoteControllerTest {
 
     // TEST PER LOCK SERVICE
 
+    /**
+     * Verifica che il servizio NoteLockService sia correttamente
+     * iniettato nel controller e disponibile per l'uso.
+     */
     @Test
     @DisplayName("TTD-CONTROLLER-LOCK-001: Test NoteLockService è iniettato nel controller")
     void testNoteLockServiceInjected() {
         assertNotNull(noteLockService);
     }
 
+
+    /**
+     * Verifica che il mock del metodo tryLockNote funzioni correttamente
+     * restituendo il valore configurato nei test.
+     */
     @Test
     @DisplayName("TTD-CONTROLLER-LOCK-002: Test mock tryLockNote funziona")
     void testTryLockNoteMock() {
@@ -1093,6 +1277,10 @@ class NoteControllerTest {
         verify(noteLockService).tryLockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che il mock del metodo unlockNote funzioni correttamente
+     * senza lanciare eccezioni durante l'esecuzione.
+     */
     @Test
     @DisplayName("TTD-CONTROLLER-LOCK-003: Test mock unlockNote funziona")
     void testUnlockNoteMock() {
@@ -1103,6 +1291,10 @@ class NoteControllerTest {
         verify(noteLockService).unlockNote(1L, "testuser");
     }
 
+    /**
+     * Verifica che il mock del metodo getLockStatus funzioni correttamente
+     * restituendo lo stato di blocco configurato nei test.
+     */
     @Test
     @DisplayName("TTD-CONTROLLER-LOCK-004: Test mock getLockStatus funziona")
     void testGetLockStatusMock() {
@@ -1118,6 +1310,10 @@ class NoteControllerTest {
         verify(noteLockService).getLockStatus(1L, "testuser");
     }
 
+    /**
+     * Verifica che il mock del metodo refreshLock funzioni correttamente
+     * senza lanciare eccezioni durante l'esecuzione.
+     */
     @Test
     @DisplayName("TTD-CONTROLLER-LOCK-005: Test mock refreshLock funziona")
     void testRefreshLockMock() {
