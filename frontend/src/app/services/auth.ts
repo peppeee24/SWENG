@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 
+// Rappresenta un utente nell'applicazione con proprietà opzionali e obbligatorie
 export interface User {
   id?: number;
   username: string;
@@ -18,6 +19,7 @@ export interface User {
   password?: string;
 }
 
+// Dati necessari per la registrazione di un nuovo utente
 export interface RegisterRequest {
   username: string;
   password: string;
@@ -30,6 +32,7 @@ export interface RegisterRequest {
   dataNascita?: string;
 }
 
+// Risposta ricevuta dal backend alla richiesta di registrazione
 export interface RegistrationResponse {
   success: boolean;
   message: string;
@@ -44,6 +47,7 @@ export interface RegistrationResponse {
   errors?: { [key: string]: string };
 }
 
+// Risposta per verificare disponibilità di username o email
 export interface AvailabilityCheck {
   available: boolean;
   message: string;
@@ -51,11 +55,13 @@ export interface AvailabilityCheck {
   value?: string;
 }
 
+// Dati necessari per effettuare il login (username + password)
 export interface LoginRequest {
   username: string;
   password: string;
 }
 
+// Risposta ricevuta dal backend alla richiesta di login
 export interface LoginResponse {
   success: boolean;
   message: string;
@@ -64,6 +70,7 @@ export interface LoginResponse {
   loginTime?: string;
 }
 
+// Risposta generica contenente token e dati utente autenticato
 export interface AuthResponse {
   token?: string; 
   user: User;
@@ -98,6 +105,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Invia una richiesta di registrazione utente al backend.
+   * @param request Dati necessari per la registrazione (username, password, e altri opzionali)
+   * @returns Observable che emette la risposta di registrazione (successo, messaggi, eventuali errori)
+   */
   register(request: RegisterRequest): Observable<RegistrationResponse> {
     console.log('Invio richiesta registrazione:', request);
     
@@ -125,6 +137,11 @@ export class AuthService {
       );
   }
 
+  /**
+   * Esegue il login dell'utente inviando username e password.
+   * @param request Contiene username e password dell'utente
+   * @returns Observable che emette la risposta di login (token, utente, successo, messaggi)
+   */
   login(request: LoginRequest): Observable<LoginResponse> {
     console.log('Tentativo login per:', request.username);
     
@@ -141,6 +158,11 @@ export class AuthService {
       );
   }
 
+  /**
+   * Verifica la disponibilità di uno username.
+   * @param username Username da controllare
+   * @returns Observable che emette se lo username è disponibile o meno, con messaggio esplicativo
+   */
   checkUsernameAvailability(username: string): Observable<AvailabilityCheck> {
     return this.http.get<AvailabilityCheck>(`${this.API_URL}/check-username?username=${encodeURIComponent(username)}`)
       .pipe(
@@ -148,6 +170,11 @@ export class AuthService {
       );
   }
 
+  /**
+   * Verifica la disponibilità di una email.
+   * @param email Email da controllare
+   * @returns Observable che emette se la email è disponibile o meno, con messaggio esplicativo
+   */
   checkEmailAvailability(email: string): Observable<AvailabilityCheck> {
     return this.http.get<AvailabilityCheck>(`${this.API_URL}/check-email?email=${encodeURIComponent(email)}`)
       .pipe(
@@ -155,6 +182,10 @@ export class AuthService {
       );
   }
 
+  /**
+   * Effettua un controllo di salute (health check) sul backend di autenticazione.
+   * @returns Observable che emette la risposta del controllo di salute del server
+   */
   healthCheck(): Observable<any> {
     return this.http.get(`${this.API_URL}/health`)
       .pipe(
@@ -162,23 +193,45 @@ export class AuthService {
       );
   }
 
+  /**
+   * Effettua il logout dell'utente cancellando la sessione locale.
+   * @returns void
+   */
   logout(): void {
     this.clearSession();
     console.log('Logout effettuato');
   }
 
+  /**
+   * Verifica se l'utente è attualmente autenticato.
+   * @returns true se l'utente è autenticato e ha un token valido, false altrimenti
+   */
   isLoggedIn(): boolean {
     return this.isAuthenticated() && this.currentToken() !== null;
   }
 
+  /**
+   * Restituisce i dati dell'utente attualmente autenticato.
+   * @returns Oggetto User o null se non autenticato
+   */
   getCurrentUser(): User | null {
     return this.currentUser();
   }
 
+  /**
+   * Restituisce il token di autenticazione corrente.
+   * @returns Token stringa o null se non autenticato
+   */
   getToken(): string | null {
     return this.currentToken();
   }
 
+  /**
+   * Imposta la sessione autenticata salvando token e dati utente su localStorage e segnali.
+   * @param token Token JWT o altro token di autenticazione
+   * @param user Dati utente autenticato
+   * @returns void
+   */
   private setAuthenticatedSession(token: string, user: User): void {
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -188,6 +241,11 @@ export class AuthService {
     console.log('Sessione autenticata salvata:', { user: user.username, hasToken: !!token });
   }
 
+  /**
+   * Imposta la sessione utente senza token (es. dopo registrazione).
+   * @param user Dati utente da salvare in sessione locale
+   * @returns void
+   */
   private setUserSession(user: User): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUser.set(user);
@@ -195,6 +253,10 @@ export class AuthService {
     console.log('Sessione utente salvata (senza token):', user);
   }
 
+  /**
+   * Pulisce la sessione locale rimuovendo dati utente e token.
+   * @returns void
+   */
   private clearSession(): void {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');
@@ -203,6 +265,12 @@ export class AuthService {
     this.isAuthenticated.set(false);
   }
 
+  /**
+   * Gestisce gli errori HTTP intercettati durante le chiamate al backend,
+   * costruendo un messaggio di errore leggibile per l'utente.
+   * @param error Errore HTTP ricevuto
+   * @returns Observable che emette un errore con messaggio leggibile
+   */
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'Si è verificato un errore sconosciuto';
     
