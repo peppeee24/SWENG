@@ -6,6 +6,14 @@ import { CartelleService } from '../../services/cartelle';
 import { AuthService } from '../../services/auth';
 import { Cartella, CreateCartellaRequest, UpdateCartellaRequest } from '../../models/cartella.model';
 
+/**
+ * Componente standalone CartelleComponent
+ * 
+ * Gestisce la visualizzazione e la gestione CRUD delle cartelle
+ * personali dell'utente. Permette di creare, modificare, eliminare
+ * cartelle e di visualizzare le note associate a una cartella.
+ */
+
 @Component({
   selector: 'app-cartelle',
   standalone: true,
@@ -56,6 +64,11 @@ export class CartelleComponent implements OnInit {
     });
   }
 
+  /**
+   * ngOnInit()
+   * 
+   * All’avvio controlla autenticazione e carica tutte le cartelle
+   */
   ngOnInit(): void {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/auth']);
@@ -65,6 +78,9 @@ export class CartelleComponent implements OnInit {
     this.loadCartelle();
   }
 
+  /**
+   * Carica tutte le cartelle per l'utente corrente dal backend
+   */
   loadCartelle(): void {
     this.cartelleService.getAllCartelle().subscribe({
       next: () => {
@@ -76,6 +92,7 @@ export class CartelleComponent implements OnInit {
     });
   }
 
+  /** Mostra il form di creazione cartella */
   showCreateForm(): void {
     this.selectedCartella.set(null);
     this.cartellaForm.reset({
@@ -86,6 +103,10 @@ export class CartelleComponent implements OnInit {
     this.showCartellaForm.set(true);
   }
 
+  /**
+   * Mostra il form di modifica per una cartella esistente
+   * @param cartella la cartella selezionata da modificare
+   */
   showEditForm(cartella: Cartella): void {
     this.selectedCartella.set(cartella);
     this.cartellaForm.patchValue({
@@ -96,12 +117,17 @@ export class CartelleComponent implements OnInit {
     this.showCartellaForm.set(true);
   }
 
+  /** Chiude e resetta il form della cartella */
   hideCartellaForm(): void {
     this.showCartellaForm.set(false);
     this.selectedCartella.set(null);
     this.cartellaForm.reset();
   }
 
+  /**
+   * Salva una nuova cartella o aggiorna una cartella esistente
+   * sulla base dello stato selectedCartella()
+   */
   onCartellaSave(): void {
     if (this.cartellaForm.valid) {
       const formData = this.cartellaForm.value;
@@ -149,6 +175,10 @@ export class CartelleComponent implements OnInit {
     }
   }
 
+  /**
+   * Elimina una cartella dopo conferma utente
+   * @param cartellaId ID della cartella da eliminare
+   */
   onCartellaDelete(cartellaId: number): void {
     if (confirm('Sei sicuro di voler eliminare questa cartella? Assicurati che non contenga note.')) {
       this.cartelleService.deleteCartella(cartellaId).subscribe({
@@ -164,18 +194,24 @@ export class CartelleComponent implements OnInit {
     }
   }
 
+  /**
+   * Naviga alla pagina di visualizzazione note di una cartella
+   * @param cartella oggetto Cartella selezionato
+   */
  viewCartellaNotes(cartella: Cartella): void {
   // Naviga alla nuova pagina dedicata per le note della cartella
   const encodedNome = encodeURIComponent(cartella.nome);
   this.router.navigate(['/cartelle', encodedNome, 'notes']);
 }
 
+/** Esegue logout, cancella le cartelle in cache e torna alla schermata di login */
   onLogout(): void {
     this.cartelleService.clearCartelle();
     this.authService.logout();
     this.router.navigate(['/auth']);
   }
 
+  /** Marca tutti i controlli del form come touched per forzare la visualizzazione errori */
   private markFormGroupTouched(): void {
     Object.keys(this.cartellaForm.controls).forEach(key => {
       const control = this.cartellaForm.get(key);

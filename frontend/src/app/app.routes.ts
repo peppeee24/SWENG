@@ -6,6 +6,15 @@ import { CartelleComponent } from './components/cartelle/cartelle';
 import { CartellaNoteComponent } from './components/cartella-notes/cartella-notes'; 
 import { authGuard } from './guards/auth-guard';
 
+/**
+ * Definizione delle route dell'applicazione.
+ * 
+ * Ogni oggetto nella lista rappresenta una configurazione di routing:
+ * - `path`: la URL relativa da intercettare
+ * - `component`: il componente da renderizzare in quella route
+ * - `canActivate`: eventuali guardie di accesso per abilitare/disabilitare la navigazione
+ */
+
 export const routes: Routes = [
   { 
     path: '', 

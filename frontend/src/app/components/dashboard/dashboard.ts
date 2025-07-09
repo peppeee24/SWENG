@@ -3,6 +3,14 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth';
 
+/**
+ * Componente DashboardComponent
+ * 
+ * Mostra la dashboard utente dopo il login. Controlla
+ * lo stato di autenticazione e mostra il nome utente.
+ * Fornisce funzionalità di logout e navigazione verso le note.
+ */
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -31,6 +39,10 @@ export class DashboardComponent implements OnInit {
     }
   });
 
+  /**
+   * Controlla autenticazione all’avvio
+   * Se non autenticato, reindirizza alla pagina di login
+   */
   ngOnInit(): void {
     console.log('Dashboard: Inizializzazione...');
     console.log('isAuthenticated:', this.isAuthenticated());
@@ -45,12 +57,19 @@ export class DashboardComponent implements OnInit {
     }
   }
 
+  /**
+   * Logout utente
+   * Pulisce lo stato e naviga alla pagina di login
+   */
   onLogout(): void {
     console.log('Dashboard: Logout richiesto');
     this.authService.logout();
     this.router.navigate(['/auth']);
   }
 
+  /**
+   * Naviga alla pagina delle note
+   */
   goToNotes(): void {
     console.log('Dashboard: Navigazione verso le note');
     this.router.navigate(['/notes']);

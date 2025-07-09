@@ -4,6 +4,13 @@ import { CommonModule } from '@angular/common';
 import { Note } from '../../../models/note.model';
 import { NoteVersionHistoryComponent } from '../note-version-history/note-version-history.component';
 
+/**
+ * Componente standalone per la visualizzazione di una scheda nota (Note Card).
+ * Mostra informazioni sulla nota, permessi, versione e fornisce azioni 
+ * come modifica, eliminazione, duplicazione, visualizzazione e gestione della cronologia versioni.
+ */
+
+
 @Component({
   selector: 'app-note-card',
   standalone: true,
@@ -12,9 +19,12 @@ import { NoteVersionHistoryComponent } from '../note-version-history/note-versio
   styleUrls: ['./note-card.css']
 })
 export class NoteCardComponent {
+  /** Nota da visualizzare */
   @Input() note!: Note;
   @Input() currentUsername: string = '';
 
+
+  /** EventEmitter per comunicare azioni verso il genitore */
   @Output() edit = new EventEmitter<Note>();
   @Output() delete = new EventEmitter<number>();
   @Output() duplicate = new EventEmitter<number>();
@@ -43,14 +53,22 @@ export class NoteCardComponent {
 
    */
 
-
+  /**
+   * Controlla se mostrare la cronologia versioni basandosi su:
+   * - La nota ha più versioni
+   * - L'utente ha permessi per visualizzare la cronologia (edit/delete)
+   */
   showVersionHistory(): boolean {
     const hasMultiple = this.hasMultipleVersions();
     const canView = this.canViewHistory();
     return hasMultiple && canView;
   }
 
-  // Metodi per formattazione date
+  /**
+   * Formatta una data ISO in stringa leggibile in formato italiano con giorno, mese, anno, ora e minuti.
+   * @param dateString data ISO
+   * @returns data formattata
+   */
   formatDate(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleString('it-IT', {
@@ -62,6 +80,12 @@ export class NoteCardComponent {
     });
   }
 
+  /**
+   * Calcola il tempo trascorso rispetto a "ora" e restituisce una stringa relativa:
+   * es. "Ora", "15m fa", "3h fa", "5g fa" o data completa se oltre 7 giorni.
+   * @param dateString data ISO
+   * @returns stringa relativa
+   */
   getRelativeTime(dateString: string): string {
     const date = new Date(dateString);
     const now = new Date();
@@ -79,7 +103,9 @@ export class NoteCardComponent {
     return this.formatDate(dateString);
   }
 
-  // Metodi per permessi
+  /**
+   * Restituisce l'icona da mostrare in base al tipo di permesso della nota.
+   */
   getPermissionIcon(): string {
     switch (this.note.tipoPermesso) {
       case 'PRIVATA': return '🔒';
@@ -89,6 +115,9 @@ export class NoteCardComponent {
     }
   }
 
+  /**
+   * Restituisce il testo descrittivo del tipo di permesso della nota.
+   */
   getPermissionText(): string {
     switch (this.note.tipoPermesso) {
       case 'PRIVATA': return 'Privata';
@@ -98,7 +127,7 @@ export class NoteCardComponent {
     }
   }
 
-  // Metodi per azioni
+  /** Azioni utente emesse agli eventi genitore */
   onEdit(): void {
     if (this.note.canEdit) {
       this.edit.emit(this.note);
@@ -143,38 +172,32 @@ export class NoteCardComponent {
     this.isVersionHistoryVisible.set(false);
   }
 
-  /*
-  // Metodo per ottenere il testo del badge della versione
-  getVersionBadgeText(): string {
-    if (!this.note.versionNumber) return '';
-
-    if (this.note.versionNumber === 1) {
-      return 'v1';
-    } else {
-      return `v${this.note.versionNumber}`;
-    }
-  }
-
-  // Metodo per determinare se mostrare l'indicatore di versioni multiple
-  shouldShowVersionIndicator(): boolean {
-    return this.hasMultipleVersions() && this.canViewHistory();
-  }
-
+  /**
+   * Controlla se l'utente può vedere la cronologia versioni
+   * in base ai permessi di modifica o eliminazione
    */
-
-
   canViewHistory(): boolean {
     return this.note?.canEdit || this.note?.canDelete || false;
   }
 
+  
+  /**
+   * Controlla se la nota ha più versioni
+   */
   hasMultipleVersions(): boolean {
     return this.note?.versionNumber ? this.note.versionNumber > 1 : false;
   }
 
+  /**
+   * Indica se mostrare l'indicatore badge versione anche se versione = 1
+   */
   shouldShowVersionIndicator(): boolean {
     return this.note?.versionNumber ? this.note.versionNumber >= 1 : false;
   }
 
+  /**
+   * Testo del badge versione, ad es. "v1", "v2", ...
+   */
   getVersionBadgeText(): string {
     if (!this.note?.versionNumber) return 'v1';
     return `v${this.note.versionNumber}`;

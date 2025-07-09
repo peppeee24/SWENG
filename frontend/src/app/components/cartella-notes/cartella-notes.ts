@@ -10,6 +10,14 @@ import { Cartella } from '../../models/cartella.model';
 import { NoteCardComponent } from '../notes/note-card/note-card';
 import { NoteFormComponent } from '../notes/note-form/note-form';
 
+/**
+ * Componente CartellaNoteComponent
+ * 
+ * Gestisce la visualizzazione e modifica delle note associate
+ * a una specifica cartella. Consente di creare, modificare,
+ * duplicare, eliminare e filtrare le note.
+ */
+
 @Component({
   selector: 'app-cartella-notes',
   standalone: true,
@@ -76,6 +84,15 @@ export class CartellaNoteComponent implements OnInit {
     });
   }
 
+  /**
+   * ngOnInit()
+   * 
+   * Alla partenza:
+   * - verifica autenticazione
+   * - legge il parametro della cartella dall’URL
+   * - carica note e info cartella
+   */
+
   ngOnInit(): void {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/auth']);
@@ -95,6 +112,12 @@ export class CartellaNoteComponent implements OnInit {
     });
   }
 
+  /**
+   * Carica informazioni della cartella corrente
+   * 
+   * @return void
+   */
+
   loadCartellaInfo(): void {
     const nome = this.cartellaNome();
 
@@ -112,6 +135,12 @@ export class CartellaNoteComponent implements OnInit {
       }
     });
   }
+
+  /**
+   * Carica tutte le note associate alla cartella corrente
+   * 
+   * @return void
+   */
 
   loadNotesForCartella(): void {
     const nome = this.cartellaNome();
@@ -137,29 +166,46 @@ export class CartellaNoteComponent implements OnInit {
     });
   }
 
+  /** Naviga alla schermata Cartelle */
+
   goBack(): void {
     this.router.navigate(['/cartelle']);
   }
 
+  /** Naviga alla schermata Note generiche */
+
   goToAllNotes(): void {
     this.router.navigate(['/notes']);
   }
+
+  /** Mostra il form per creare una nuova nota */
 
   showCreateForm(): void {
     this.selectedNote.set(null);
     this.showNoteForm.set(true);
   }
 
+  /**
+   * Mostra il form di modifica per una nota esistente
+   * 
+   * @param note la nota selezionata da modificare
+   */
   showEditForm(note: Note): void {
     this.selectedNote.set(note);
     this.showNoteForm.set(true);
   }
 
+  /** Chiude il form di nota */
   hideNoteForm(): void {
     this.showNoteForm.set(false);
     this.selectedNote.set(null);
   }
 
+  /**
+   * Salva una nuova nota o aggiorna una esistente
+   * 
+   * @param noteData i dati della nota da salvare/aggiornare
+   */
   onNoteSave(noteData: CreateNoteRequest | UpdateNoteRequest): void {
     const selectedNote = this.selectedNote();
 
@@ -199,6 +245,11 @@ export class CartellaNoteComponent implements OnInit {
     }
   }
 
+  /**
+   * Elimina una nota
+   * 
+   * @param noteId ID della nota da eliminare
+   */
   onNoteDelete(noteId: number): void {
     if (confirm('Sei sicuro di voler eliminare questa nota?')) {
       this.notesService.deleteNote(noteId).subscribe({
@@ -214,6 +265,11 @@ export class CartellaNoteComponent implements OnInit {
     }
   }
 
+  /**
+   * Duplica una nota
+   * 
+   * @param noteId ID della nota da duplicare
+   */
   onNoteDuplicate(noteId: number): void {
     this.notesService.duplicateNote(noteId).subscribe({
       next: (response) => {
@@ -227,17 +283,24 @@ export class CartellaNoteComponent implements OnInit {
     });
   }
 
+  /**
+   * Gestisce il click su una nota
+   * 
+   * @param note la nota selezionata dall’utente
+   */
   onNoteView(note: Note): void {
     if (note.canEdit) {
       this.showEditForm(note);
     }
   }
-
+  
+  /** Pulisce il campo di ricerca e resetta la query */
   clearSearch(): void {
     this.searchQuery.set('');
     this.searchForm.reset();
   }
 
+  /** Esegue il logout e reindirizza alla pagina di login */
   onLogout(): void {
     this.authService.logout();
     this.router.navigate(['/auth']);

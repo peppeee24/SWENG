@@ -15,6 +15,17 @@ interface PermissionsRequest {
   utentiScrittura: string[];
 }
 
+/**
+ * Componente standalone per la gestione del form di creazione/modifica di una nota.
+ * Supporta:
+ * - Modalità creazione e modifica (basato su presenza di nota in input)
+ * - Gestione permessi di condivisione (privata, lettura, scrittura)
+ * - Gestione tag e cartelle associate
+ * - Sistema di lock per evitare modifiche concorrenti (con rinnovo periodico)
+ * - Validazione form, conteggio caratteri e suggerimenti tag
+ * - Iniezione di servizi per cartelle, utenti, note e autenticazione
+ */
+
 @Component({
   selector: 'app-note-form',
   standalone: true,
@@ -102,6 +113,10 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * Carica dati esterni cartelle e utenti all'inizializzazione
+   * Se c'è una nota, carica i dati della nota nel form
+   */
   ngOnInit(): void {
     this.loadCartelle();
     this.loadUsers();
@@ -111,11 +126,17 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  /**
+   * Pulisce risorse all'uscita (rilascia lock)
+   */
   ngOnDestroy(): void {
     // Rilascia il lock quando il componente viene distrutto
     this.releaseLock();
   }
 
+  /**
+   * Carica le cartelle da servizio
+   */
   private loadCartelle(): void {
     this.cartelleService.getAllCartelle().subscribe({
       next: () => {
@@ -127,6 +148,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * Carica gli utenti da servizio
+   */
   private loadUsers(): void {
     console.log(' Caricamento utenti...');
     this.userService.getAllUsers().subscribe({
@@ -176,6 +200,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  /**
+   * Avvia il rinnovo automatico del lock ogni 90 secondi per mantenerlo attivo.
+   */
   private startLockRefresh(): void {
     if (!this.note?.id) return;
 
@@ -205,6 +232,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * Rilascia il lock sulla nota (ad esempio quando si chiude il form o salva).
+   */
   private releaseLock(): void {
     if (this.note?.id && this.isNoteLocked()) {
       console.log(' Rilascio lock per nota:', this.note.id);
@@ -321,6 +351,12 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * Gestisce cambiamenti degli input (nota, visibilità)
+   * - Quando si apre il modal tenta di acquisire il lock sulla nota da modificare
+   * - Quando si chiude il modal rilascia il lock e resetta il form
+   * - Quando cambia la nota aggiorna il form con i nuovi dati
+   */
   async ngOnChanges(changes: SimpleChanges): Promise<void> {
     console.log('ngOnChanges triggered:', changes);
     console.log('note value:', this.note);
@@ -375,6 +411,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  /**
+   * Carica i dati della nota nel form e aggiorna gli stati interni
+   */
   private loadNoteData() {
     if (!this.note) return;
 
@@ -394,6 +433,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     this.characterCount.set(this.note.contenuto.length);
   }
 
+  /**
+   * Reset completo del form e degli stati
+   */
   private resetForm() {
     this.noteForm.reset();
     this.selectedTags.set([]);
@@ -408,6 +450,9 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     this.lockError.set(null);
   }
 
+  /**
+   * Gestisce il cambio del tipo di permesso aggiornando le liste utenti appropriate
+   */
   onPermissionTypeChange(type: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA') {
     this.permissionType.set(type);
     if (type === 'PRIVATA') {
@@ -421,6 +466,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     this.showUserDropdown.set(false);
   }
 
+  // Metodi per dropdown utenti, aggiunta/rimozione utenti da liste di permessi
   toggleUserDropdown() {
     this.showUserDropdown.set(!this.showUserDropdown());
   }
@@ -451,6 +497,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     this.selectedUsersForWriting.set(current.filter(u => u !== username));
   }
 
+  // Metodi per gestione tag
   addTag() {
     const tagValue = this.tagInputValue().trim();
     if (tagValue && !this.selectedTags().includes(tagValue)) {
@@ -470,6 +517,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  // Dropdown cartelle
   toggleCartelleDropdown() {
     this.showCartelleDropdown.set(!this.showCartelleDropdown());
   }
@@ -486,6 +534,10 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     this.selectedCartelle.set(this.selectedCartelle().filter(c => c !== cartella));
   }
 
+  /**
+   * Submit del form: crea o aggiorna nota a seconda della modalità.
+   * Gestisce anche i permessi se permesso all'utente.
+   */
   onSubmit(): void {
     if (this.noteForm.valid) {
       console.log(' Submitting form...');
@@ -549,6 +601,10 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  /**
+   * Gestisce la cancellazione/chiusura del form
+   * Rilascia il lock e notifica il genitore
+   */
   onCancel(): void {
     console.log(' Cancellazione form - rilascio lock');
     this.releaseLock(); // Rilascia lock quando chiudi
@@ -574,7 +630,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     return '';
   }
 
-  // Getter per il template
+  // Proprietà getter per messaggi e stati nel template
   get isCharacterLimitWarning(): boolean {
     return this.characterCount() > this.maxCharacters * 0.8;
   }
@@ -597,7 +653,6 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     return this.isEditMode() && (this.isNoteLocked() || !!this.lockError());
   }
 
-  // METODI MANCANTI PER IL TEMPLATE
   onUserToggle(username: string): void {
     const permissionType = this.permissionType();
 
@@ -630,6 +685,7 @@ export class NoteFormComponent implements OnInit, OnChanges, OnDestroy {
     return false;
   }
 
+  // Gestione input tag
   onTagInputChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.tagInputValue.set(target.value);
