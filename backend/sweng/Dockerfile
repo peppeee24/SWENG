@@ -7,7 +7,7 @@ RUN apk update && apk add --no-cache curl
 WORKDIR /app
 
 # Copia il jar
-COPY target/backend.jar /app/app.jar
+COPY target/nota-bene-backend-0.0.1-SNAPSHOT.jar /app/app.jar
 
 # Espone la porta
 EXPOSE 8080
