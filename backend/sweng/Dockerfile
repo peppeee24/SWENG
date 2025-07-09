@@ -1,20 +1,16 @@
 FROM eclipse-temurin:17-jre-alpine
 
 # Installa curl per health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apk update && apk add --no-cache curl
 
 # Crea directory applicazione
 WORKDIR /app
 
-# Copia il JAR
-COPY target/nota-bene-backend-*.jar app.jar
+# Copia il jar
+COPY target/backend.jar /app/app.jar
 
-# Espone porta 8080
+# Espone la porta
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-# Comando di avvio
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Avvia l'applicazione
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
