@@ -2,6 +2,18 @@ package tech.ipim.sweng.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+/**
+ * DTO per la richiesta di aggiornamento di una cartella.
+ * <p>
+ * Contiene i dati aggiornabili della cartella, con le relative validazioni.
+ * <p>
+ * Campi:
+ * <ul>
+ *   <li>{@code nome} - obbligatorio, lunghezza tra 1 e 100 caratteri</li>
+ *   <li>{@code descrizione} - opzionale, massimo 500 caratteri</li>
+ *   <li>{@code colore} - opzionale, codice colore esadecimale massimo 7 caratteri (es. #FFFFFF)</li>
+ * </ul>
+ */
 
 public class UpdateCartellaRequest {
 

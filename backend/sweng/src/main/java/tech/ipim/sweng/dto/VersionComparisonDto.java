@@ -1,6 +1,15 @@
 package tech.ipim.sweng.dto;
 
 import java.time.LocalDateTime;
+/**
+ * DTO per il confronto tra due versioni di una nota.
+ * <p>
+ * Contiene i dati delle due versioni confrontate, informazioni sulle modifiche
+ * e un riassunto delle differenze rilevate.
+ * <p>
+ * Utilizza internamente una classe statica {@link DifferenceDto} per rappresentare
+ * le differenze dettagliate tra titolo e contenuto.
+ */
 
 public class VersionComparisonDto {
     private Long noteId;

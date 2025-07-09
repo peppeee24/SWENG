@@ -2,6 +2,14 @@ package tech.ipim.sweng.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+/**
+ * DTO per la risposta relativa alla registrazione di un utente.
+ * <p>
+ * Contiene informazioni sull’esito della registrazione, un messaggio
+ * descrittivo e, in caso di successo, i dati dell’utente registrato.
+ * <p>
+ * Fornisce factory methods per creare risposte di successo e di errore in modo semplice.
+ */
 
 public class RegistrationResponse {
 

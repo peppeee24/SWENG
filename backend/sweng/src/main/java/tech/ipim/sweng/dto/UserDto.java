@@ -6,8 +6,25 @@ import java.time.LocalDateTime;
 import tech.ipim.sweng.model.User;
 
 /**
- * DTO per rappresentare i dati utente nelle response (senza password)
+ * DTO per rappresentare i dati di un utente nelle risposte.
+ * <p>
+ * Include le informazioni essenziali dell'utente, escluse quelle sensibili come la password.
+ * <p>
+ * Campi:
+ * <ul>
+ *   <li>{@code id} - identificatore univoco dell'utente</li>
+ *   <li>{@code username} - nome utente</li>
+ *   <li>{@code nome} - nome proprio</li>
+ *   <li>{@code cognome} - cognome</li>
+ *   <li>{@code email} - indirizzo email</li>
+ *   <li>{@code sesso} - sesso dell'utente</li>
+ *   <li>{@code numeroTelefono} - numero di telefono</li>
+ *   <li>{@code citta} - città di residenza</li>
+ *   <li>{@code dataNascita} - data di nascita</li>
+ *   <li>{@code createdAt} - data di creazione dell'account</li>
+ * </ul>
  */
+
 public class UserDto {
     
     private Long id;

@@ -13,6 +13,22 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+/**
+ * Entità JPA che rappresenta una cartella nel sistema.
+ * <p>
+ * La cartella è un contenitore per organizzare le note, associata ad un proprietario (utente).
+ * Include metadati quali nome, descrizione, colore, e date di creazione e modifica.
+ * <p>
+ * Vincoli di validazione sui campi:
+ * <ul>
+ *   <li>{@code nome} - obbligatorio, da 1 a 100 caratteri</li>
+ *   <li>{@code descrizione} - opzionale, massimo 500 caratteri</li>
+ *   <li>{@code colore} - opzionale, codice esadecimale di massimo 7 caratteri, default "#667eea"</li>
+ * </ul>
+ * <p>
+ * La data di creazione viene impostata al momento dell'istanza, mentre la data di modifica
+ * viene aggiornata automaticamente prima di ogni update tramite {@code @PreUpdate}.
+ */
 
 @Entity
 @Table(name = "cartelle")

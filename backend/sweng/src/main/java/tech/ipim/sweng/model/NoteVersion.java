@@ -10,6 +10,20 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+/**
+ * Entità JPA che rappresenta una versione storica di una nota.
+ * Ogni modifica significativa di una nota può generare una nuova istanza di NoteVersion,
+ * conservando titolo, contenuto, autore della modifica e timestamp.
+ * 
+ * Campi principali:
+ * - note: riferimento alla nota originale
+ * - versionNumber: numero progressivo della versione
+ * - contenuto: testo della nota in quella versione
+ * - titolo: titolo della nota in quella versione
+ * - createdAt: data/ora della creazione della versione
+ * - createdBy: username dell'autore della modifica
+ * - changeDescription: descrizione opzionale delle modifiche apportate
+ */
 
 @Entity
 @Table(name = "note_versions")

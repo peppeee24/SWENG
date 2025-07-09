@@ -2,6 +2,14 @@ package tech.ipim.sweng.dto;
 
 import tech.ipim.sweng.model.TipoPermesso;
 import java.util.List;
+/**
+ * DTO per la gestione dei permessi di accesso a una risorsa.
+ * <p>
+ * Contiene il tipo di permesso (es. PRIVATO, CONDIVISO) e le liste
+ * degli utenti che hanno permessi di lettura e scrittura.
+ * <p>
+ * Utilizzato per trasferire informazioni sui permessi tra client e server.
+ */
 
 public class PermissionDto {
 

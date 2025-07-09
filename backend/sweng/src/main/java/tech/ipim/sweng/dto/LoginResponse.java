@@ -1,7 +1,20 @@
 package tech.ipim.sweng.dto;
 
 import java.time.LocalDateTime;
-
+/**
+ * DTO per la risposta al tentativo di login.
+ * <p>
+ * Incapsula le informazioni restituite dal backend dopo una richiesta di autenticazione,
+ * indicando se il login è andato a buon fine o meno, il messaggio descrittivo,
+ * il token di autenticazione (se presente), i dati dell’utente autenticato
+ * e il timestamp del login.
+ * <p>
+ * Viene fornita anche una data/ora di login impostata automaticamente al momento della creazione
+ * della risposta.
+ * <p>
+ * Sono presenti factory methods statici per facilitare la creazione di risposte di successo
+ * o di errore.
+ */
 public class LoginResponse {
     
     private boolean success;

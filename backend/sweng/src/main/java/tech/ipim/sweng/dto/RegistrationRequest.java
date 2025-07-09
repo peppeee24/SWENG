@@ -5,7 +5,30 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
-
+/**
+ * DTO per la richiesta di registrazione di un nuovo utente.
+ * <p>
+ * Contiene i dati necessari per creare un account, con validazioni
+ * sulle proprietà per garantire correttezza e sicurezza.
+ * <p>
+ * Campi obbligatori:
+ * <ul>
+ *   <li>{@code username} - obbligatorio, 3-50 caratteri</li>
+ *   <li>{@code password} - obbligatoria, almeno 6 caratteri</li>
+ * </ul>
+ * <p>
+ * Campi opzionali (con limiti di lunghezza e pattern):
+ * <ul>
+ *   <li>{@code nome} e {@code cognome} - massimo 100 caratteri</li>
+ *   <li>{@code email} - formato email valido, max 150 caratteri</li>
+ *   <li>{@code sesso} - deve essere "M", "F" o "ALTRO"</li>
+ *   <li>{@code numeroTelefono} - formato numerico internazionale</li>
+ *   <li>{@code citta} - massimo 100 caratteri</li>
+ *   <li>{@code dataNascita} - data di nascita (senza validazioni aggiuntive)</li>
+ * </ul>
+ * <p>
+ * Il metodo {@code toString()} omette password per motivi di sicurezza.
+ */
 public class RegistrationRequest {
 
     @NotBlank(message = "Username è obbligatorio")

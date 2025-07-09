@@ -8,6 +8,21 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+/**
+ * Entità JPA che rappresenta un blocco (lock) applicato a una nota.
+ * 
+ * Serve a gestire la modifica concorrente di una nota, impedendo a più utenti
+ * di modificarla contemporaneamente.
+ * 
+ * La tabella ha un vincolo di unicità su noteId per assicurare che una nota possa
+ * avere al massimo un blocco attivo alla volta.
+ * 
+ * Campi:
+ * - noteId: ID della nota bloccata (univoco)
+ * - lockedBy: username dell'utente che ha acquisito il lock
+ * - lockedAt: timestamp di inizio blocco
+ * - expiresAt: timestamp di scadenza del blocco (lock temporaneo)
+ */
 
 @Entity
 @Table(name = "note_locks", uniqueConstraints = @UniqueConstraint(columnNames = "noteId"))

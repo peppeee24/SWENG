@@ -3,6 +3,14 @@ package tech.ipim.sweng.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+/**
+ * DTO per la richiesta di ripristino di una versione precedente di una nota.
+ * <p>
+ * Contiene il numero della versione da ripristinare, che deve essere un valore intero
+ * maggiore o uguale a 1.
+ * <p>
+ * Utilizzato per validare e trasmettere la richiesta dal client al backend.
+ */
 
 public class RestoreVersionRequest {
 
