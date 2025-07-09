@@ -3,6 +3,12 @@ package tech.ipim.sweng;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/**
+ * Classe principale di avvio per l'applicazione SWENG.
+ * <p>
+ * Contiene il metodo {@code main} che esegue il bootstrap dell'applicazione Spring Boot.
+ */
+
 @SpringBootApplication
 public class SwengApplication {
 

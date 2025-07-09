@@ -29,12 +29,19 @@ public class JwtUtil {
     
     private final SecretKey key;
     
+    /**
+     * Costruttore che inizializza la chiave segreta per la firma dei JWT.
+     */
+
     public JwtUtil() {
         this.key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
     
     /**
-     * Genera un JWT token per l'utente
+     * Genera un JWT token per l'utente specificato, includendo informazioni personalizzate nei claims.
+     *
+     * @param user Utente per cui generare il token
+     * @return Token JWT firmato
      */
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
@@ -48,7 +55,11 @@ public class JwtUtil {
     }
     
     /**
-     * Crea il JWT token con claims e subject
+     * Crea un JWT token con claims e subject specificati.
+     *
+     * @param claims  Claims personalizzati da inserire nel token
+     * @param subject Username o identificativo del soggetto del token
+     * @return Token JWT firmato
      */
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
@@ -61,28 +72,42 @@ public class JwtUtil {
     }
     
     /**
-     * Estrae lo username dal token
+     * Estrae lo username dal token JWT.
+     *
+     * @param token Token JWT
+     * @return Username contenuto nel token
      */
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
     
     /**
-     * Estrae la data di scadenza dal token
+     * Estrae la data di scadenza dal token JWT.
+     *
+     * @param token Token JWT
+     * @return Data di scadenza del token
      */
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
     
     /**
-     * Estrae l'ID utente dal token
+     * Estrae l'ID utente dai claims del token JWT.
+     *
+     * @param token Token JWT
+     * @return ID dell'utente
      */
     public Long extractUserId(String token) {
         return extractClaim(token, claims -> claims.get("userId", Long.class));
     }
     
     /**
-     * Estrae un claim specifico dal token
+     * Estrae un claim specifico dal token JWT.
+     *
+     * @param token          Token JWT
+     * @param claimsResolver Funzione per estrarre il valore desiderato dai claims
+     * @param <T>            Tipo del valore restituito
+     * @return Valore del claim estratto
      */
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
@@ -90,7 +115,11 @@ public class JwtUtil {
     }
     
     /**
-     * Estrae tutti i claims dal token
+     * Estrae tutti i claims dal token JWT.
+     *
+     * @param token Token JWT
+     * @return Claims contenuti nel token
+     * @throws RuntimeException se il token è scaduto, malformato o invalido
      */
     private Claims extractAllClaims(String token) {
         try {
@@ -118,7 +147,10 @@ public class JwtUtil {
     }
     
     /**
-     * Verifica se il token è scaduto
+     * Verifica se il token JWT è scaduto.
+     *
+     * @param token Token JWT
+     * @return True se scaduto, false altrimenti
      */
     public Boolean isTokenExpired(String token) {
         try {
@@ -129,7 +161,11 @@ public class JwtUtil {
     }
     
     /**
-     * Valida il token contro l'utente
+     * Valida un token JWT confrontandolo con i dati di un utente.
+     *
+     * @param token Token JWT da validare
+     * @param user  Utente di riferimento
+     * @return True se il token è valido e associato all'utente, false altrimenti
      */
     public Boolean validateToken(String token, User user) {
         try {
@@ -142,7 +178,10 @@ public class JwtUtil {
     }
     
     /**
-     * Verifica se il token è valido (formato e firma)
+     * Verifica la validità formale e di firma del token JWT.
+     *
+     * @param token Token JWT da verificare
+     * @return True se il token è valido e non scaduto, false altrimenti
      */
     public Boolean isTokenValid(String token) {
         try {
@@ -154,7 +193,10 @@ public class JwtUtil {
     }
     
     /**
-     * Estrae il Bearer token dall'header Authorization
+     * Estrae il Bearer token dall'header Authorization.
+     *
+     * @param authHeader Header Authorization della richiesta HTTP
+     * @return Token JWT oppure null se non presente o formattato male
      */
     public String extractTokenFromHeader(String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {

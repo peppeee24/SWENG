@@ -33,7 +33,14 @@ public class CartellaService {
         this.noteRepository = noteRepository;
     }
 
-
+    /**
+     * Crea una nuova cartella per l'utente specificato
+     * 
+     * @param request dati per creare la cartella (nome, descrizione, colore)
+     * @param username username del proprietario della cartella
+     * @return DTO della cartella creata con numero note inizializzato a 0
+     * @throws RuntimeException se l'utente non esiste o esiste già una cartella con lo stesso nome
+     */
     public CartellaDto createCartella(CreateCartellaRequest request, String username) {
         User proprietario = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
@@ -58,7 +65,11 @@ public class CartellaService {
     }
 
     /**
-     * Recupera tutte le cartelle dell'utente
+     * Recupera tutte le cartelle dell'utente ordinate per data di modifica decrescente
+     * 
+     * @param username username dell'utente proprietario delle cartelle
+     * @return lista di DTO delle cartelle con il numero di note conteggiato
+     * @throws RuntimeException se l'utente non esiste
      */
     @Transactional(readOnly = true)
     public List<CartellaDto> getUserCartelle(String username) {
@@ -79,7 +90,11 @@ public class CartellaService {
     }
 
     /**
-     * Recupera una cartella specifica
+     * Recupera una cartella specifica per ID e username proprietario
+     * 
+     * @param id ID della cartella
+     * @param username username del proprietario
+     * @return Optional di DTO della cartella con numero note se trovata, altrimenti empty
      */
     @Transactional(readOnly = true)
     public Optional<CartellaDto> getCartellaById(Long id, String username) {
@@ -97,7 +112,13 @@ public class CartellaService {
     }
 
     /**
-     * Aggiorna una cartella esistente
+     * Aggiorna i dati di una cartella esistente
+     * 
+     * @param id ID della cartella da aggiornare
+     * @param request dati aggiornati della cartella (nome, descrizione, colore)
+     * @param username username del proprietario che effettua l'aggiornamento
+     * @return DTO della cartella aggiornata con il numero di note aggiornato
+     * @throws RuntimeException se la cartella non esiste, non è accessibile o nome già esistente
      */
     public CartellaDto updateCartella(Long id, UpdateCartellaRequest request, String username) {
         Cartella cartella = cartellaRepository.findByIdAndUsername(id, username)
@@ -129,7 +150,12 @@ public class CartellaService {
     }
 
     /**
-     * Elimina una cartella
+     * Elimina una cartella se vuota di note
+     * 
+     * @param id ID della cartella da eliminare
+     * @param username username del proprietario che richiede l'eliminazione
+     * @return true se eliminazione avvenuta con successo
+     * @throws RuntimeException se la cartella non esiste, non è accessibile o contiene note
      */
     public boolean deleteCartella(Long id, String username) {
         Cartella cartella = cartellaRepository.findByIdAndUsername(id, username)
@@ -147,7 +173,11 @@ public class CartellaService {
     }
 
     /**
-     * Recupera statistiche cartelle utente
+     * Recupera statistiche sulle cartelle di un utente
+     * 
+     * @param username username dell'utente di cui ottenere le statistiche
+     * @return oggetto contenente numero totale di cartelle e lista nomi cartelle
+     * @throws RuntimeException se l'utente non esiste
      */
     @Transactional(readOnly = true)
     public CartelleStats getUserCartelleStats(String username) {
@@ -164,7 +194,7 @@ public class CartellaService {
     }
 
     /**
-     * Classe per le statistiche cartelle
+     * Classe interna per rappresentare le statistiche delle cartelle di un utente
      */
     public static class CartelleStats {
         private final long numeroCartelle;

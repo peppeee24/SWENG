@@ -38,6 +38,15 @@ public class NoteService {
         this.userRepository = userRepository;
         this.noteVersionService = noteVersionService;
     }
+    
+    /**
+     * Crea una nuova nota associata all'utente specificato
+     * e crea la prima versione della nota.
+     * 
+     * @param request dati della nuova nota (titolo, contenuto, tags, cartelle, permessi)
+     * @param username nome utente che crea la nota
+     * @return DTO della nota creata
+     */
 
     @Transactional
     public NoteDto createNote(CreateNoteRequest request, String username) {
@@ -120,12 +129,27 @@ public class NoteService {
         return NoteDto.fromNote(savedNote, username);
     }
 
+    /**
+     * Recupera tutte le note accessibili dall'utente,
+     * incluse note proprie e condivise.
+     * 
+     * @param username nome utente che richiede le note
+     * @return lista di DTO delle note accessibili
+     */
+
     public List<NoteDto> getAllAccessibleNotes(String username) {
         List<Note> notes = noteRepository.findAllAccessibleNotes(username);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
                 .toList();
     }
+
+    /**
+     * Recupera tutte le note create dall'utente.
+     * 
+     * @param username nome utente autore delle note
+     * @return lista di DTO delle note dell'utente
+     */
 
     public List<NoteDto> getUserNotes(String username) {
         User user = userRepository.findByUsername(username)
@@ -137,10 +161,26 @@ public class NoteService {
                 .toList();
     }
 
+    /**
+     * Recupera una singola nota accessibile all'utente per ID.
+     * 
+     * @param noteId ID della nota
+     * @param username nome utente richiedente
+     * @return Optional contenente il DTO della nota se accessibile
+     */
+
     public Optional<NoteDto> getNoteById(Long noteId, String username) {
         Optional<Note> note = noteRepository.findAccessibleNoteById(noteId, username);
         return note.map(n -> NoteDto.fromNote(n, username));
     }
+
+    /**
+     * Cerca note accessibili contenenti una parola chiave nel titolo o contenuto.
+     * 
+     * @param username nome utente richiedente
+     * @param keyword parola chiave per la ricerca
+     * @return lista di DTO delle note trovate
+     */
 
     public List<NoteDto> searchNotes(String username, String keyword) {
         List<Note> notes = noteRepository.searchNotesByKeyword(username, keyword.trim());
@@ -149,6 +189,14 @@ public class NoteService {
                 .toList();
     }
 
+    /**
+     * Recupera le note accessibili associate a un determinato tag.
+     * 
+     * @param username nome utente richiedente
+     * @param tag tag con cui filtrare le note
+     * @return lista di DTO delle note filtrate per tag
+     */
+
     public List<NoteDto> getNotesByTag(String username, String tag) {
         List<Note> notes = noteRepository.findNotesByTag(username, tag);
         return notes.stream()
@@ -156,12 +204,29 @@ public class NoteService {
                 .toList();
     }
 
+    /**
+     * Recupera le note accessibili associate a una specifica cartella.
+     * 
+     * @param username nome utente richiedente
+     * @param cartella nome della cartella per il filtro
+     * @return lista di DTO delle note filtrate per cartella
+     */
+
     public List<NoteDto> getNotesByCartella(String username, String cartella) {
         List<Note> notes = noteRepository.findNotesByCartella(username, cartella);
         return notes.stream()
                 .map(note -> NoteDto.fromNote(note, username))
                 .toList();
     }
+
+    /**
+     * Duplica una nota esistente a cui l'utente ha accesso,
+     * creando una nuova nota con suffisso "(copia)".
+     * 
+     * @param noteId ID della nota da duplicare
+     * @param username nome utente che effettua la duplicazione
+     * @return DTO della nuova nota duplicata
+     */
 
     @Transactional
     public NoteDto duplicateNote(Long noteId, String username) {
@@ -197,6 +262,15 @@ public class NoteService {
         return NoteDto.fromNote(savedNote, username);
     }
 
+    /**
+     * Elimina una nota se l'utente è l'autore.
+     * Elimina anche tutte le versioni associate.
+     * 
+     * @param noteId ID della nota da eliminare
+     * @param username nome utente che richiede l'eliminazione
+     * @return true se eliminazione avvenuta con successo
+     */
+
     @Transactional
     public boolean deleteNote(Long noteId, String username) {
         Note note = noteRepository.findById(noteId)
@@ -212,6 +286,14 @@ public class NoteService {
         System.out.println("Nota eliminata: " + noteId + " da " + username);
         return true;
     }
+
+    /**
+     * Rimuove un utente dalla condivisione di una nota
+     * se non è il proprietario.
+     * 
+     * @param noteId ID della nota
+     * @param username nome utente da rimuovere
+     */
 
     @Transactional
     public void removeUserFromSharing(Long noteId, String username) {
@@ -236,6 +318,17 @@ public class NoteService {
         noteRepository.save(note);
         System.out.println("Utente " + username + " rimosso dalla condivisione della nota " + noteId);
     }
+
+    /**
+     * Aggiorna i dati (titolo, contenuto, tags, cartelle) di una nota
+     * se l'utente ha i permessi di scrittura.
+     * Crea una nuova versione della nota aggiornata.
+     * 
+     * @param noteId ID della nota da aggiornare
+     * @param request dati aggiornati
+     * @param username nome utente che effettua l'aggiornamento
+     * @return DTO della nota aggiornata
+     */
 
     @Transactional
     public NoteDto updateNote(Long noteId, UpdateNoteRequest request, String username) {
@@ -277,6 +370,16 @@ public class NoteService {
         System.out.println("Nota aggiornata: " + noteId + " da " + username + " (versione " + note.getVersionNumber() + ")");
         return NoteDto.fromNote(savedNote, username);
     }
+
+    /**
+     * Aggiorna i permessi di una nota (tipo permesso, utenti lettura/scrittura)
+     * solo se l'utente è il proprietario della nota.
+     * 
+     * @param noteId ID della nota
+     * @param permissionDto nuovi permessi da impostare
+     * @param username nome utente proprietario della nota
+     * @return DTO della nota aggiornata con nuovi permessi
+     */
 
     @Transactional
     public NoteDto updateNotePermissions(Long noteId, PermissionDto permissionDto, String username) {
@@ -330,6 +433,14 @@ public class NoteService {
         return NoteDto.fromNote(savedNote, username);
     }
 
+    /**
+     * Recupera la cronologia delle versioni di una nota accessibile all'utente.
+     * 
+     * @param noteId ID della nota
+     * @param username nome utente richiedente
+     * @return lista di DTO delle versioni della nota
+     */
+
     public List<NoteVersionDto> getNoteVersionHistory(Long noteId, String username) {
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata"));
@@ -345,6 +456,15 @@ public class NoteService {
                 .toList();
     }
 
+    /**
+     * Recupera una specifica versione di una nota se accessibile all'utente.
+     * 
+     * @param noteId ID della nota
+     * @param versionNumber numero della versione da recuperare
+     * @param username nome utente richiedente
+     * @return Optional contenente il DTO della versione richiesta
+     */
+
     public Optional<NoteVersionDto> getNoteVersion(Long noteId, Integer versionNumber, String username) {
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata"));
@@ -359,8 +479,15 @@ public class NoteService {
     }
 
     /**
-     * Ripristina una versione precedente di una nota
+     * Ripristina una versione precedente di una nota,
+     * creando una nuova versione con il contenuto ripristinato.
+     * 
+     * @param noteId ID della nota
+     * @param versionNumber versione da ripristinare
+     * @param username nome utente che effettua il ripristino
+     * @return DTO della nota aggiornata dopo il ripristino
      */
+
     @Transactional
     public NoteDto restoreNoteVersion(Long noteId, Integer versionNumber, String username) {
         Note note = noteRepository.findById(noteId)
@@ -405,8 +532,16 @@ public class NoteService {
     }
 
     /**
-     * Confronta due versioni di una nota
+     * Confronta due versioni di una nota restituendo un DTO
+     * con le differenze di titolo e contenuto.
+     * 
+     * @param noteId ID della nota
+     * @param version1 numero della prima versione
+     * @param version2 numero della seconda versione
+     * @param username nome utente richiedente
+     * @return DTO con il confronto tra le due versioni
      */
+
     public VersionComparisonDto compareNoteVersions(Long noteId, Integer version1, Integer version2, String username) {
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Nota non trovata"));
@@ -448,8 +583,14 @@ public class NoteService {
     }
 
     /**
-     * Genera una descrizione semplificata delle differenze nel contenuto
+     * Genera una descrizione semplificata delle differenze
+     * tra due contenuti testuali.
+     * 
+     * @param content1 contenuto prima versione
+     * @param content2 contenuto seconda versione
+     * @return descrizione testuale della differenza
      */
+
     private String generateContentDiff(String content1, String content2) {
         if (content1.equals(content2)) {
             return "Nessuna differenza";
@@ -468,8 +609,13 @@ public class NoteService {
     }
 
     /**
-     * Recupera tutti gli autori disponibili per l'utente corrente
+     * Recupera la lista degli autori delle note accessibili
+     * all'utente specificato.
+     * 
+     * @param username nome utente
+     * @return lista di username autori
      */
+
     public List<String> getAvailableAutori(String username) {
         System.out.println("Recupero autori disponibili per utente: " + username);
 
@@ -487,10 +633,15 @@ public class NoteService {
     }
 
 
+     /**
+     * Recupera le note filtrate per autore e filtro tipo (own, shared, all).
+     * 
+     * @param username nome utente richiedente
+     * @param autore nome utente autore da filtrare
+     * @param filter tipo di filtro ("own", "shared", "all")
+     * @return lista di DTO delle note filtrate
+     */
 
-/**
- * Recupera le note filtrate per autore
- */
 public List<NoteDto> getNotesByAutore(String username, String autore, String filter) {
     System.out.println("Recupero note per autore: " + autore + ", filtro: " + filter);
 
@@ -522,10 +673,14 @@ public List<NoteDto> getNotesByAutore(String username, String autore, String fil
 }
 
     /**
-     * Recupera le note filtrate per autore
+     * Recupera le note filtrate per intervallo di date e filtro tipo (own, shared, all).
+     * 
+     * @param username nome utente richiedente
+     * @param dataInizio data inizio filtro (yyyy-MM-dd) o null
+     * @param dataFine data fine filtro (yyyy-MM-dd) o null
+     * @param filter tipo di filtro ("own", "shared", "all")
+     * @return lista di DTO delle note filtrate
      */
-
-// Sostituisci il metodo getNotesByDateRange nel NoteService con questa versione
 
 public List<NoteDto> getNotesByDateRange(String username, String dataInizio, String dataFine, String filter) {
     System.out.println("Ricerca note per periodo: " + dataInizio + " - " + dataFine + ", filtro: " + filter);
@@ -613,6 +768,14 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
     }
 }
 
+    /**
+     * Recupera statistiche riepilogative per un utente,
+     * inclusi numero note create, condivise, tags e cartelle.
+     * 
+     * @param username nome utente
+     * @return DTO con statistiche utente
+     */
+
     public UserStatsDto getUserStats(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utente non trovato: " + username));
@@ -633,6 +796,17 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
         );
     }
 
+    /**
+     * Costruisce una descrizione testuale dei cambiamenti tra
+     * titolo e contenuto vecchi e nuovi.
+     * 
+     * @param oldTitle titolo precedente
+     * @param oldContent contenuto precedente
+     * @param newTitle titolo nuovo
+     * @param newContent contenuto nuovo
+     * @return descrizione dei cambiamenti
+     */
+
     private String buildChangeDescription(String oldTitle, String oldContent, String newTitle, String newContent) {
         StringBuilder description = new StringBuilder();
 
@@ -652,6 +826,14 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
 
         return description.toString();
     }
+
+    /**
+     * Configura i permessi di una nota in base ai dati ricevuti
+     * nel DTO dei permessi.
+     * 
+     * @param note nota da configurare
+     * @param permissionDto dati dei permessi da applicare
+     */
 
     private void configurePermissions(Note note, PermissionDto permissionDto) {
         System.out.println(">>> configurePermissions START");
@@ -722,6 +904,8 @@ public List<NoteDto> getNotesByDateRange(String username, String dataInizio, Str
         System.out.println("FINALE - Scrittura (" + note.getPermessiScrittura().size() + "): " + note.getPermessiScrittura());
         System.out.println(">>> configurePermissions END");
     }
+
+    // Classe interna DTO per statistiche utente
 
     public static class UserStatsDto {
 
