@@ -32,7 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.argThat;
@@ -43,6 +48,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import tech.ipim.sweng.dto.PermissionDto;
 
+/**
+ * Test di unità per la classe NoteService.
+ * 
+ * Questa classe verifica il corretto funzionamento delle operazioni principali
+ * sulle note, inclusi aggiornamenti, gestione permessi, versionamento, confronto
+ * versioni e cancellazione. 
+ * 
+ * Si usano mock per il repository delle note e il servizio di versionamento
+ * per isolare la logica di business e testare il comportamento in diversi scenari,
+ * come modifiche parziali, gestione permessi e ripristino di versioni precedenti.
+ */
 
 @ExtendWith(MockitoExtension.class)
 class NoteServiceTest {
@@ -85,6 +101,17 @@ class NoteServiceTest {
 
     }
 
+    /**
+     * Test di creazione di una nuova nota con utente valido.
+     * <p>
+     * Mocka il repository utente per trovare l'utente esistente con username "testuser".
+     * Mocka il repository note per salvare e flushare la nuova nota, simulando il salvataggio nel DB.
+     * Mocka il servizio di versionamento per creare la prima versione della nota con descrizione "Creazione nota".
+     * Mocka il findById per verificare la presenza della nota salvata.
+     * Verifica che la nota restituita dal servizio abbia i campi corretti, incluso l'autore,
+     * e che i metodi repository e versionamento siano chiamati correttamente con i parametri attesi.
+     */
+
     @Test
     void shouldCreateNoteSuccessfully() {
         // Setup dell'utente
@@ -126,6 +153,13 @@ class NoteServiceTest {
         verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), eq("Creazione nota"));
     }
 
+    /**
+     * Test che verifica il comportamento quando l'utente per la creazione della nota non viene trovato.
+     * <p>
+     * Mocka il repository utente per restituire Optional.empty() per uno username inesistente.
+     * Verifica che il metodo createNote lanci un'eccezione RuntimeException con messaggio appropriato.
+     * Assicura che il repository note non venga mai chiamato a salvare la nota.
+     */
 
     @Test
     void shouldThrowExceptionWhenUserNotFoundForCreation() {
@@ -137,6 +171,15 @@ class NoteServiceTest {
 
         verify(noteRepository, never()).save(any(Note.class));
     }
+
+    /**
+     * Test per recuperare tutte le note accessibili da un dato utente.
+     * <p>
+     * Mocka il repository note per restituire una lista contenente la nota di test.
+     * Verifica che la lista restituita dal servizio contenga esattamente una nota
+     * e che il titolo corrisponda a quello atteso.
+     * Controlla che il metodo findAllAccessibleNotes sia chiamato una volta con il corretto username.
+     */
 
     @Test
     void shouldGetAllAccessibleNotes() {
@@ -150,6 +193,15 @@ class NoteServiceTest {
 
         verify(noteRepository).findAllAccessibleNotes("testuser");
     }
+
+    /**
+     * Test per ottenere tutte le note create da un utente specifico.
+     * <p>
+     * Mocka il repository utente per restituire l'utente di test con username "testuser".
+     * Mocka il repository note per restituire la lista delle note di quell'autore ordinate per data modifica decrescente.
+     * Verifica che la lista contenga la nota di test con l'autore corretto.
+     * Controlla che entrambi i repository vengano interrogati con i parametri corretti.
+     */
 
     @Test
     void shouldGetUserNotes() {
@@ -165,6 +217,14 @@ class NoteServiceTest {
         verify(noteRepository).findByAutoreOrderByDataModificaDesc(testUser);
     }
 
+    /**
+     * Test per ottenere una singola nota accessibile tramite ID e username.
+     * <p>
+     * Mocka il repository note per restituire la nota di test in un Optional.
+     * Verifica che il risultato del servizio sia presente e che l'ID corrisponda a quello atteso.
+     * Assicura che il metodo findAccessibleNoteById sia chiamato con i parametri corretti.
+     */
+
     @Test
     void shouldGetNoteById() {
         when(noteRepository.findAccessibleNoteById(1L, "testuser")).thenReturn(Optional.of(testNote));
@@ -177,6 +237,13 @@ class NoteServiceTest {
         verify(noteRepository).findAccessibleNoteById(1L, "testuser");
     }
 
+    /**
+     * Test che verifica il comportamento nel caso in cui la nota con l'ID specificato non esista.
+     * <p>
+     * Mocka il repository note per restituire Optional.empty().
+     * Verifica che il servizio restituisca un Optional vuoto senza eccezioni.
+     */
+
     @Test
     void shouldReturnEmptyWhenNoteNotFound() {
         when(noteRepository.findAccessibleNoteById(999L, "testuser")).thenReturn(Optional.empty());
@@ -185,6 +252,14 @@ class NoteServiceTest {
 
         assertThat(result).isEmpty();
     }
+
+    /**
+     * Test per la ricerca di note tramite keyword.
+     * <p>
+     * Mocka il repository note per restituire una lista contenente la nota di test filtrata per keyword.
+     * Verifica che la lista risultante abbia dimensione uno e il titolo corrispondente.
+     * Controlla la chiamata del repository con i parametri corretti.
+     */
 
     @Test
     void shouldSearchNotes() {
@@ -198,6 +273,13 @@ class NoteServiceTest {
         verify(noteRepository).searchNotesByKeyword("testuser", "test");
     }
 
+    /**
+     * Test per il recupero di note filtrate tramite tag.
+     * <p>
+     * Mocka il repository per restituire la lista di note che contengono il tag specificato.
+     * Verifica che la lista risultante contenga la nota di test.
+     * Controlla la corretta chiamata al repository con username e tag.
+     */
     @Test
     void shouldGetNotesByTag() {
         when(noteRepository.findNotesByTag("testuser", "test")).thenReturn(Arrays.asList(testNote));
@@ -208,6 +290,14 @@ class NoteServiceTest {
         verify(noteRepository).findNotesByTag("testuser", "test");
     }
 
+    /**
+     * Test per il recupero di note filtrate tramite cartella.
+     * <p>
+     * Mocka il repository per restituire la lista di note nella cartella specificata.
+     * Verifica che la lista risultante contenga la nota di test.
+     * Controlla la chiamata del repository con i parametri attesi.
+     */
+
     @Test
     void shouldGetNotesByCartella() {
         when(noteRepository.findNotesByCartella("testuser", "Test Folder")).thenReturn(Arrays.asList(testNote));
@@ -217,6 +307,16 @@ class NoteServiceTest {
         assertThat(result).hasSize(1);
         verify(noteRepository).findNotesByCartella("testuser", "Test Folder");
     }
+
+    /**
+     * Test di duplicazione di una nota esistente da parte di un utente autorizzato.
+     * <p>
+     * Mocka il repository note per trovare la nota originale tramite ID.
+     * Mocka il repository utente per trovare l'utente corrente.
+     * Mocka il salvataggio della nuova nota duplicata.
+     * Verifica che la nota duplicata abbia titolo aggiornato (con suffisso " (Copia)") e contenuto uguale.
+     * Controlla che tutti i metodi repository vengano chiamati con i parametri corretti.
+     */
 
     @Test
     void shouldDuplicateNote() {
@@ -238,6 +338,14 @@ class NoteServiceTest {
         verify(noteRepository).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica che venga lanciata un'eccezione quando si tenta di duplicare
+     * una nota inesistente.
+     * <p>
+     * Mocka il repository note per restituire Optional.empty().
+     * Verifica che il servizio lanci RuntimeException con messaggio adeguato.
+     * Assicura che i metodi di repository user e save non vengano mai invocati.
+     */
     @Test
     void shouldThrowExceptionWhenDuplicatingNonExistentNote() {
         when(noteRepository.findById(1L)).thenReturn(Optional.empty());
@@ -251,6 +359,15 @@ class NoteServiceTest {
         verify(userRepository, never()).findByUsername(anyString());
         verify(noteRepository, never()).save(any(Note.class));
     }
+
+    /**
+     * Test che verifica che venga lanciata un'eccezione quando si tenta di duplicare
+     * una nota inesistente.
+     * <p>
+     * Mocka il repository note per restituire Optional.empty().
+     * Verifica che il servizio lanci RuntimeException con messaggio adeguato.
+     * Assicura che i metodi di repository user e save non vengano mai invocati.
+     */
 
     @Test
     void shouldThrowExceptionWhenDuplicatingNonAccessibleNote() {
@@ -270,6 +387,13 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+
+    /**
+     * Test di cancellazione di una nota da parte dell'autore.
+     * <p>
+     * Mocka il repository note per restituire la nota di test.
+     * Verifica che la cancellazione ritorni true e che il repository venga chiamato per eliminare la nota.
+     */
     @Test
     void shouldDeleteNoteWhenUserIsAuthor() {
         testNote.setAutore(testUser);
@@ -280,6 +404,14 @@ class NoteServiceTest {
         assertThat(result).isTrue();
         verify(noteRepository).delete(testNote);
     }
+
+    /**
+     * Test che verifica il fallimento della cancellazione quando l'utente non ha i permessi.
+     * <p>
+     * Mocka il repository note per restituire una nota il cui autore è un altro utente.
+     * Verifica che il servizio lanci RuntimeException con messaggio di permessi negati.
+     * Controlla che il metodo delete del repository non venga mai invocato.
+     */
 
     @Test
     void shouldThrowExceptionWhenDeletingNoteWithoutPermission() {
@@ -293,6 +425,14 @@ class NoteServiceTest {
 
         verify(noteRepository, never()).delete(any(Note.class));
     }
+
+    /**
+     * Test per ottenere statistiche relative a un utente.
+     * <p>
+     * Mocka il repository utente per restituire l'utente di test.
+     * Mocka il repository note per restituire conteggi di note create, condivise, tag e cartelle.
+     * Verifica che i valori del DTO restituito corrispondano ai dati mockati.
+     */
 
     @Test
     void shouldGetUserStats() {
@@ -312,6 +452,14 @@ class NoteServiceTest {
         assertThat(result.getAllCartelle()).containsExactly("folder1");
     }
 
+    /**
+     * Test che verifica che venga lanciata un'eccezione quando si richiedono
+     * statistiche per un utente non esistente.
+     * <p>
+     * Mocka il repository utente per restituire Optional.empty().
+     * Verifica che venga lanciata RuntimeException con messaggio corretto.
+     */
+
     @Test
     void shouldThrowExceptionWhenGettingStatsForNonExistentUser() {
         when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
@@ -323,6 +471,15 @@ class NoteServiceTest {
 
     // TEST PER RIMOZIONE DALLA CONDIVISIONE
 
+    /**
+     * Test di rimozione di un utente dalla condivisione in sola lettura di una nota.
+     * <p>
+     * Prepara una nota con permessi di lettura che includono l'utente da rimuovere.
+     * Mocka il repository per trovare la nota e salvarla.
+     * Chiama il servizio per rimuovere l'utente dalla condivisione.
+     * Verifica che i permessi di lettura siano aggiornati e che la data di modifica sia aggiornata.
+     * Controlla che il repository venga chiamato per salvare la nota modificata.
+     */
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in lettura")
     void shouldRemoveUserFromReadingSharing() {
@@ -343,6 +500,16 @@ class NoteServiceTest {
         verify(noteRepository).save(note);
         assertTrue(note.getDataModifica().isAfter(note.getDataCreazione()));
     }
+
+    /**
+     * Test di rimozione di un utente dalla condivisione in scrittura (e lettura) di una nota.
+     * <p>
+     * Prepara una nota con permessi di lettura e scrittura che includono l'utente da rimuovere.
+     * Mocka il repository per trovare e salvare la nota.
+     * Chiama il servizio per rimuovere l'utente.
+     * Verifica che i permessi di lettura e scrittura non includano più l'utente.
+     * Controlla la chiamata al repository per il salvataggio.
+     */
 
     @Test
     @DisplayName("Dovrebbe rimuovere un utente dalla condivisione in scrittura")
@@ -366,6 +533,15 @@ class NoteServiceTest {
         verify(noteRepository).save(note);
     }
 
+    /**
+     * Test che verifica il fallimento della rimozione quando l'utente da rimuovere
+     * è il proprietario della nota.
+     * <p>
+     * Prepara una nota con proprietario uguale all'utente da rimuovere.
+     * Mocka il repository per trovare la nota.
+     * Verifica che venga lanciata RuntimeException con messaggio di impossibilità di rimuovere il proprietario.
+     * Controlla che il repository non esegua salvataggi.
+     */
     @Test
     @DisplayName("Dovrebbe fallire se l'utente è il proprietario")
     void shouldFailWhenUserIsOwner() {
@@ -383,6 +559,15 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica il fallimento della rimozione quando l'utente
+     * non ha alcun accesso alla nota.
+     * <p>
+     * Prepara una nota con un proprietario diverso e senza permessi per l'utente da rimuovere.
+     * Mocka il repository per trovare la nota.
+     * Verifica che venga lanciata RuntimeException con messaggio di accesso negato.
+     * Controlla che non vengano effettuati salvataggi.
+     */
     @Test
     @DisplayName("Dovrebbe fallire se l'utente non ha accesso alla nota")
     void shouldFailWhenUserHasNoAccess() {
@@ -400,6 +585,14 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica il fallimento della rimozione quando la nota
+     * indicata per ID non viene trovata.
+     * <p>
+     * Mocka il repository per restituire Optional.empty() per l'ID specificato.
+     * Verifica che venga lanciata RuntimeException con messaggio "Nota non trovata".
+     * Assicura che non vengano fatti tentativi di salvataggio.
+     */
     @Test
     @DisplayName("Dovrebbe fallire se la nota non esiste")
     void shouldFailWhenNoteNotFound() {
@@ -414,6 +607,15 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica l'aggiornamento della data di modifica di una nota
+     * quando viene rimosso un utente dalla condivisione.
+     * <p>
+     * Prepara una nota con data modifica iniziale e un utente nei permessi di lettura.
+     * Mocka il repository per trovare e salvare la nota.
+     * Chiama il metodo di rimozione utente.
+     * Verifica che la data di modifica sia successiva a quella originale.
+     */
     @Test
     @DisplayName("Dovrebbe aggiornare la data di modifica quando rimuove l'utente")
     void shouldUpdateModificationDateWhenRemovingUser() {
@@ -433,6 +635,17 @@ class NoteServiceTest {
         assertTrue(note.getDataModifica().isAfter(originalModDate));
     }
 
+    /**
+     * Test di aggiornamento di una nota da parte del proprietario.
+     * <p>
+     * Prepara una nota con tag e cartelle esistenti.
+     * Prepara una richiesta di aggiornamento con nuovi dati e nuovi set di tag e cartelle.
+     * Mocka il repository per trovare e salvare la nota.
+     * Verifica che i dati della nota siano aggiornati correttamente,
+     * che i tag e cartelle siano sostituiti,
+     * e che la data di modifica sia aggiornata.
+     * Controlla le chiamate al repository.
+     */
     @Test
     @DisplayName("Dovrebbe aggiornare una nota quando l'utente è il proprietario")
     void shouldUpdateNoteWhenUserIsOwner() {
@@ -466,6 +679,16 @@ class NoteServiceTest {
         verify(noteRepository).save(note);
     }
 
+    /**
+     * Test di aggiornamento di una nota da parte di un utente con permessi di scrittura.
+     * <p>
+     * Prepara una nota con permessi scrittura che includono l'utente.
+     * Prepara una richiesta di aggiornamento.
+     * Mocka il repository per trovare e salvare la nota.
+     * Verifica che i dati della nota siano aggiornati correttamente.
+     * Controlla la chiamata al repository per il salvataggio.
+     */
+
     @Test
     @DisplayName("Dovrebbe aggiornare una nota quando l'utente ha permessi di scrittura")
     void shouldUpdateNoteWhenUserHasWritePermission() {
@@ -492,6 +715,16 @@ class NoteServiceTest {
         verify(noteRepository).save(note);
     }
 
+    /**
+     * Test che verifica il fallimento dell'aggiornamento nota
+     * quando l'utente non ha i permessi necessari.
+     * <p>
+     * Prepara una nota di un altro utente senza permessi per l'utente di test.
+     * Prepara una richiesta di aggiornamento.
+     * Mocka il repository per trovare la nota.
+     * Verifica che venga lanciata RuntimeException con messaggio di permessi negati.
+     * Assicura che non venga fatto alcun salvataggio.
+     */
     @Test
     @DisplayName("Dovrebbe fallire quando l'utente non ha permessi di modifica")
     void shouldFailWhenUserHasNoEditPermission() {
@@ -513,6 +746,14 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica il fallimento dell'aggiornamento
+     * quando la nota non viene trovata tramite ID.
+     * <p>
+     * Mocka il repository per restituire Optional.empty().
+     * Verifica che venga lanciata RuntimeException con messaggio "Nota non trovata".
+     * Assicura che non vengano fatti tentativi di salvataggio.
+     */
     @Test
     @DisplayName("Dovrebbe fallire quando la nota non esiste")
     void shouldFailWhenNoteNotFoundForUpdate() {
@@ -530,6 +771,17 @@ class NoteServiceTest {
         assertEquals("Nota non trovata", exception.getMessage());
         verify(noteRepository, never()).save(any(Note.class));
     }
+
+    /**
+     * Test che verifica la corretta gestione dei valori null per tags e cartelle
+     * durante l'aggiornamento di una nota.
+     * <p>
+     * Prepara una nota con tags e cartelle inizialmente valorizzati.
+     * Prepara una richiesta di aggiornamento con tags e cartelle null.
+     * Mocka il repository per trovare e salvare la nota.
+     * Verifica che i set tags e cartelle siano svuotati correttamente
+     * e che la nota venga salvata senza errori.
+     */
 
     @Test
     @DisplayName("Dovrebbe gestire tags e cartelle null")
@@ -559,6 +811,11 @@ class NoteServiceTest {
 
         verify(noteRepository).save(note);
     }
+
+    /**
+     * Verifica che durante l'aggiornamento della nota vengano modificati solo i campi cambiati,
+     * lasciando invariati tag e cartelle, e aggiornando la data di modifica.
+     */
 
     @Test
     @DisplayName("Dovrebbe aggiornare solo i campi modificati")
@@ -591,6 +848,11 @@ class NoteServiceTest {
 
         verify(noteRepository).save(note);
     }
+
+    /**
+     * Verifica che gli spazi bianchi in eccesso vengano rimossi dal titolo e dal contenuto
+     * prima di salvare la nota aggiornata.
+     */
 
     @Test
     @DisplayName("Dovrebbe trimmare spazi bianchi dal titolo e contenuto")
@@ -644,6 +906,10 @@ class NoteServiceTest {
 
 
 
+    /**
+     * Verifica che la cronologia delle versioni venga restituita correttamente
+     * per una nota a cui l'utente ha accesso.
+     */
     @Test
     @DisplayName("Dovrebbe ottenere la cronologia delle versioni per una nota accessibile")
     void shouldGetVersionHistoryForAccessibleNote() {
@@ -668,6 +934,10 @@ class NoteServiceTest {
         verify(noteVersionService).getVersionHistory(1L);
     }
 
+    /**
+     * Verifica che venga sollevata un'eccezione se si tenta di ottenere la cronologia
+     * di una nota non esistente.
+     */
     @Test
     @DisplayName("Dovrebbe fallire l'ottenimento cronologia se nota non trovata")
     void shouldFailGetVersionHistoryIfNoteNotFound() {
@@ -682,6 +952,11 @@ class NoteServiceTest {
         verify(noteRepository).findById(999L);
         verify(noteVersionService, never()).getVersionHistory(anyLong());
     }
+
+    /**
+     * Verifica che venga sollevata un'eccezione se l'utente non ha accesso alla nota
+     * di cui si richiede la cronologia delle versioni.
+     */
 
     @Test
     @DisplayName("Dovrebbe fallire l'ottenimento cronologia se utente non ha accesso")
@@ -701,6 +976,11 @@ class NoteServiceTest {
         verify(noteRepository).findById(1L);
         verify(noteVersionService, never()).getVersionHistory(anyLong());
     }
+
+    /**
+     * Verifica che venga restituita una versione specifica della nota se accessibile
+     * all'utente che la richiede.
+     */
 
     @Test
     @DisplayName("Dovrebbe ottenere una versione specifica se accessibile")
@@ -724,6 +1004,10 @@ class NoteServiceTest {
         verify(noteVersionService).getVersion(1L, 2);
     }
 
+    /**
+     * Verifica che venga restituito Optional vuoto se la versione richiesta non esiste.
+     */
+
     @Test
     @DisplayName("Dovrebbe restituire vuoto se versione non esiste")
     void shouldReturnEmptyIfVersionNotExists() {
@@ -740,6 +1024,11 @@ class NoteServiceTest {
         verify(noteRepository).findById(1L);
         verify(noteVersionService).getVersion(1L, 999);
     }
+
+    /**
+     * Verifica che il ripristino di una versione precedente della nota aggiorni
+     * correttamente titolo e contenuto.
+     */
 
     @Test
     @DisplayName("Dovrebbe ripristinare una versione precedente")
@@ -775,6 +1064,11 @@ class NoteServiceTest {
         verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), contains("Ripristino alla versione 2"));
     }
 
+    /**
+     * Verifica che venga sollevata un'eccezione se si tenta di ripristinare
+     * una versione non esistente.
+     */
+
     @Test
     @DisplayName("Dovrebbe fallire il ripristino se versione non esiste")
     void shouldFailRestoreIfVersionNotExists() {
@@ -792,6 +1086,11 @@ class NoteServiceTest {
         verify(noteRepository, never()).save(any(Note.class));
     }
 
+    /**
+     * Verifica che il ripristino di una versione fallisca se l'utente non ha
+     * permessi di scrittura sulla nota.
+     */
+
     @Test
     @DisplayName("Dovrebbe fallire il ripristino se utente non ha accesso di scrittura")
     void shouldFailRestoreIfUserHasNoWriteAccess() {
@@ -807,6 +1106,10 @@ class NoteServiceTest {
         verify(noteVersionService, never()).getVersion(anyLong(), anyInt());
     }
 
+    /**
+     * Verifica il corretto confronto tra due versioni di una nota,
+     * rilevando modifiche nel titolo e nel contenuto.
+     */
 
     @Test
     @DisplayName("Dovrebbe confrontare due versioni di una nota")
@@ -838,6 +1141,10 @@ class NoteServiceTest {
     }
 
 
+    /**
+     * Verifica che venga sollevata un'eccezione se si tenta di confrontare
+     * versioni di nota non esistenti.
+     */
 
     @Test
     @DisplayName("Dovrebbe fallire il confronto se una delle versioni non esiste")
@@ -858,6 +1165,11 @@ class NoteServiceTest {
         verify(noteVersionService).getVersion(1L, 1);
         verify(noteVersionService).getVersion(1L, 999);
     }
+
+    /**
+     * Verifica che venga creata una nuova versione della nota durante l'aggiornamento
+     * del contenuto o del titolo.
+     */
 
     @Test
     @DisplayName("Dovrebbe creare una versione quando si aggiorna una nota")
@@ -885,6 +1197,10 @@ class NoteServiceTest {
         verify(noteVersionService).createVersion(any(Note.class), eq("testuser"), anyString());
     }
 
+    /**
+     * Verifica che l'aggiornamento dei permessi della nota non comporti la creazione
+     * di una nuova versione.
+     */
 
     @Test
     @DisplayName("Dovrebbe aggiornare i permessi senza creare una versione")
@@ -932,6 +1248,10 @@ class NoteServiceTest {
         );
     }
 
+    /**
+     * Verifica che tutte le versioni di una nota vengano eliminate
+     * quando la nota stessa viene cancellata.
+     */
 
     @Test
     @DisplayName("Dovrebbe eliminare tutte le versioni quando si elimina una nota")
@@ -948,7 +1268,10 @@ class NoteServiceTest {
         verify(noteRepository).delete(testNote);
     }
 
-
+    /**
+     * Test per la modifica di una nota da parte di un collaboratore con permessi di scrittura.
+     * Verifica che la modifica venga accettata.
+     */
 
     @Test
     @DisplayName("UC4.S13 - Test modifica nota con permessi scrittura")
@@ -984,6 +1307,11 @@ class NoteServiceTest {
         verify(noteRepository).save(any(Note.class));
     }
 
+    /**
+     * Test che verifica il rifiuto della modifica di una nota da parte
+     * di un utente senza permessi di scrittura.
+     */
+
     @Test
     @DisplayName("UC4.S14 - Test rifiuto modifica senza permessi")
     void testRejectUpdateWithoutPermission() {
@@ -1006,6 +1334,10 @@ class NoteServiceTest {
 
         verify(noteRepository, never()).save(any());
     }
+
+    /**
+     * Test che conferma che il proprietario della nota può sempre modificarla.
+     */
 
     @Test
     @DisplayName("UC4.S15 - Test modifica nota da proprietario sempre consentita")
@@ -1030,6 +1362,11 @@ class NoteServiceTest {
         verify(noteRepository).save(any());
     }
 
+    /**
+     * Test che verifica il fallimento della modifica di una nota
+     * da parte di un utente con permessi solo di lettura.
+     */
+
     @Test
     @DisplayName("UC4.S16 - Test modifica nota con permessi solo lettura fallisce")
     void testUpdateNoteWithReadOnlyPermission() {
@@ -1052,6 +1389,11 @@ class NoteServiceTest {
 
         verify(noteRepository, never()).save(any());
     }
+
+    /**
+     * Test per l'aggiornamento parziale di una nota, verificando
+     * che i campi specificati vengano aggiornati correttamente.
+     */
 
     @Test
     @DisplayName("UC4.S17 - Test aggiornamento campi specifici")
@@ -1081,6 +1423,11 @@ class NoteServiceTest {
         ));
     }
 
+    /**
+     * Test per la gestione dei permessi condivisi in modalità scrittura,
+     * verificando che utenti autorizzati possano modificare la nota.
+     */
+
     @Test
     @DisplayName("UC4.S18 - Test gestione permessi condivisa scrittura")
     void testSharedWritePermissions() {
@@ -1108,6 +1455,11 @@ class NoteServiceTest {
         assertEquals("Modified by Writer", result.getTitolo());
         verify(noteRepository).save(any());
     }
+
+    /**
+     * Test che verifica la conservazione dei permessi di lettura e scrittura
+     * durante l'aggiornamento della nota.
+     */
 
     @Test
     @DisplayName("UC4.S19 - Test conservazione permessi durante modifica")
@@ -1137,9 +1489,6 @@ class NoteServiceTest {
                         && savedNote.getTipoPermesso() == TipoPermesso.CONDIVISA_SCRITTURA
         ));
     }
-
-
-
 
 
 }

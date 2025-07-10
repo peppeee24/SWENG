@@ -15,6 +15,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test unitari per la verifica della disponibilità di username e email
+ * tramite il servizio {@link UserService}.
+ * <p>
+ * Questi test validano il corretto funzionamento dei metodi che controllano
+ * se username o email siano già presenti nel sistema, gestendo anche casi
+ * con caratteri speciali e differenze di maiuscole/minuscole.
+ * <p>
+ * Le dipendenze {@link UserRepository}, {@link PasswordEncoder} e {@link JwtUtil}
+ * sono mockate per isolare la logica di business.
+ */
+
 @ExtendWith(MockitoExtension.class)
 public class UsernameAvailabilityTest {
 
@@ -30,6 +42,14 @@ public class UsernameAvailabilityTest {
     @InjectMocks
     private UserService userService;
 
+
+    /**
+     * Verifica che venga restituito true quando lo username NON esiste nel sistema.
+     * <p>
+     * Mocka il repository per restituire false alla verifica di esistenza username.
+     * Verifica che il metodo isUsernameAvailable restituisca true e venga chiamato il repository.
+     */
+
     @Test
     void shouldReturnTrueWhenUsernameIsAvailable() {
         String availableUsername = "newuser";
@@ -40,6 +60,13 @@ public class UsernameAvailabilityTest {
         assertTrue(isAvailable);
         verify(userRepository).existsByUsername(availableUsername);
     }
+
+    /**
+     * Verifica che venga restituito false quando lo username è già presente nel sistema.
+     * <p>
+     * Mocka il repository per restituire true alla verifica di esistenza username.
+     * Verifica che il metodo isUsernameAvailable restituisca false e venga chiamato il repository.
+     */
 
     @Test
     void shouldReturnFalseWhenUsernameIsNotAvailable() {
@@ -52,6 +79,13 @@ public class UsernameAvailabilityTest {
         verify(userRepository).existsByUsername(takenUsername);
     }
 
+    /**
+     * Verifica che venga restituito true quando l'email NON è già utilizzata.
+     * <p>
+     * Mocka il repository per restituire false alla verifica di esistenza email.
+     * Verifica che il metodo isEmailAvailable restituisca true e venga chiamato il repository.
+     */
+
     @Test
     void shouldReturnTrueWhenEmailIsAvailable() {
         String availableEmail = "new@example.com";
@@ -62,6 +96,13 @@ public class UsernameAvailabilityTest {
         assertTrue(isAvailable);
         verify(userRepository).existsByEmail(availableEmail);
     }
+
+    /**
+     * Verifica che venga restituito false quando l'email è già utilizzata.
+     * <p>
+     * Mocka il repository per restituire true alla verifica di esistenza email.
+     * Verifica che il metodo isEmailAvailable restituisca false e venga chiamato il repository.
+     */
 
     @Test
     void shouldReturnFalseWhenEmailIsNotAvailable() {
@@ -74,6 +115,14 @@ public class UsernameAvailabilityTest {
         verify(userRepository).existsByEmail(takenEmail);
     }
 
+    /**
+     * Verifica il controllo case insensitive sugli username.
+     * <p>
+     * Mocka il repository per restituire true anche se lo username è in maiuscolo,
+     * simulando che la ricerca sia case sensitive e l'username sia già preso.
+     * Verifica che isUsernameAvailable restituisca false.
+     */
+
     @Test
     void shouldHandleCaseInsensitiveUsernameCheck() {
         String upperCaseUsername = "TESTUSER";
@@ -85,6 +134,14 @@ public class UsernameAvailabilityTest {
         verify(userRepository).existsByUsername(upperCaseUsername);
     }
 
+    /**
+     * Verifica il corretto funzionamento del controllo username contenenti caratteri speciali.
+     * <p>
+     * Mocka il repository per restituire false per uno username con punti, underscore e numeri,
+     * simulando username valido e disponibile.
+     * Verifica che isUsernameAvailable restituisca true.
+     */
+    
     @Test
     void shouldHandleSpecialCharactersInUsername() {
         String specialUsername = "user.name_123";
