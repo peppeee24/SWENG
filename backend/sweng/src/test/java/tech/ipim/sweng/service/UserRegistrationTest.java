@@ -26,6 +26,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test unitari per la registrazione utenti tramite il servizio {@link UserService}.
+ * <p>
+ * Questi test verificano i vari scenari di registrazione, inclusi i casi di
+ * successo, tentativi di registrazione con username o email già esistenti,
+ * e la registrazione senza email opzionale.
+ * <p>
+ * Le dipendenze {@link UserRepository}, {@link PasswordEncoder} e {@link JwtUtil}
+ * sono mockate per isolare la logica di business del servizio.
+ */
+
 @ExtendWith(MockitoExtension.class)
 public class UserRegistrationTest {
 
@@ -43,6 +54,12 @@ public class UserRegistrationTest {
 
     private RegistrationRequest validRequest;
 
+    /**
+     * Setup iniziale comune a tutti i test.
+     * <p>
+     * Crea una richiesta di registrazione valida con username, password ed email.
+     */
+
     @BeforeEach
     void setUp() {
         validRequest = new RegistrationRequest();
@@ -51,6 +68,15 @@ public class UserRegistrationTest {
         validRequest.setEmail("test@example.com");
     }
 
+     /**
+     * Test di registrazione con dati validi.
+     * <p>
+     * Mocka il repository per indicare che username ed email sono liberi,
+     * mocka l'encoding della password e il salvataggio utente.
+     * Verifica che la risposta indichi successo e che i dati ritornati
+     * corrispondano a quelli della richiesta.
+     * Inoltre, verifica che siano state chiamate tutte le interazioni previste.
+     */
     @Test
     void shouldRegisterNewUserWithValidData() {
         when(userRepository.existsByUsername("testuser")).thenReturn(false);
@@ -75,6 +101,14 @@ public class UserRegistrationTest {
         verify(userRepository).save(any(User.class));
     }
 
+    /**
+     * Test di registrazione fallita a causa di username già esistente.
+     * <p>
+     * Mocka il repository per indicare che lo username esiste già.
+     * Verifica che venga lanciata l'eccezione {@link UserAlreadyExistsException}
+     * con messaggio corretto e che non venga effettuato il salvataggio utente.
+     */
+
     @Test
     void shouldFailWhenUsernameAlreadyExists() {
         when(userRepository.existsByUsername("testuser")).thenReturn(true);
@@ -88,6 +122,14 @@ public class UserRegistrationTest {
         verify(userRepository).existsByUsername("testuser");
         verify(userRepository, never()).save(any(User.class));
     }
+
+     /**
+     * Test di registrazione fallita a causa di email già esistente.
+     * <p>
+     * Mocka il repository per indicare che lo username è libero ma l'email è già in uso.
+     * Verifica che venga lanciata l'eccezione {@link UserAlreadyExistsException}
+     * con messaggio corretto e che non venga effettuato il salvataggio utente.
+     */
 
     @Test
     void shouldFailWhenEmailAlreadyExists() {
@@ -105,6 +147,15 @@ public class UserRegistrationTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
+    /**
+     * Test di registrazione con email opzionale NON fornita.
+     * <p>
+     * Mocka il repository per indicare che lo username è libero,
+     * mocka l'encoding della password e il salvataggio utente.
+     * Verifica che la registrazione abbia successo, che l'email nel
+     * risultato sia nulla e che non venga mai verificata la presenza email.
+     */
+    
     @Test
     void shouldRegisterUserWithoutOptionalEmail() {
         RegistrationRequest requestNoEmail = new RegistrationRequest();

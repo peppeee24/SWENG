@@ -4,6 +4,20 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.util.Set;
+/**
+ * DTO per la richiesta di aggiornamento di una nota.
+ * <p>
+ * Contiene i dati modificabili di una nota, con le rispettive validazioni.
+ * <p>
+ * Campi:
+ * <ul>
+ *   <li>{@code id} - identificativo univoco della nota da aggiornare</li>
+ *   <li>{@code titolo} - obbligatorio, massimo 100 caratteri</li>
+ *   <li>{@code contenuto} - obbligatorio, massimo 280 caratteri</li>
+ *   <li>{@code tags} - set di tag associati alla nota (opzionale)</li>
+ *   <li>{@code cartelle} - set di cartelle di appartenenza (opzionale)</li>
+ * </ul>
+ */
 
 public class UpdateNoteRequest {
 

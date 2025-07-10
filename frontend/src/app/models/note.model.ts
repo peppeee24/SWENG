@@ -1,5 +1,7 @@
 // note.model.ts
-
+/**
+ * Modello dati di una nota nel sistema.
+ */
 export interface Note {
   id: number;
   titolo: string;
@@ -20,12 +22,19 @@ export interface Note {
   lockExpiresAt?: string;
 }
 
+/**
+ * Rappresenta i permessi di una nota.
+ */
 export interface Permission {
   tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
   utentiLettura: string[];
   utentiScrittura: string[];
 }
 
+
+/**
+ * Modello di richiesta per la creazione di una nuova nota.
+ */
 export interface CreateNoteRequest {
   titolo: string;
   contenuto: string;
@@ -34,6 +43,10 @@ export interface CreateNoteRequest {
   permessi: Permission;
 }
 
+
+/**
+ * Modello di richiesta per l'aggiornamento di una nota esistente (senza permessi).
+ */
 export interface UpdateNoteRequest {
   id: number;
   titolo: string;
@@ -42,21 +55,33 @@ export interface UpdateNoteRequest {
   cartelle: string[];
 }
 
+/**
+ * Modello di richiesta di aggiornamento di una nota comprensivo di permessi.
+ */
 export interface UpdateNoteRequestWithPermissions extends UpdateNoteRequest {
   permessi: Permission;
 }
 
+/**
+ * Modello per aggiornare esclusivamente i permessi di una nota.
+ */
 export interface PermissionsRequest {
   tipoPermesso: 'PRIVATA' | 'CONDIVISA_LETTURA' | 'CONDIVISA_SCRITTURA';
   utentiLettura: string[];
   utentiScrittura: string[];
 }
 
+/**
+ * Modello di richiesta per bloccare o sbloccare una nota.
+ */
 export interface NoteLockRequest {
   noteId: number;
   action: 'LOCK' | 'UNLOCK';
 }
 
+/**
+ * Risposta del backend per operazioni di lock/unlock su una nota.
+ */
 export interface NoteLockResponse {
   success: boolean;
   locked: boolean;
@@ -65,6 +90,9 @@ export interface NoteLockResponse {
   message: string;
 }
 
+/**
+ * Risposta standard per operazioni su una singola nota.
+ */
 export interface NoteResponse {
   success: boolean;
   message: string;
@@ -72,6 +100,9 @@ export interface NoteResponse {
   note?: Note; // Mantenuto per retrocompatibilità
 }
 
+/**
+ * Risposta per liste di note.
+ */
 export interface NotesListResponse {
   success: boolean;
   notes: Note[];
@@ -84,6 +115,9 @@ export interface NotesListResponse {
   dataModifica?: string;
 }
 
+/**
+ * Modello di una versione di una nota.
+ */
 export interface NoteVersion {
   id: number;
   versionNumber: number;
@@ -94,6 +128,9 @@ export interface NoteVersion {
   changeDescription: string;
 }
 
+/**
+ * Statistiche aggregate per un utente.
+ */
 export interface UserStats {
   noteCreate: number;
   noteCondivise: number;
@@ -103,6 +140,9 @@ export interface UserStats {
   allCartelle: string[];
 }
 
+/**
+ * DTO per una versione di nota, usato per confronti e visualizzazione.
+ */
 export interface NoteVersionDto {
   id: number;
   versionNumber: number;
@@ -113,10 +153,16 @@ export interface NoteVersionDto {
   changeDescription?: string;
 }
 
+/**
+ * Modello per richiedere il ripristino di una versione di una nota.
+ */
 export interface RestoreVersionRequest {
   versionNumber: number;
 }
 
+/**
+ * DTO per il confronto tra due versioni di una nota.
+ */
 export interface VersionComparisonDto {
   version1: NoteVersionDto;
   version2: NoteVersionDto;
@@ -132,6 +178,9 @@ export interface VersionComparisonDto {
 
 }
 
+/**
+ * Filtro combinato per ricerca note.
+ */
 export interface SearchFilters {
   search?: string;
   tag?: string;

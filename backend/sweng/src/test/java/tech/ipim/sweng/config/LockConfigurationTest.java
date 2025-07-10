@@ -16,6 +16,20 @@ import tech.ipim.sweng.repository.UserRepository;
 import tech.ipim.sweng.service.NoteLockService;
 import tech.ipim.sweng.service.NoteService;
 
+/**
+ * Test di configurazione per il sistema di gestione dei lock sulle note.
+ * <p>
+ * Verifica che i bean principali relativi al lock (in particolare {@link NoteLockService})
+ * vengano correttamente istanziati e configurati all'interno del contesto Spring.
+ * <p>
+ * I test sono eseguiti con profilo {@code "test"} e utilizzano {@code @MockitoExtension}
+ * per il mocking delle dipendenze.
+ *
+ * <ul>
+ *   <li><b>TTD-CONFIG-001</b>: verifica che {@code NoteLockService} sia istanziato</li>
+ *   <li><b>TTD-CONFIG-002</b>: verifica che la configurazione iniziale del lock non sia nulla</li>
+ * </ul>
+ */
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 @DisplayName("Lock Configuration - Test configurazione sistema lock")

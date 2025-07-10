@@ -1,4 +1,16 @@
 package tech.ipim.sweng.dto;
+/**
+ * DTO che rappresenta lo stato di blocco di una nota.
+ * <p>
+ * Fornisce informazioni se la nota è bloccata per la modifica,
+ * se l’utente corrente può modificarla, chi ha effettuato il blocco
+ * e un messaggio descrittivo relativo allo stato.
+ * <p>
+ * Sono presenti factory methods per creare rapidamente istanze comuni:
+ * - nota sbloccata e modificabile,
+ * - nota bloccata dall’utente corrente,
+ * - nota bloccata da un altro utente.
+ */
 
 public class NoteLockStatusDto {
 

@@ -5,6 +5,13 @@ import { User, UserDisplayName } from '../models/user.model';
 import { AuthService } from './auth';
 import { environment } from '../environments/environment';
 
+/**
+ * Servizio Angular per la gestione degli utenti.
+ * Permette di recuperare la lista utenti dal backend,
+ * mappando i dati per una visualizzazione più leggibile,
+ * e gestisce gli stati di caricamento e errori con segnali reattivi.
+ */
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,7 +24,10 @@ export class UserService {
   isLoading = signal(false);
   error = signal<string | null>(null);
 
-  //  metodo per creare gli headers con il token JWT
+  /**
+   * Crea gli headers HTTP con il token JWT per autorizzazione.
+   * @returns HttpHeaders con Content-Type e Authorization Bearer token
+   */
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -26,6 +36,12 @@ export class UserService {
     });
   }
 
+  /**
+   * Recupera la lista di tutti gli utenti dal backend.
+   * Aggiorna il segnale `users` con la lista di utenti mappati a UserDisplayName.
+   * Gestisce gli stati di caricamento e di errore.
+   * @returns Observable di array User dal backend
+   */
   getAllUsers(): Observable<User[]> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -53,6 +69,14 @@ export class UserService {
     );
   }
 
+  /**
+   * Crea una stringa displayName a partire dai dati dell'utente.
+   * - Se sono presenti nome e cognome, concatena "nome cognome (username)"
+   * - Se presente solo nome, concatena "nome (username)"
+   * - Altrimenti restituisce solo lo username
+   * @param user - oggetto User da cui ricavare il displayName
+   * @returns stringa da mostrare come nome utente leggibile
+   */
   private createDisplayName(user: User): string {
     if (user.nome && user.cognome) {
       return `${user.nome} ${user.cognome} (${user.username})`;

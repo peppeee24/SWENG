@@ -1,5 +1,3 @@
-// note-version-history.component.ts - Versione completa con tutti i metodi richiesti
-
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotesService } from '../../../services/notes';
@@ -73,6 +71,10 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     return contributors.size;
   });
 
+  /**
+ * Hook Angular chiamato all'inizializzazione del componente.
+ * Se il componente è visibile e dispone di un noteId valido, carica la cronologia versioni.
+ */
   ngOnInit(): void {
     console.log('NoteVersionHistory ngOnInit - noteId:', this.noteId, 'isVisible:', this.isVisible);
     if (this.noteId && this.isVisible) {
@@ -80,6 +82,12 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     }
   }
 
+  /**
+ * Hook Angular chiamato quando cambiano gli @Input() del componente.
+ * Se cambiano `noteId` o `isVisible`, richiama `loadVersionHistory()` se condizioni soddisfatte.
+ * 
+ * @param changes - Oggetto contenente le modifiche degli input
+ */
   ngOnChanges(changes: SimpleChanges): void {
     console.log('NoteVersionHistory ngOnChanges:', changes);
 
@@ -92,6 +100,14 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
       }
     }
   }
+
+  /**
+ * Carica la cronologia delle versioni della nota corrente dal server.
+ * Se il noteId non è definito, mostra un errore.
+ * La risposta viene elaborata per adattarsi ai diversi formati possibili restituiti dal backend.
+ * Le versioni valide (con versionNumber numerico) vengono salvate nel signal `versions`.
+ * In caso di errore, viene settato un messaggio di errore nel signal `error`.
+ */
 
   loadVersionHistory(): void {
     if (!this.noteId) {
@@ -167,12 +183,26 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     });
   }
 
+/**
+ * Gestisce la selezione di una versione della nota.
+ * Imposta la versione selezionata nel signal `selectedVersion`
+ * e abilita la visualizzazione del confronto tramite `showComparison`.
+ * 
+ * @param version - La versione della nota selezionata dall'utente
+ */
   onVersionSelect(version: NoteVersionDto): void {
     console.log('Versione selezionata:', version);
     this.selectedVersion.set(version);
     this.showComparison.set(true);
   }
 
+/**
+ * Emette un evento di ripristino versione verso il componente genitore.
+ * Richiede una conferma tramite `confirm()` all'utente.
+ * Può ricevere direttamente un numero di versione o un oggetto `NoteVersionDto`.
+ * 
+ * @param versionOrNumber - numero di versione o oggetto versione da ripristinare
+ */
   onRestoreVersion(versionOrNumber: NoteVersionDto | number): void {
     let versionNumber: number;
 
@@ -193,6 +223,15 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     }
   }
 
+  /**
+ * Restituisce la classe CSS da applicare al badge della versione in base al suo stato:
+ * - 'latest' se è la versione più recente
+ * - 'selected' se è la versione selezionata
+ * - default 'version-badge' altrimenti
+ * 
+ * @param version - La versione per cui calcolare la classe CSS
+ * @returns La stringa della classe CSS da applicare
+ */
   getVersionBadgeClass(version: NoteVersionDto): string {
     const sorted = this.sortedVersions();
     if (sorted.length === 0) return 'version-badge';
@@ -209,6 +248,14 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     return 'version-badge';
   }
 
+ /**
+ * Restituisce l'icona da visualizzare accanto alla versione:
+ * - ⭐ se è la versione più recente
+ * - 📄 per tutte le altre
+ * 
+ * @param version - La versione per cui calcolare l'icona
+ * @returns Una stringa contenente l'emoji appropriata
+ */
   getVersionIcon(version: NoteVersionDto): string {
     const sorted = this.sortedVersions();
     if (sorted.length === 0) return '📄';
@@ -220,7 +267,14 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     return '📄';
   }
 
-
+  /**
+ * Calcola il tempo relativo dalla data specificata a "ora",
+ * restituendo una stringa leggibile (es. '2 giorni fa', '3 ore fa').
+ * Se la data è nulla o non valida, restituisce un messaggio di fallback.
+ * 
+ * @param dateString - La data in formato stringa ISO
+ * @returns Una stringa descrittiva del tempo trascorso
+ */
 
   getRelativeTime(dateString: string): string {
     if (!dateString) return 'Data sconosciuta';
@@ -247,7 +301,12 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
       return 'Data non valida';
     }
   }
-
+  
+/**
+ * Chiude la finestra/modale della cronologia versioni.
+ * Resetta i signal `selectedVersion` e `showComparison`
+ * ed emette l'evento `close` verso il componente padre.
+ */
   onClose(): void {
     console.log('Chiusura cronologia versioni');
     this.selectedVersion.set(null);
@@ -255,6 +314,14 @@ export class NoteVersionHistoryComponent implements OnInit, OnChanges {
     this.close.emit();
   }
 
+  /**
+ * Format di una data in stringa nel formato italiano completo:
+ * 'gg/MM/yyyy HH:mm'
+ * Se la data è nulla o non valida, restituisce un messaggio di fallback.
+ * 
+ * @param dateString - La data da formattare in stringa
+ * @returns La stringa formattata o un messaggio di errore
+ */
   formatDate(dateString: string): string {
     if (!dateString) return 'Data non disponibile';
 

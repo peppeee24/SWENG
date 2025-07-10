@@ -16,6 +16,31 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test di integrazione per il repository {@link NoteVersionRepository}.
+ * <p>
+ * Verifica il corretto comportamento delle query personalizzate e delle
+ * operazioni CRUD sulle entità {@link NoteVersion}, utilizzando
+ * {@link TestEntityManager} per simulare operazioni di persistenza reali.
+ * <p>
+ * <p>
+ * Riepilogo test implementati:
+ * <ul>
+ *   <li>{@code shouldFindVersionsByNoteIdOrderedByVersionNumberDesc} – Ordine decrescente versioni</li>
+ *   <li>{@code shouldFindLatestVersionNumber} – Recupero numero versione più recente</li>
+ *   <li>{@code shouldReturnEmptyIfNoVersionsExist} – Nessuna versione presente</li>
+ *   <li>{@code shouldFindVersionByNoteIdAndVersionNumber} – Ricerca per numero versione</li>
+ *   <li>{@code shouldReturnEmptyForNonExistentVersion} – Versione inesistente</li>
+ *   <li>{@code shouldReturnEmptyForNonExistentNote} – Nota inesistente</li>
+ *   <li>{@code shouldFindVersionHistoryOrdered} – Cronologia ordinata</li>
+ *   <li>{@code shouldReturnEmptyListForNoteWithoutVersions} – Cronologia vuota</li>
+ *   <li>{@code shouldSaveNewVersionCorrectly} – Salvataggio nuova versione</li>
+ *   <li>{@code shouldDeleteVersionCorrectly} – Cancellazione versione</li>
+ *   <li>{@code shouldHandleNoteRelationshipCorrectly} – Associazione versioni-note</li>
+ *   <li>{@code shouldHandleSpecialCharactersInContent} – Gestione caratteri speciali</li>
+ * </ul>
+ */
+
 @DataJpaTest
 class NoteVersionRepositoryTest {
 
@@ -30,6 +55,11 @@ class NoteVersionRepositoryTest {
     private NoteVersion version1;
     private NoteVersion version2;
     private NoteVersion version3;
+
+    /**
+     * Setup ambiente di test: crea utente di test, nota di test e tre versioni associate
+     * con timestamp differenziati per testare ordinamento e cronologia.
+     */
 
     @BeforeEach
     void setUp() {
@@ -56,6 +86,15 @@ class NoteVersionRepositoryTest {
         version3 = entityManager.persistAndFlush(version3);
     }
 
+    /**
+     * Verifica il corretto ordinamento decrescente delle versioni per una nota.
+     * <p>
+     * Valida:
+     * - Numero totale versioni corretto
+     * - Ordinamento decrescente dei numeri di versione
+     * - Appartenenza di tutte le versioni alla stessa nota
+     */
+
     @Test
     @DisplayName("Dovrebbe trovare versioni ordinate per numero decrescente")
     void shouldFindVersionsByNoteIdOrderedByVersionNumberDesc() {
@@ -72,6 +111,10 @@ class NoteVersionRepositoryTest {
         assertThat(versions).allMatch(v -> v.getNote().getId().equals(testNote.getId()));
     }
 
+    /**
+     * Verifica il recupero del numero di versione più recente per una nota.
+     */
+
     @Test
     @DisplayName("Dovrebbe trovare il numero di versione più alto")
     void shouldFindLatestVersionNumber() {
@@ -82,6 +125,10 @@ class NoteVersionRepositoryTest {
         assertThat(latestVersionNumber).isPresent();
         assertThat(latestVersionNumber.get()).isEqualTo(3);
     }
+
+    /**
+     * Verifica che, in assenza di versioni per una nota, il repository restituisca Optional e lista vuoti.
+     */
 
     @Test
     @DisplayName("Dovrebbe restituire vuoto se non ci sono versioni")
@@ -99,6 +146,10 @@ class NoteVersionRepositoryTest {
         assertThat(versions).isEmpty();
     }
 
+    /**
+     * Verifica il recupero di una specifica versione di una nota tramite ID nota e numero versione.
+     */
+
     @Test
     @DisplayName("Dovrebbe trovare una versione specifica per nota e numero")
     void shouldFindVersionByNoteIdAndVersionNumber() {
@@ -113,6 +164,10 @@ class NoteVersionRepositoryTest {
         assertThat(foundVersion.get().getChangeDescription()).isEqualTo("Seconda versione");
     }
 
+    /**
+     * Verifica che la ricerca di una versione inesistente restituisca Optional vuoto.
+     */
+
     @Test
     @DisplayName("Dovrebbe restituire vuoto per versione inesistente")
     void shouldReturnEmptyForNonExistentVersion() {
@@ -123,6 +178,10 @@ class NoteVersionRepositoryTest {
         assertThat(foundVersion).isEmpty();
     }
 
+    /**
+     * Verifica che la ricerca su una nota inesistente restituisca Optional vuoto.
+     */
+
     @Test
     @DisplayName("Dovrebbe restituire vuoto per nota inesistente")
     void shouldReturnEmptyForNonExistentNote() {
@@ -132,6 +191,10 @@ class NoteVersionRepositoryTest {
         // Then
         assertThat(foundVersion).isEmpty();
     }
+
+    /**
+     * Verifica il recupero della cronologia delle versioni ordinata per numero versione decrescente.
+     */
 
     @Test
     @DisplayName("Dovrebbe trovare la cronologia delle versioni ordinata per numero decrescente")
@@ -153,6 +216,10 @@ class NoteVersionRepositoryTest {
         assertThat(history.get(2).getCreatedBy()).isEqualTo("testuser");
     }
 
+    /**
+     * Verifica che la cronologia di una nota senza versioni restituisca una lista vuota.
+     */
+
     @Test
     @DisplayName("Dovrebbe restituire lista vuota per nota senza versioni")
     void shouldReturnEmptyListForNoteWithoutVersions() {
@@ -166,6 +233,10 @@ class NoteVersionRepositoryTest {
         // Then
         assertThat(history).isEmpty();
     }
+
+    /**
+     * Verifica il salvataggio di una nuova versione e la sua corretta persistenza.
+     */
 
     @Test
     @DisplayName("Dovrebbe salvare una nuova versione correttamente")
@@ -192,6 +263,10 @@ class NoteVersionRepositoryTest {
         assertThat(foundVersion.get().getId()).isEqualTo(savedVersion.getId());
     }
 
+    /**
+     * Verifica la cancellazione di una versione e la persistenza delle rimanenti.
+     */
+
     @Test
     @DisplayName("Dovrebbe eliminare una versione correttamente")
     void shouldDeleteVersionCorrectly() {
@@ -212,6 +287,10 @@ class NoteVersionRepositoryTest {
         assertThat(remainingVersions).extracting(NoteVersion::getVersionNumber)
                 .containsExactly(3, 1);
     }
+
+    /**
+     * Verifica la corretta associazione tra versioni e note diverse.
+     */
 
     @Test
     @DisplayName("Dovrebbe gestire relazione con nota correttamente")
@@ -240,6 +319,10 @@ class NoteVersionRepositoryTest {
        // assertThat(versionsForAnotherNote).allMatch(v -> v.getNote().getId().equals(anotherNote.getId()));
     }
 
+    /**
+     * Verifica la gestione di caratteri speciali in contenuto e titolo di una versione.
+     */
+    
     @Test
     @DisplayName("Dovrebbe gestire caratteri speciali nel contenuto")
     void shouldHandleSpecialCharactersInContent() {

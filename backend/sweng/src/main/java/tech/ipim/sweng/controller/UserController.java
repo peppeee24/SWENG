@@ -33,6 +33,14 @@ public class UserController {
         this.jwtUtil = jwtUtil;
     }
 
+
+    /**
+     * getAllUsers
+     * Restituisce la lista di tutti gli utenti tranne quello attualmente autenticato.
+     *
+     * @param authHeader header Authorization contenente il JWT
+     * @return ResponseEntity con la lista degli utenti o errore HTTP
+     */
     @GetMapping("/list")
     public ResponseEntity<List<UserDto>> getAllUsers(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {

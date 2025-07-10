@@ -25,6 +25,11 @@ export class CartelleService {
   error = signal<string | null>(null);
   selectedCartella = signal<Cartella | null>(null);
 
+
+  /**
+   * Costruisce gli headers HTTP con il token di autorizzazione.
+   * @returns HttpHeaders con Content-Type e Authorization Bearer token
+   */
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -33,6 +38,12 @@ export class CartelleService {
     });
   }
 
+
+  /**
+   * Crea una nuova cartella inviando i dati al backend.
+   * @param request - dati della cartella da creare (nome, descrizione, colore)
+   * @returns Observable di CartellaResponse con esito e dati cartella creata
+   */
   createCartella(request: CreateCartellaRequest): Observable<CartellaResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -52,6 +63,10 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Recupera tutte le cartelle dell'utente dal backend.
+   * @returns Observable di CartelleListResponse contenente lista cartelle e conteggio
+   */
   getAllCartelle(): Observable<CartelleListResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -70,6 +85,11 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Recupera i dettagli di una singola cartella tramite il suo ID.
+   * @param id - identificativo univoco della cartella
+   * @returns Observable di CartellaResponse con i dati della cartella selezionata
+   */
   getCartellaById(id: number): Observable<CartellaResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -87,6 +107,12 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Aggiorna i dati di una cartella esistente.
+   * @param id - ID della cartella da aggiornare
+   * @param request - dati aggiornati della cartella (nome, descrizione, colore)
+   * @returns Observable di CartellaResponse con esito e dati aggiornati
+   */
   updateCartella(id: number, request: UpdateCartellaRequest): Observable<CartellaResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -110,6 +136,11 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Elimina una cartella tramite il suo ID.
+   * @param id - ID della cartella da eliminare
+   * @returns Observable di CartellaResponse con esito dell'operazione
+   */
   deleteCartella(id: number): Observable<CartellaResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -132,6 +163,10 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Recupera le statistiche sulle cartelle (es. numero e nomi).
+   * @returns Observable contenente esito e statistiche delle cartelle
+   */
   getCartelleStats(): Observable<{success: boolean, stats: CartelleStats}> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -149,12 +184,22 @@ export class CartelleService {
     );
   }
 
+  /**
+   * Pulisce lo stato locale rimuovendo tutte le cartelle e la cartella selezionata.
+   * @returns void
+   */
   clearCartelle(): void {
     this.cartelle.set([]);
     this.selectedCartella.set(null);
     this.error.set(null);
   }
 
+  /**
+   * Gestisce gli errori HTTP provenienti dalle chiamate API.
+   * Imposta il messaggio di errore e restituisce un errore Observable.
+   * @param error - errore HttpErrorResponse ricevuto
+   * @returns Observable che emette un errore con messaggio descrittivo
+   */
   private handleError(error: HttpErrorResponse): Observable<never> {
     this.isLoading.set(false);
     let errorMessage = 'Si è verificato un errore sconosciuto';

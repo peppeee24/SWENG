@@ -20,6 +20,14 @@ public class NoteVersionService {
         this.noteVersionRepository = noteVersionRepository;
     }
 
+    /**
+     * Crea una nuova versione della nota specificata.
+     *
+     * @param note               La nota di cui creare la versione
+     * @param username           L'utente che ha effettuato la modifica
+     * @param changeDescription  Descrizione della modifica effettuata
+     * @return La nuova versione salvata della nota
+     */
     @Transactional
     public NoteVersion createVersion(Note note, String username, String changeDescription) {
         Integer nextVersionNumber = getNextVersionNumber(note.getId());
@@ -36,15 +44,32 @@ public class NoteVersionService {
         return noteVersionRepository.save(version);
     }
 
+    /**
+     * Recupera lo storico di tutte le versioni di una nota.
+     *
+     * @param noteId ID della nota di cui recuperare le versioni
+     * @return Lista ordinata di versioni associate alla nota
+     */
     public List<NoteVersion> getVersionHistory(Long noteId) {
         return noteVersionRepository.findVersionHistory(noteId);
     }
 
+    /**
+     * Recupera una specifica versione di una nota.
+     *
+     * @param noteId        ID della nota
+     * @param versionNumber Numero della versione da recuperare
+     * @return Optional contenente la versione se trovata
+     */
     public Optional<NoteVersion> getVersion(Long noteId, Integer versionNumber) {
         return noteVersionRepository.findByNoteIdAndVersionNumber(noteId, versionNumber);
     }
 
-
+    /**
+     * Elimina tutte le versioni associate a una nota.
+     *
+     * @param noteId ID della nota di cui eliminare le versioni
+     */
     @Transactional
     public void deleteAllVersionsForNote(Long noteId) {
         System.out.println("️ Eliminazione di tutte le versioni per nota ID: " + noteId);
@@ -54,9 +79,8 @@ public class NoteVersionService {
             System.out.println(" Trovate " + versions.size() + " versioni da eliminare");
 
             if (!versions.isEmpty()) {
-                // Elimina tutte le versioni
                 noteVersionRepository.deleteAll(versions);
-                noteVersionRepository.flush(); // Forza l'eliminazione immediata
+                noteVersionRepository.flush();
                 System.out.println(" Eliminate " + versions.size() + " versioni per la nota " + noteId);
             } else {
                 System.out.println("ℹ Nessuna versione trovata per la nota " + noteId);
@@ -68,17 +92,37 @@ public class NoteVersionService {
         }
     }
 
-
+    /**
+     * Recupera l'ultima versione disponibile per una nota.
+     *
+     * @param noteId ID della nota
+     * @return Optional contenente l'ultima versione se esistente
+     */
     public Optional<NoteVersion> getLatestVersion(Long noteId) {
         List<NoteVersion> versions = noteVersionRepository.findByNoteIdOrderByVersionNumberDesc(noteId);
         return versions.isEmpty() ? Optional.empty() : Optional.of(versions.get(0));
     }
 
+    /**
+     * Calcola il numero della prossima versione disponibile per una nota.
+     *
+     * @param noteId ID della nota
+     * @return Numero progressivo della prossima versione
+     */
     private Integer getNextVersionNumber(Long noteId) {
         Optional<Integer> latestVersion = noteVersionRepository.findLatestVersionNumber(noteId);
         return latestVersion.orElse(0) + 1;
     }
 
+    /**
+     * Verifica se esistono conflitti tra la versione corrente della nota e la base di confronto.
+     *
+     * @param noteId        ID della nota
+     * @param baseVersion   Numero della versione base di confronto
+     * @param currentContent Contenuto corrente della nota
+     * @param currentTitle   Titolo corrente della nota
+     * @return True se esistono conflitti rispetto alla versione più recente, false altrimenti
+     */
     public boolean hasConflictingChanges(Long noteId, Integer baseVersion, String currentContent, String currentTitle) {
         Optional<NoteVersion> latestVersion = getLatestVersion(noteId);
 

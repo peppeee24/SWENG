@@ -42,9 +42,14 @@ public class AuthController {
         this.userService = userService;
     }
 
+
     /**
-     * Endpoint per verificare la disponibilità di un'email
+     * checkEmailAvailability
+     * Endpoint che Verifica se un'email è disponibile per la registrazione.
      * GET /api/auth/check-email?email=test@example.com
+     *
+     * @param email l'email da controllare
+     * @return ResponseEntity con informazioni sulla disponibilità dell'email
      */
     @GetMapping("/check-email")
     public ResponseEntity<Map<String, Object>> checkEmailAvailability(@RequestParam String email) {
@@ -64,9 +69,16 @@ public class AuthController {
         ));
     }
 
+
+
     /**
-     * Endpoint per la registrazione di un nuovo utente
+     * registerUser
+     * Endpoint che Registra un nuovo utente dopo aver validato i dati forniti.
      * POST /api/auth/register
+     *
+     * @param request        oggetto con i dati di registrazione
+     * @param bindingResult  risultato della validazione del form
+     * @return ResponseEntity con l'esito della registrazione o messaggi di errore
      */
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegistrationRequest request,

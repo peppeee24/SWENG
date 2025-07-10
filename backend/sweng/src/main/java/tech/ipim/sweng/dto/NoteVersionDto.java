@@ -2,6 +2,15 @@ package tech.ipim.sweng.dto;
 
 import tech.ipim.sweng.model.NoteVersion;
 import java.time.LocalDateTime;
+/**
+ * DTO per la rappresentazione di una versione di una nota.
+ * <p>
+ * Contiene i dati relativi a una specifica versione, come il contenuto,
+ * il titolo, l’autore della modifica, la data di creazione della versione
+ * e una descrizione del cambiamento effettuato.
+ * <p>
+ * Viene costruito a partire dall’entità NoteVersion.
+ */
 
 public class NoteVersionDto {
 

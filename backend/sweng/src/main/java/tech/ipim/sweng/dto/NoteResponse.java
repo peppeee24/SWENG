@@ -1,4 +1,13 @@
 package tech.ipim.sweng.dto;
+/**
+ * DTO per la risposta relativa alle operazioni sulle note.
+ * <p>
+ * Contiene un indicatore di successo, un messaggio descrittivo
+ * e opzionalmente il DTO della nota coinvolta nell’operazione.
+ * <p>
+ * Fornisce metodi factory statici per costruire facilmente risposte
+ * di successo o di errore.
+ */
 
 public class NoteResponse {
     

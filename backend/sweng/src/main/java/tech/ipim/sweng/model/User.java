@@ -13,6 +13,18 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+/**
+ * Entità JPA che rappresenta un utente del sistema.
+ * 
+ * Memorizza informazioni personali, credenziali e dati di contatto.
+ * 
+ * I campi principali sono username e password, con regole di validazione.
+ * Sono presenti anche dati opzionali come nome, cognome, email, sesso, 
+ * numero di telefono, città e data di nascita.
+ * 
+ * Gli attributi createdAt e updatedAt registrano la data di creazione
+ * e l’ultima modifica dell’utente.
+ */
 
 @Entity
 @Table(name = "users")

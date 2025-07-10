@@ -20,6 +20,24 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+/**
+ * Entità JPA che rappresenta una nota testuale.
+ * 
+ * Ogni nota ha un titolo, contenuto, un autore (utente proprietario) e metadata 
+ * come date di creazione/modifica, tags, cartelle associate, permessi di accesso, 
+ * blocco per modifica concorrente e versione.
+ * 
+ * Validazioni sui campi:
+ * - titolo obbligatorio, max 100 caratteri
+ * - contenuto obbligatorio, max 280 caratteri
+ * 
+ * Supporta permessi di accesso tramite enumerazione {@link TipoPermesso} e liste di utenti
+ * autorizzati a leggere o scrivere.
+ * 
+ * Supporta un sistema di blocco per evitare modifiche concorrenti (lock con scadenza e utente).
+ * 
+ * Gestisce versionamento tramite un numero di versione incrementale.
+ */
 
 @Entity
 @Table(name = "notes")

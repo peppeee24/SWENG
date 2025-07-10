@@ -26,6 +26,10 @@ export class NotesService {
   error = signal<string | null>(null);
   selectedNote = signal<Note | null>(null);
 
+  /**
+   * Restituisce gli headers HTTP con il token di autorizzazione.
+   * @returns HttpHeaders con Content-Type e Authorization Bearer token
+   */
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -34,6 +38,11 @@ export class NotesService {
     });
   }
 
+  /**
+   * Crea una nuova nota inviando i dati al backend.
+   * @param request - dati della nuova nota (titolo, contenuto, etc.)
+   * @returns Observable di NoteResponse con esito e dati della nota creata
+   */
   createNote(request: CreateNoteRequest): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -53,6 +62,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Recupera tutte le note, eventualmente filtrate (tutte, proprie, condivise).
+   * @param filter - filtro da applicare: 'all', 'own', 'shared'
+   * @returns Observable di NotesListResponse contenente lista note e conteggio
+   */
   getAllNotes(filter: 'all' | 'own' | 'shared' = 'all'): Observable<NotesListResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -73,6 +87,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Rimuove la condivisione di una nota specifica.
+   * @param id - ID della nota da rimuovere dalla condivisione
+   * @returns Observable di risposta generica con esito dell'operazione
+   */
   removeFromSharing(id: number): Observable<any> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -96,6 +115,13 @@ export class NotesService {
       catchError(this.handleError.bind(this))
     );
   }
+
+  /**
+   * Aggiorna i permessi di una nota (lettura, scrittura, tipo permesso).
+   * @param id - ID della nota di cui modificare i permessi
+   * @param permessi - oggetto con i permessi da aggiornare
+   * @returns Observable di NoteResponse con esito e dati aggiornati
+   */
 
   updateNotePermissions(id: number, permessi: PermissionsRequest): Observable<NoteResponse> {
     this.isLoading.set(true);
@@ -144,6 +170,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Aggiorna manualmente la singola nota con dati aggiornati dal backend.
+   * @param noteId - ID della nota da aggiornare in cache locale
+   * @returns void
+   */
   refreshNote(noteId: number): void {
     console.log('Refresh manuale della nota:', noteId);
 
@@ -170,6 +201,11 @@ export class NotesService {
   }
 
   // SISTEMA DI LOCK
+  /**
+   * Richiede il blocco (lock) di una nota per impedirne modifiche concorrenti.
+   * @param noteId - ID della nota da bloccare
+   * @returns Observable di risposta generica
+   */
   lockNote(noteId: number): Observable<any> {
     console.log('Chiamata API lockNote per nota:', noteId);
     return this.http.post(`${this.API_URL}/${noteId}/lock`, {}, {
@@ -182,6 +218,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Verifica lo stato del blocco su una nota.
+   * @param noteId - ID della nota di cui verificare il lock
+   * @returns Observable di risposta generica contenente lo stato del lock
+   */
   getLockStatus(noteId: number): Observable<any> {
     console.log('Chiamata API getLockStatus per nota:', noteId);
 
@@ -195,6 +236,11 @@ export class NotesService {
     );
   }
 
+   /**
+   * Rimuove il blocco su una nota.
+   * @param noteId - ID della nota da sbloccare
+   * @returns Observable di risposta generica
+   */
   unlockNote(noteId: number): Observable<any> {
     console.log('Chiamata API unlockNote per nota:', noteId);
 
@@ -207,6 +253,12 @@ export class NotesService {
       catchError(this.handleError.bind(this))
     );
   }
+
+  /**
+   * Rinnova il blocco su una nota per estendere il tempo di lock.
+   * @param noteId - ID della nota di cui rinnovare il lock
+   * @returns Observable di risposta generica
+   */
 
   refreshLock(noteId: number): Observable<any> {
     console.log('Chiamata API refreshLock per nota:', noteId);
@@ -221,6 +273,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Recupera i dettagli di una singola nota tramite ID.
+   * @param id - ID della nota da recuperare
+   * @returns Observable di NoteResponse con dati della nota selezionata
+   */
   getNoteById(id: number): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -238,6 +295,12 @@ export class NotesService {
     );
   }
 
+  /**
+   * Aggiorna una nota esistente con nuovi dati.
+   * @param id - ID della nota da aggiornare
+   * @param request - dati aggiornati della nota
+   * @returns Observable di NoteResponse con dati aggiornati
+   */
   updateNote(id: number, request: UpdateNoteRequest): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -261,6 +324,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Elimina una nota tramite ID.
+   * @param id - ID della nota da eliminare
+   * @returns Observable di NoteResponse con esito eliminazione
+   */
   deleteNote(id: number): Observable<NoteResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -283,6 +351,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Duplica una nota specifica tramite ID.
+   * @param id - ID della nota da duplicare
+   * @returns Observable di NoteResponse con la nuova nota creata
+   */
   duplicateNote(id: number): Observable<NoteResponse> {
     console.log('NotesService: Duplicazione nota ID:', id);
     console.log('URL chiamata:', `${this.API_URL}/${id}/duplicate`);
@@ -316,6 +389,11 @@ export class NotesService {
     );
   }
 
+   /**
+   * Cerca note tramite parola chiave.
+   * @param keyword - stringa di ricerca
+   * @returns Observable di NotesListResponse con lista note corrispondenti
+   */
   searchNotes(keyword: string): Observable<NotesListResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -334,6 +412,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Recupera note filtrate per tag specifico.
+   * @param tag - tag da usare come filtro
+   * @returns Observable di NotesListResponse con note filtrate
+   */
   getNotesByTag(tag: string): Observable<NotesListResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -352,6 +435,11 @@ export class NotesService {
     );
   }
 
+  /**
+   * Recupera note filtrate per cartella specifica.
+   * @param cartella - nome della cartella da filtrare
+   * @returns Observable di NotesListResponse con note filtrate
+   */
   getNotesByCartella(cartella: string): Observable<NotesListResponse> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -370,6 +458,10 @@ export class NotesService {
     );
   }
 
+  /**
+   * Recupera statistiche relative all'utente e le sue note.
+   * @returns Observable contenente esito e statistiche utente
+   */
   getUserStats(): Observable<{success: boolean, stats: UserStats}> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -387,6 +479,11 @@ export class NotesService {
     );
   }
 
+   /**
+   * Recupera la cronologia delle versioni di una nota.
+   * @param noteId - ID della nota di cui ottenere la cronologia versioni
+   * @returns Observable con array di versioni o array vuoto in caso di errori 404
+   */
   getNoteVersionHistory(noteId: number): Observable<any> {
     console.log('Service: richiesta cronologia versioni per nota:', noteId);
 
@@ -419,6 +516,12 @@ export class NotesService {
     );
   }
 
+  /**
+   * Ripristina una versione precedente di una nota.
+   * @param noteId - ID della nota
+   * @param versionNumber - numero della versione da ripristinare
+   * @returns Observable con risultato del ripristino
+   */
   restoreNoteVersion(noteId: number, versionNumber: number): Observable<any> {
     console.log('Service: ripristino versione', versionNumber, 'per nota:', noteId);
 
@@ -455,7 +558,9 @@ export class NotesService {
   //  METODI PER FILTRI AUTORE E DATA
 
   /**
-   * Recupera le note filtrate per autore
+   * Recupera le note filtrate per autore.
+   * @param autore - nome autore da filtrare
+   * @returns Observable di NotesListResponse con note filtrate
    */
   getNotesByAutore(autore: string): Observable<NotesListResponse> {
     this.isLoading.set(true);
@@ -479,7 +584,11 @@ export class NotesService {
   }
 
   /**
-   * Recupera le note filtrate per range di date
+   * Recupera le note filtrate per intervallo di date e filtro.
+   * @param dataInizio - data di inizio (formato stringa)
+   * @param dataFine - data di fine (formato stringa)
+   * @param filter - filtro applicato (default 'all')
+   * @returns Observable di NotesListResponse con note filtrate
    */
   getNotesByDateRange(dataInizio?: string, dataFine?: string, filter: string = 'all'): Observable<NotesListResponse> {
   console.log('SERVICE: getNotesByDateRange chiamato con:', { dataInizio, dataFine, filter });
@@ -517,7 +626,8 @@ export class NotesService {
 }
 
   /**
-   * Recupera la lista degli autori disponibili per il filtro
+   * Recupera la lista degli autori disponibili per il filtro.
+   * @returns Observable di array stringhe con autori disponibili
    */
 
   getAvailableAutori(): Observable<string[]> {
@@ -543,7 +653,9 @@ export class NotesService {
   }
 
   /**
-   * Metodo di ricerca avanzata che supporta tutti i filtri
+   * Metodo di ricerca avanzata con supporto a tutti i filtri possibili.
+   * @param filters - oggetto contenente i filtri (search, tag, cartella, autore, dataInizio, dataFine)
+   * @returns Observable di NotesListResponse con risultati filtrati
    */
   searchNotesAdvanced(filters: {
     search?: string;
@@ -582,16 +694,27 @@ export class NotesService {
 
   // METODI UTILITY
 
+  /**
+   * Pulisce eventuale cache (se implementata).
+   */
   clearCache(): void {
     console.log('Cache cleared');
   }
 
+  /**
+   * Pulisce eventuale cache (se implementata).
+   */
   clearNotes(): void {
     this.notes.set([]);
     this.selectedNote.set(null);
     this.error.set(null);
   }
 
+  /**
+   * Gestione centralizzata degli errori HTTP.
+   * @param error - HttpErrorResponse ricevuto dall'API
+   * @returns Observable che emette errore con messaggio significativo
+   */
   private handleError(error: HttpErrorResponse): Observable<never> {
     this.isLoading.set(false);
     let errorMessage = 'Si è verificato un errore sconosciuto';

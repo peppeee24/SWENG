@@ -29,6 +29,18 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 
+/**
+ * Test unitari per {@link CartellaService}.
+ * <p>
+ * Questi test verificano in isolamento il corretto funzionamento dei metodi
+ * CRUD e statistici del servizio CartellaService.
+ * <p>
+ * Si testano sia i flussi positivi che le condizioni di errore (es. nome duplicato,
+ * cartella inesistente, cartella non eliminabile se contiene note).
+ * <p>
+ * Le dipendenze dei repository vengono mockate per simulare i comportamenti
+ * necessari ai test, isolando la logica di business.
+ */
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -51,6 +63,13 @@ class CartellaServiceTest {
     private CreateCartellaRequest createRequest;
     private UpdateCartellaRequest updateRequest;
 
+    /**
+     * Setup iniziale prima di ogni test:
+     * - Crea un utente di test con id e username
+     * - Crea una cartella di test associata all'utente
+     * - Prepara richieste di creazione e aggiornamento con dati predefiniti
+     */
+
     @BeforeEach
     void setUp() {
         testUser = new User("testuser", "password123");
@@ -72,6 +91,21 @@ class CartellaServiceTest {
         updateRequest.setColore("#4ecdc4");
     }
 
+     /**
+     * Testa la creazione corretta di una nuova cartella associata ad un utente esistente.
+     *
+     * Sequenza:
+     * - Mock ricerca utente per username
+     * - Mock controllo esistenza cartella con nome dato
+     * - Mock salvataggio cartella
+     * - Invoca il metodo createCartella del servizio
+     *
+     * Valida:
+     * - CartellaDto restituita non nulla e con nome, proprietario corretti
+     * - Numero note inizializzato a zero
+     * - Verifica chiamate ai repository corrette
+     */
+
     @Test
     void shouldCreateCartellaSuccessfully() {
 
@@ -91,6 +125,15 @@ class CartellaServiceTest {
         verify(cartellaRepository).save(any(Cartella.class));
     }
 
+    /**
+     * Verifica che venga lanciata un'eccezione se si prova a creare una cartella
+     * per un utente non esistente.
+     *
+     * Valida:
+     * - Eccezione RuntimeException con messaggio specifico
+     * - Nessun tentativo di salvataggio cartella effettuato
+     */
+
     @Test
     void shouldThrowExceptionWhenUserNotFoundForCreation() {
 
@@ -102,6 +145,15 @@ class CartellaServiceTest {
 
         verify(cartellaRepository, never()).save(any(Cartella.class));
     }
+
+     /**
+     * Verifica che la creazione di una cartella con nome già esistente per lo stesso utente
+     * venga bloccata con eccezione.
+     *
+     * Valida:
+     * - RuntimeException con messaggio appropriato
+     * - Nessun salvataggio eseguito
+     */
 
     @Test
     void shouldThrowExceptionWhenCartellaAlreadyExists() {
@@ -115,6 +167,21 @@ class CartellaServiceTest {
 
         verify(cartellaRepository, never()).save(any(Cartella.class));
     }
+
+    /**
+     * Verifica il recupero della lista di cartelle di un utente, includendo il
+     * corretto conteggio delle note per ogni cartella.
+     *
+     * Sequenza:
+     * - Mock ricerca utente
+     * - Mock ritorno lista cartelle ordinate per data modifica
+     * - Mock conteggio note per cartella
+     *
+     * Valida:
+     * - Dimensione lista attesa
+     * - Correttezza nome e conteggio note per ciascuna cartella
+     * - Verifica chiamate ai repository
+     */
 
     @Test
     void shouldGetUserCartelle() {
@@ -134,6 +201,20 @@ class CartellaServiceTest {
         verify(cartellaRepository).findByProprietarioOrderByDataModificaDesc(testUser);
     }
 
+    /**
+     * Verifica il recupero di una cartella tramite id e username proprietario.
+     *
+     * Sequenza:
+     * - Mock ricerca cartella per id e username
+     * - Mock ricerca note della cartella
+     *
+     * Valida:
+     * - Presenza dell'Optional con dati corretti
+     * - Verifica chiamata al repository corretta
+     *
+     * @return Optional di CartellaDto presente se cartella trovata
+     */
+
     @Test
     void shouldGetCartellaById() {
  
@@ -151,6 +232,13 @@ class CartellaServiceTest {
         verify(cartellaRepository).findByIdAndUsername(1L, "testuser");
     }
 
+    /**
+     * Verifica che venga restituito un Optional vuoto se la cartella
+     * non viene trovata per id e username.
+     *
+     * @return Optional vuoto se cartella inesistente
+     */
+
     @Test
     void shouldReturnEmptyWhenCartellaNotFound() {
 
@@ -162,6 +250,22 @@ class CartellaServiceTest {
 
         assertThat(result).isEmpty();
     }
+
+    /**
+     * Verifica aggiornamento corretto dei dati di una cartella esistente.
+     *
+     * Sequenza:
+     * - Mock ricerca cartella esistente per id e username
+     * - Mock verifica non esistenza di nome duplicato (se diverso dal corrente)
+     * - Mock salvataggio aggiornamento cartella
+     * - Mock ricerca note associate (per DTO)
+     *
+     * Valida:
+     * - DTO aggiornato non nullo
+     * - Verifica corrette chiamate ai repository
+     *
+     * @return DTO aggiornato della cartella
+     */
 
     @Test
     void shouldUpdateCartellaSuccessfully() {
@@ -177,6 +281,14 @@ class CartellaServiceTest {
         verify(cartellaRepository).save(any(Cartella.class));
     }
 
+    /**
+     * Verifica il comportamento in caso di aggiornamento su cartella inesistente.
+     *
+     * Valida:
+     * - Lancio RuntimeException con messaggio appropriato
+     * - Nessun salvataggio eseguito
+     */
+
     @Test
     void shouldThrowExceptionWhenUpdatingNonExistentCartella() {
 
@@ -188,6 +300,15 @@ class CartellaServiceTest {
 
         verify(cartellaRepository, never()).save(any(Cartella.class));
     }
+
+    /**
+     * Verifica il blocco dell'aggiornamento quando il nuovo nome della cartella
+     * è già utilizzato da un'altra cartella dello stesso utente.
+     *
+     * Valida:
+     * - RuntimeException con messaggio di nome duplicato
+     * - Nessun salvataggio eseguito
+     */
 
     @Test
     void shouldThrowExceptionWhenUpdatingWithExistingName() {
@@ -201,6 +322,21 @@ class CartellaServiceTest {
         verify(cartellaRepository, never()).save(any(Cartella.class));
     }
 
+    /**
+     * Verifica la cancellazione di una cartella vuota (senza note).
+     *
+     * Sequenza:
+     * - Mock ricerca cartella
+     * - Mock lista note vuota per la cartella
+     * - Invocazione metodo deleteCartella
+     *
+     * Valida:
+     * - Metodo ritorna true indicando successo
+     * - Chiamata a delete sul repository
+     *
+     * @return boolean true se cancellazione avvenuta
+     */
+
     @Test
     void shouldDeleteEmptyCartellaSuccessfully() {
         when(cartellaRepository.findByIdAndUsername(1L, "testuser")).thenReturn(Optional.of(testCartella));
@@ -211,6 +347,14 @@ class CartellaServiceTest {
         assertThat(result).isTrue();
         verify(cartellaRepository).delete(testCartella);
     }
+
+    /**
+     * Verifica il blocco della cancellazione di una cartella che contiene note.
+     *
+     * Valida:
+     * - Lancio RuntimeException con messaggio che indica presenza note
+     * - Nessuna cancellazione eseguita
+     */
 
     @Test
     void shouldThrowExceptionWhenDeletingCartellaWithNotes() {
@@ -225,6 +369,14 @@ class CartellaServiceTest {
         verify(cartellaRepository, never()).delete(any(Cartella.class));
     }
 
+    /**
+     * Verifica il comportamento di cancellazione quando la cartella non esiste.
+     *
+     * Valida:
+     * - RuntimeException con messaggio specifico
+     * - Nessuna cancellazione eseguita
+     */
+
     @Test
     void shouldThrowExceptionWhenDeletingNonExistentCartella() {
 
@@ -237,6 +389,20 @@ class CartellaServiceTest {
 
         verify(cartellaRepository, never()).delete(any(Cartella.class));
     }
+
+    /**
+     * Testa il recupero delle statistiche sulle cartelle di un utente,
+     * inclusi numero totale e lista dei nomi.
+     *
+     * Sequenza:
+     * - Mock ricerca utente
+     * - Mock conteggio cartelle per utente
+     * - Mock lista cartelle per username
+     *
+     * Valida:
+     * - Statistiche corrette con numero e nomi attesi
+     * - Verifica chiamate ai repository
+     */
 
     @Test
     void shouldGetUserCartelleStats() {
@@ -261,6 +427,14 @@ class CartellaServiceTest {
         verify(cartellaRepository).findByUsername("testuser");
     }
 
+    /**
+     * Verifica che venga lanciata eccezione nel caso in cui si chiedano
+     * le statistiche di un utente inesistente.
+     *
+     * Valida:
+     * - RuntimeException con messaggio utente non trovato
+     */
+
     @Test
     void shouldThrowExceptionWhenGettingStatsForNonExistentUser() {
 
@@ -272,6 +446,16 @@ class CartellaServiceTest {
                 .hasMessage("Utente non trovato: nonexistent");
     }
 
+    /**
+     * Testa l'aggiornamento della cartella mantenendo lo stesso nome,
+     * evitando inutili controlli di nome duplicato.
+     *
+     * Valida:
+     * - DTO aggiornato non nullo
+     * - Verifica che non venga chiamato existsByNomeAndProprietario
+     * - Verifica salvataggio cartella
+     */
+    
     @Test
     void shouldAllowUpdateWithSameName() {
         updateRequest.setNome("Test Cartella");

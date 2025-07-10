@@ -5,6 +5,15 @@ import { Router } from '@angular/router';
 import { AuthService, RegisterRequest, LoginRequest } from '../../services/auth';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
+/**
+ * Componente di autenticazione standalone
+ * 
+ * Gestisce sia il login che la registrazione degli utenti
+ * in base alla modalità impostata. Utilizza Reactive Forms,
+ * validazioni asincrone per username/email, segnali reattivi
+ * per lo stato dell’interfaccia e comunicazione con il backend.
+ */
+
 @Component({
   selector: 'app-auth',
   standalone: true,
@@ -29,6 +38,12 @@ export class AuthComponent implements OnInit {
 
   loginForm: FormGroup;
   registerForm: FormGroup;
+
+  /**
+   * Inizializza i form e definisce i loro validatori.
+   * La validazione custom passwordMatchValidator viene
+   * applicata al form di registrazione.
+   */
 
   constructor() {
     this.loginForm = this.fb.group({
@@ -68,6 +83,8 @@ export class AuthComponent implements OnInit {
     this.testBackendConnection();
   }
 
+  /** Verifica la connessione al backend via healthCheck API */
+
   private testBackendConnection(): void {
     this.authService.healthCheck().subscribe({
       next: (response) => {
@@ -79,6 +96,8 @@ export class AuthComponent implements OnInit {
       }
     });
   }
+
+  /** Validazione asincrona username su valueChanges con debounce e distinctUntilChanged */
 
   private setupUsernameValidation(): void {
     this.registerForm.get('username')?.valueChanges
@@ -95,6 +114,8 @@ export class AuthComponent implements OnInit {
       });
   }
 
+  /** Validazione asincrona email su valueChanges */
+
   private setupEmailValidation(): void {
     this.registerForm.get('email')?.valueChanges
       .pipe(
@@ -109,7 +130,7 @@ export class AuthComponent implements OnInit {
         }
       });
   }
-
+  /** Chiamata al backend per verificare disponibilità username */
   private checkUsernameAvailability(username: string): void {
     this.usernameChecking.set(true);
     this.usernameAvailable.set(null);
@@ -127,7 +148,7 @@ export class AuthComponent implements OnInit {
       }
     });
   }
-
+  /** Chiamata al backend per verificare disponibilità email */
   private checkEmailAvailability(email: string): void {
     this.emailChecking.set(true);
     this.emailAvailable.set(null);
@@ -145,7 +166,7 @@ export class AuthComponent implements OnInit {
       }
     });
   }
-
+  /** Validatore custom che verifica la corrispondenza tra password e conferma */
   passwordMatchValidator(form: FormGroup) {
     const password = form.get('password');
     const confirmPassword = form.get('confirmPassword');
@@ -155,21 +176,21 @@ export class AuthComponent implements OnInit {
     }
     return null;
   }
-
+  /** Passaggio tra modalità login e registrazione */
   switchMode(): void {
     this.isLoginMode.set(!this.isLoginMode());
     this.errorMessage.set('');
     this.successMessage.set('');
     this.resetForms();
   }
-
+  /** Reset dei form e degli stati di validazione asincrona */
   resetForms(): void {
     this.loginForm.reset();
     this.registerForm.reset();
     this.usernameAvailable.set(null);
     this.emailAvailable.set(null);
   }
-
+  /** Esecuzione login */
   onLogin(): void {
     if (this.loginForm.valid) {
       this.isLoading.set(true);
@@ -208,7 +229,7 @@ export class AuthComponent implements OnInit {
       this.errorMessage.set('Compila tutti i campi correttamente.');
     }
   }
-
+  /** Esecuzione registrazione */
   onRegister(): void {
     if (this.registerForm.valid && this.usernameAvailable() !== false && this.emailAvailable() !== false) {
       this.isLoading.set(true);
@@ -271,7 +292,7 @@ export class AuthComponent implements OnInit {
       }
     }
   }
-
+  /** Utility: segna tutti i controlli di un form come toccati */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);

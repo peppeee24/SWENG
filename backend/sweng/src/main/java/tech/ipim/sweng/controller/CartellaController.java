@@ -51,6 +51,11 @@ public class CartellaController {
     /**
      * Crea una nuova cartella
      * POST /api/cartelle
+     *
+     *  @param request        dati per creare la cartella
+     *  @param bindingResult  risultato della validazione
+     *  @param authHeader     header Authorization con JWT
+     *  @return ResponseEntity con il risultato della creazione
      */
     @PostMapping
     public ResponseEntity<?> createCartella(@Valid @RequestBody CreateCartellaRequest request,
@@ -97,6 +102,8 @@ public class CartellaController {
     /**
      * Recupera tutte le cartelle dell'utente
      * GET /api/cartelle
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con l'elenco delle cartelle
      */
     @GetMapping
     public ResponseEntity<?> getAllCartelle(@RequestHeader("Authorization") String authHeader) {
@@ -128,6 +135,10 @@ public class CartellaController {
     /**
      * Recupera una cartella specifica
      * GET /api/cartelle/{id}
+     *
+     * @param id         ID della cartella
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con i dati della cartella o errore
      */
     @GetMapping("/{id}")
     public ResponseEntity<?> getCartellaById(@PathVariable Long id,
@@ -159,6 +170,12 @@ public class CartellaController {
     /**
      * Aggiorna una cartella
      * PUT /api/cartelle/{id}
+     *
+     * @param id            ID della cartella da aggiornare
+     * @param request       nuovi dati per la cartella
+     * @param bindingResult risultato della validazione
+     * @param authHeader    header Authorization con JWT
+     * @return ResponseEntity con il risultato dell'aggiornamento
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updateCartella(@PathVariable Long id,
@@ -201,6 +218,10 @@ public class CartellaController {
     /**
      * Elimina una cartella
      * DELETE /api/cartelle/{id}
+     *
+     * @param id         ID della cartella da eliminare
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con il risultato dell'eliminazione
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCartella(@PathVariable Long id,
@@ -235,6 +256,9 @@ public class CartellaController {
     /**
      * Recupera statistiche cartelle utente
      * GET /api/cartelle/stats
+     *
+     * @param authHeader header Authorization con JWT
+     * @return ResponseEntity con numero e nomi delle cartelle
      */
     @GetMapping("/stats")
     public ResponseEntity<?> getCartelleStats(@RequestHeader("Authorization") String authHeader) {
@@ -264,7 +288,11 @@ public class CartellaController {
     }
 
     /**
-     * Estrae lo username dal token JWT
+     * extractUsernameFromAuth
+     * Estrae lo username dal token JWT presente nell'header Authorization.
+     *
+     * @param authHeader header Authorization con JWT
+     * @return username se il token è valido, altrimenti null
      */
     private String extractUsernameFromAuth(String authHeader) {
         try {

@@ -5,7 +5,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 import tech.ipim.sweng.model.Note;
-
+/**
+ * DTO per il trasferimento dei dati relativi a una Nota.
+ * <p>
+ * Contiene tutte le informazioni principali di una nota, inclusi titolo, contenuto,
+ * autore, date di creazione e modifica, tags associati, cartelle di appartenenza,
+ * tipo di permessi e diritti dell’utente corrente relativi alla nota.
+ * <p>
+ * Il DTO viene costruito a partire dall’entità Note e dal nome utente corrente per
+ * determinare i permessi di visualizzazione, modifica e cancellazione.
+ * <p>
+ * Il campo {@code cartelle} è valorizzato solo se l’utente corrente è il proprietario della nota,
+ * per rispettare la privacy.
+ */
 public class NoteDto {
     
     private Long id;
@@ -27,7 +39,6 @@ public class NoteDto {
     
     public NoteDto() { }
     
-
 
 public NoteDto(Note note, String currentUsername) {
     boolean isAutore = note.isAutore(currentUsername);

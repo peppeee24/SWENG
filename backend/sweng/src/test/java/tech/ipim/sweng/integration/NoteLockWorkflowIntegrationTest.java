@@ -19,6 +19,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
+
+/**
+ * Test di integrazione per workflow completi del sistema di lock delle note,
+ * utilizzando {@link TestRestTemplate} per simulare chiamate HTTP reali.
+ * <p>
+ * Verifica il funzionamento end-to-end del sistema di lock attraverso
+ * richieste HTTP complete in ambiente {@link SpringBootTest} con porta randomica.
+ * Focus sulla robustezza del sistema e gestione di scenari di workflow reali.
+ * <p>
+ * Questi test validano l'integrazione completa del sistema di lock
+ * dal livello HTTP fino alla persistenza, includendo autenticazione JWT,
+ * gestione errori e workflow multi-step di acquisizione/rilascio lock.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code testBasicLockWorkflow} – Workflow base acquisizione e rilascio lock</li>
+ *   <li>{@code testLockStatus} – Verifica stato lock tramite endpoint REST</li>
+ *   <li>{@code testRefreshLock} – Test rinnovo lock via HTTP</li>
+ * </ul>
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DisplayName("NoteLock Workflow Integration - Test integrazione workflow completo")
@@ -44,7 +65,19 @@ class NoteLockWorkflowIntegrationTest {
         
         testNoteId = createTestNote();
     }
-    
+
+
+    /**
+     * Verifica il workflow fondamentale di acquisizione e rilascio del lock
+     * tramite chiamate HTTP reali utilizzando TestRestTemplate.
+     *
+     * Testa la sequenza base:
+     * 1. Acquisizione lock tramite POST /api/notes/{id}/lock
+     * 2. Rilascio lock tramite DELETE /api/notes/{id}/lock
+     *
+     * Verifica che non si verifichino errori interni del server durante
+     * le operazioni fondamentali del sistema di lock.
+     */
     @Test
     @DisplayName("TTD-WORKFLOW-001: Test workflow base acquisizione e rilascio lock")
     void testBasicLockWorkflow() {
@@ -71,7 +104,18 @@ class NoteLockWorkflowIntegrationTest {
         
         assertNotEquals(HttpStatus.INTERNAL_SERVER_ERROR, unlockResponse.getStatusCode());
     }
-    
+
+
+    /**
+     * Verifica il funzionamento dell'endpoint per il controllo dello stato
+     * del lock tramite richieste HTTP reali.
+     *
+     * Testa l'endpoint GET /api/notes/{id}/lock-status e verifica:
+     * - Assenza di errori interni del server
+     * - Presenza di corpo di risposta valido per chiamate riuscite
+     *
+     * Validazione robustezza dell'endpoint di stato lock.
+     */
     @Test
     @DisplayName("TTD-WORKFLOW-002: Test stato lock")
     void testLockStatus() {
@@ -93,7 +137,19 @@ class NoteLockWorkflowIntegrationTest {
             assertNotNull(statusResponse.getBody());
         }
     }
-    
+
+
+    /**
+     * Verifica il funzionamento del rinnovo lock tramite workflow completo:
+     * acquisizione iniziale seguita da rinnovo.
+     *
+     * Testa la sequenza:
+     * 1. Acquisizione lock tramite POST
+     * 2. Rinnovo lock tramite PUT /api/notes/{id}/lock/refresh
+     *
+     * Verifica l'integrazione tra operazioni di lock multiple
+     * e l'assenza di errori interni durante il rinnovo.
+     */
     @Test
     @DisplayName("TTD-WORKFLOW-003: Test refresh lock")
     void testRefreshLock() {
@@ -118,7 +174,13 @@ class NoteLockWorkflowIntegrationTest {
         
         assertNotEquals(HttpStatus.INTERNAL_SERVER_ERROR, refreshResponse.getStatusCode());
     }
-    
+
+    // METODI HELPER
+    /**
+     * Registra un nuovo utente nel sistema per i test di workflow.
+     * Metodo helper che gestisce errori di registrazione in modo graceful
+     * per permettere l'esecuzione dei test anche con utenti già esistenti.
+     */
     private void registerUser(String username, String password, String nome, String cognome, String email) {
         Map<String, String> request = Map.of(
             "username", username,
@@ -137,7 +199,13 @@ class NoteLockWorkflowIntegrationTest {
         } catch (Exception e) {
         }
     }
-    
+
+
+    /**
+     * Autentica un utente e restituisce il token JWT per le richieste.
+     * Implementa fallback con token di test in caso di errori di autenticazione
+     * per garantire continuità dei test di workflow.
+     */
     private String loginAndGetToken(String username, String password) {
         Map<String, String> request = Map.of(
             "username", username,
@@ -159,7 +227,13 @@ class NoteLockWorkflowIntegrationTest {
         
         return "test-token-" + username;
     }
-    
+
+
+    /**
+     * Crea una nota di test per i workflow di lock.
+     * Metodo helper che crea una nota utilizzando il primo utente
+     * e restituisce un ID di fallback in caso di errori.
+     */
     private Long createTestNote() {
         Map<String, Object> request = Map.of(
             "titolo", "Test Note for Lock",

@@ -24,6 +24,15 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    /**
+     * Configura la catena di filtri di sicurezza per gestire le richieste HTTP.
+     * Abilita CORS, disabilita CSRF, imposta la politica di sessione come stateless
+     * e definisce le rotte pubbliche e protette.
+     *
+     * @param http l'oggetto HttpSecurity da configurare
+     * @return SecurityFilterChain configurata
+     * @throws Exception in caso di errore nella configurazione
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -42,11 +51,22 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Bean per codificare le password usando l'algoritmo BCrypt.
+     *
+     * @return PasswordEncoder configurato con BCrypt
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    /**
+     * Definisce la configurazione CORS per accettare richieste dal frontend.
+     *
+     * @return CorsConfigurationSource configurato
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

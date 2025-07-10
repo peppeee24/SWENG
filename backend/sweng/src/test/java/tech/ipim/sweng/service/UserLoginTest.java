@@ -25,6 +25,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Test di unità per il servizio di autenticazione {@link UserService}.
+ * <p>
+ * Questi test verificano il flusso di login dell'utente, coprendo casi di successo,
+ * fallimento per username non esistente, password errata e password vuota.
+ * <p>
+ * Vengono usati mock per isolare le dipendenze esterne quali repository utenti,
+ * encoder delle password e generatore di token JWT.
+ */
+
 @ExtendWith(MockitoExtension.class)
 public class UserLoginTest {
 
@@ -43,6 +53,12 @@ public class UserLoginTest {
     private LoginRequest validLoginRequest;
     private User existingUser;
 
+    /**
+     * Setup dati comuni per i test.
+     * <p>
+     * Inizializza una richiesta di login valida e un utente esistente con password hashed.
+     */
+
     @BeforeEach
     void setUp() {
         validLoginRequest = new LoginRequest();
@@ -55,6 +71,15 @@ public class UserLoginTest {
         existingUser.setPassword("hashedPassword");
         existingUser.setEmail("test@example.com");
     }
+
+    /**
+     * Test del login con credenziali corrette.
+     * <p>
+     * Mocka la ricerca dell'utente, la verifica della password e la generazione del token JWT.
+     * Verifica che la risposta indichi successo, il messaggio sia corretto,
+     * il token JWT sia presente e l'utente restituito abbia username corretto.
+     * Inoltre verifica che i metodi mockati siano effettivamente invocati.
+     */
 
     @Test
     void shouldLoginSuccessfullyWithValidCredentials() {
@@ -78,6 +103,14 @@ public class UserLoginTest {
         verify(jwtUtil).generateToken(existingUser);
     }
 
+    /**
+     * Test del login con username non esistente.
+     * <p>
+     * Mocka il repository per restituire Optional vuoto.
+     * Verifica che venga lanciata una RuntimeException con messaggio
+     * "Credenziali non valide" e che encoder e jwtUtil non vengano chiamati.
+     */
+
     @Test
     void shouldFailLoginWithInvalidUsername() {
         when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
@@ -97,6 +130,14 @@ public class UserLoginTest {
         verify(passwordEncoder, never()).matches(any(), any());
         verify(jwtUtil, never()).generateToken(any());
     }
+
+    /**
+     * Test del login con password errata.
+     * <p>
+     * Mocka la ricerca dell'utente e la verifica password per restituire false.
+     * Verifica che venga lanciata una RuntimeException con messaggio
+     * "Credenziali non valide" e che il token JWT non venga generato.
+     */
 
     @Test
     void shouldFailLoginWithInvalidPassword() {
@@ -118,6 +159,14 @@ public class UserLoginTest {
         verify(jwtUtil, never()).generateToken(any());
     }
 
+    /**
+     * Test del login con password vuota.
+     * <p>
+     * Mocka la ricerca dell'utente e verifica password fallita per stringa vuota.
+     * Verifica che venga lanciata una RuntimeException con messaggio
+     * "Credenziali non valide".
+     */
+    
     @Test
     void shouldFailLoginWithEmptyPassword() {
         LoginRequest emptyPasswordRequest = new LoginRequest();
