@@ -15,6 +15,36 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test di integrazione per il repository {@link NoteRepository}, responsabile
+ * della gestione delle query sulle entità {@link Note}, inclusa la gestione
+ * dei permessi di accesso, ricerca per parole chiave, filtri per tag, cartelle e
+ * conteggi note condivise.
+ * <p>
+ * Verifica il comportamento delle query personalizzate definite a livello di repository.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code shouldFindNotesByAutore} – Recupera le note di un autore, ordinate per data di modifica</li>
+ *   <li>{@code shouldFindAllAccessibleNotesForOwner} – Recupera tutte le note accessibili dal proprietario</li>
+ *   <li>{@code shouldFindOnlySharedNotesForNonOwner} – Verifica che un utente non proprietario veda solo le note condivise</li>
+ *   <li>{@code shouldFindAccessibleNoteById} – Verifica il recupero di una nota per ID se accessibile dall’utente</li>
+ *   <li>{@code shouldNotFindPrivateNoteForNonOwner} – Verifica che una nota privata non sia accessibile da altri utenti</li>
+ *   <li>{@code shouldFindSharedNoteForAuthorizedUser} – Verifica accesso a nota condivisa per un utente autorizzato</li>
+ *   <li>{@code shouldSearchNotesByKeyword} – Ricerca note per parola chiave nel titolo o contenuto</li>
+ *   <li>{@code shouldSearchNotesInTitleAndContent} – Ricerca combinata nel titolo e nel contenuto</li>
+ *   <li>{@code shouldFindNotesByTag} – Filtra le note per tag associati</li>
+ *   <li>{@code shouldFindNotesByCartella} – Filtra le note per nome di cartella</li>
+ *   <li>{@code shouldCountNotesByAutore} – Conta quante note appartengono a un autore</li>
+ *   <li>{@code shouldCountSharedNotes} – Conta quante note condivise sono accessibili a un utente</li>
+ *   <li>{@code shouldFindAllTagsByUser} – Recupera tutti i tag associati a note di un utente</li>
+ *   <li>{@code shouldFindAllCartelleByUser} – Recupera tutte le cartelle associate a note di un utente</li>
+ *   <li>{@code shouldFindSharedNotesForUser} – Recupera tutte le note condivise accessibili per un utente specifico</li>
+ *   <li>{@code shouldNotFindNotesForUserWithoutAccess} – Verifica che un utente senza permessi non visualizzi alcuna nota</li>
+ * </ul>
+ */
+
 @DataJpaTest
 class NoteRepositoryTest {
 
@@ -28,6 +58,10 @@ class NoteRepositoryTest {
     private User testUser2;
     private Note privateNote;
     private Note sharedNote;
+
+    /**
+     * Configura dati di test: due utenti, una nota privata e una condivisa con permessi specifici.
+     */
 
     @BeforeEach
     void setUp() {
@@ -57,6 +91,10 @@ class NoteRepositoryTest {
         entityManager.clear();
     }
 
+    /**
+     * Verifica il recupero di tutte le note di un autore, ordinate per data di modifica decrescente.
+     */
+
     @Test
     void shouldFindNotesByAutore() {
         // When
@@ -67,6 +105,10 @@ class NoteRepositoryTest {
         assertThat(notes).extracting(Note::getTitolo)
                 .containsExactly("Nota Condivisa", "Nota Privata"); // Ordinato per data modifica desc
     }
+
+    /**
+     * Verifica il recupero di tutte le note accessibili da un proprietario (private e condivise).
+     */
 
     @Test
     void shouldFindAllAccessibleNotesForOwner() {
@@ -79,6 +121,10 @@ class NoteRepositoryTest {
                 .contains("Nota Privata", "Nota Condivisa");
     }
 
+    /**
+     * Verifica che un utente non proprietario possa vedere solo le note condivise.
+     */
+
     @Test
     void shouldFindOnlySharedNotesForNonOwner() {
         // When
@@ -88,6 +134,10 @@ class NoteRepositoryTest {
         assertThat(notes).hasSize(1);
         assertThat(notes.get(0).getTitolo()).isEqualTo("Nota Condivisa");
     }
+
+    /**
+     * Verifica il recupero di una nota per ID se accessibile dal proprietario.
+     */
 
     @Test
     void shouldFindAccessibleNoteById() {
@@ -99,6 +149,10 @@ class NoteRepositoryTest {
         assertThat(foundNote.get().getTitolo()).isEqualTo("Nota Privata");
     }
 
+    /**
+     * Verifica che una nota privata non sia accessibile da utenti non proprietari.
+     */
+
     @Test
     void shouldNotFindPrivateNoteForNonOwner() {
         // When - utente non proprietario tenta di accedere a nota privata
@@ -107,6 +161,10 @@ class NoteRepositoryTest {
         // Then
         assertThat(foundNote).isEmpty();
     }
+
+    /**
+     * Verifica che una nota condivisa sia accessibile da un utente autorizzato.
+     */
 
     @Test
     void shouldFindSharedNoteForAuthorizedUser() {
@@ -118,6 +176,10 @@ class NoteRepositoryTest {
         assertThat(foundNote.get().getTitolo()).isEqualTo("Nota Condivisa");
     }
 
+    /**
+     * Verifica la ricerca di note per parola chiave.
+     */
+
     @Test
     void shouldSearchNotesByKeyword() {
         // When
@@ -127,6 +189,10 @@ class NoteRepositoryTest {
         assertThat(notes).hasSize(1);
         assertThat(notes.get(0).getTitolo()).isEqualTo("Nota Privata");
     }
+
+    /**
+     * Verifica ricerca di note per keyword sia nel titolo che nel contenuto.
+     */
 
     @Test
     void shouldSearchNotesInTitleAndContent() {
@@ -141,6 +207,10 @@ class NoteRepositoryTest {
         assertThat(notesByContent).hasSize(1);
     }
 
+    /**
+     * Verifica il recupero di note filtrate per tag.
+     */
+
     @Test
     void shouldFindNotesByTag() {
         // When
@@ -150,6 +220,10 @@ class NoteRepositoryTest {
         assertThat(notes).hasSize(1);
         assertThat(notes.get(0).getTitolo()).isEqualTo("Nota Privata");
     }
+
+    /**
+     * Verifica il recupero di note filtrate per cartella.
+     */
 
     @Test
     void shouldFindNotesByCartella() {
@@ -161,6 +235,10 @@ class NoteRepositoryTest {
         assertThat(notes.get(0).getTitolo()).isEqualTo("Nota Privata");
     }
 
+     /**
+     * Conta quante note appartengono a un autore.
+     */
+
     @Test
     void shouldCountNotesByAutore() {
         // When
@@ -169,6 +247,10 @@ class NoteRepositoryTest {
         // Then
         assertThat(count).isEqualTo(2);
     }
+
+    /**
+     * Conta quante note condivise risultano accessibili a un determinato utente.
+     */
 
     @Test
     void shouldCountSharedNotes() {
@@ -179,6 +261,10 @@ class NoteRepositoryTest {
         assertThat(count).isEqualTo(1);
     }
 
+    /**
+     * Recupera tutti i tag associati alle note di un utente.
+     */
+
     @Test
     void shouldFindAllTagsByUser() {
         // When
@@ -188,6 +274,10 @@ class NoteRepositoryTest {
         assertThat(tags).containsExactlyInAnyOrder("condiviso", "importante", "lavoro", "team");
     }
 
+    /**
+     * Recupera tutte le cartelle associate alle note di un utente.
+     */
+
     @Test
     void shouldFindAllCartelleByUser() {
         // When
@@ -196,6 +286,10 @@ class NoteRepositoryTest {
         // Then
         assertThat(cartelle).containsExactlyInAnyOrder("Progetto A", "Progetti Condivisi");
     }
+
+    /**
+     * Recupera tutte le note condivise accessibili a un utente.
+     */
 
     @Test
     void shouldFindSharedNotesForUser() {
@@ -207,6 +301,10 @@ class NoteRepositoryTest {
         assertThat(sharedNotes.get(0).getTitolo()).isEqualTo("Nota Condivisa");
     }
 
+    /**
+     * Verifica che un utente senza permessi non visualizzi alcuna nota.
+     */
+    
     @Test
     void shouldNotFindNotesForUserWithoutAccess() {
         // Given - crea un terzo utente senza accesso

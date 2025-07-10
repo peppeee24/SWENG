@@ -13,6 +13,32 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test di integrazione per il repository {@link CartellaRepository}, responsabile della gestione
+ * delle operazioni CRUD e query personalizzate sulle entità {@link Cartella}.
+ * <p>
+ * Verifica il corretto funzionamento dei metodi di ricerca, esistenza, conteggio e ordinamento
+ * delle cartelle associate agli utenti.
+ * <p>
+ * <p>
+ * Riepilogo dei test implementati:
+ * <ul>
+ *   <li>{@code shouldFindCartelleByProprietario} – Recupera le cartelle di un utente ordinandole per data di modifica decrescente</li>
+ *   <li>{@code shouldFindCartellaByNomeAndProprietario} – Recupera una cartella specifica per nome e proprietario</li>
+ *   <li>{@code shouldNotFindCartellaByNomeAndProprietarioWhenNotExists} – Verifica il comportamento con nome inesistente</li>
+ *   <li>{@code shouldNotFindCartellaOfOtherUser} – Assicura che un utente non possa accedere alle cartelle di altri</li>
+ *   <li>{@code shouldCheckExistsByNomeAndProprietario} – Verifica l’esistenza di una cartella per nome e proprietario</li>
+ *   <li>{@code shouldCountCartelleByProprietario} – Conta le cartelle di un determinato proprietario</li>
+ *   <li>{@code shouldFindCartelleByUsername} – Recupera le cartelle tramite username del proprietario</li>
+ *   <li>{@code shouldFindCartellaByIdAndUsername} – Recupera una cartella tramite ID e username</li>
+ *   <li>{@code shouldNotFindCartellaByIdAndUsernameForWrongUser} – Verifica che un altro utente non acceda a cartelle altrui</li>
+ *   <li>{@code shouldNotFindCartellaByWrongId} – Testa il recupero di una cartella con ID inesistente</li>
+ *   <li>{@code shouldReturnEmptyListForUserWithoutCartelle} – Gestisce il caso di utente senza cartelle associate</li>
+ *   <li>{@code shouldHandleCaseInsensitiveSearch} – Verifica la sensibilità al maiuscolo/minuscolo nelle query</li>
+ *   <li>{@code shouldOrderCartelleByDataModificaDesc} – Verifica l’ordinamento delle cartelle per data di modifica</li>
+ * </ul>
+ */
+
 @DataJpaTest
 class CartellaRepositoryTest {
 
@@ -26,6 +52,11 @@ class CartellaRepositoryTest {
     private User testUser2;
     private Cartella cartellaLavoro;
     private Cartella cartellaPersonale;
+
+    /**
+     * Inizializza i dati di test prima di ogni metodo, creando utenti e cartelle
+     * persistite nel database H2 in memoria per i test di integrazione.
+     */
 
     @BeforeEach
     void setUp() {
@@ -60,6 +91,11 @@ class CartellaRepositoryTest {
         entityManager.clear();
     }
 
+    /**
+     * Verifica il recupero delle cartelle di un utente specifico ordinate
+     * per data di modifica in ordine decrescente.
+     */
+
     @Test
     void shouldFindCartelleByProprietario() {
         List<Cartella> cartelle = cartellaRepository.findByProprietarioOrderByDataModificaDesc(testUser1);
@@ -68,6 +104,10 @@ class CartellaRepositoryTest {
         assertThat(cartelle).extracting(Cartella::getNome)
                 .containsExactly("Personale", "Lavoro");
     }
+
+    /**
+     * Verifica il recupero di una cartella per nome e proprietario.
+     */
 
     @Test
     void shouldFindCartellaByNomeAndProprietario() {
@@ -81,6 +121,10 @@ class CartellaRepositoryTest {
         assertThat(foundCartella.get().getColore()).isEqualTo("#ff6b6b");
     }
 
+     /**
+     * Verifica che una ricerca per nome e proprietario ritorni vuoto se il nome non esiste.
+     */
+
     @Test
     void shouldNotFindCartellaByNomeAndProprietarioWhenNotExists() {
   
@@ -90,6 +134,10 @@ class CartellaRepositoryTest {
         assertThat(foundCartella).isEmpty();
     }
 
+    /**
+     * Verifica che un utente non possa accedere alle cartelle di un altro utente.
+     */
+
     @Test
     void shouldNotFindCartellaOfOtherUser() {
 
@@ -98,6 +146,11 @@ class CartellaRepositoryTest {
 
         assertThat(foundCartella).isEmpty();
     }
+
+    /**
+     * Verifica la presenza di una cartella per nome e proprietario e il comportamento
+     * in caso di nome inesistente.
+     */
 
     @Test
     void shouldCheckExistsByNomeAndProprietario() {
@@ -110,6 +163,10 @@ class CartellaRepositoryTest {
         assertThat(notExists).isFalse();
     }
 
+    /**
+     * Verifica il conteggio delle cartelle associate a un utente specifico.
+     */
+
     @Test
     void shouldCountCartelleByProprietario() {
 
@@ -118,6 +175,10 @@ class CartellaRepositoryTest {
 
         assertThat(count).isEqualTo(2);
     }
+
+    /**
+     * Verifica il recupero delle cartelle tramite username del proprietario.
+     */
 
     @Test
     void shouldFindCartelleByUsername() {
@@ -130,6 +191,10 @@ class CartellaRepositoryTest {
                 .containsExactlyInAnyOrder("Lavoro", "Personale");
     }
 
+    /**
+     * Verifica il recupero di una cartella tramite ID e username del proprietario.
+     */
+
     @Test
     void shouldFindCartellaByIdAndUsername() {
 
@@ -139,7 +204,11 @@ class CartellaRepositoryTest {
         assertThat(foundCartella).isPresent();
         assertThat(foundCartella.get().getNome()).isEqualTo("Lavoro");
     }
-
+    
+    /**
+     * Verifica che un altro utente non possa accedere a una cartella per ID e username.
+     */
+    
     @Test
     void shouldNotFindCartellaByIdAndUsernameForWrongUser() {
  
@@ -149,6 +218,9 @@ class CartellaRepositoryTest {
         assertThat(foundCartella).isEmpty();
     }
 
+    /**
+     * Verifica che una ricerca con ID inesistente ritorni vuoto.
+     */
     @Test
     void shouldNotFindCartellaByWrongId() {
 
@@ -157,6 +229,10 @@ class CartellaRepositoryTest {
 
         assertThat(foundCartella).isEmpty();
     }
+
+    /**
+     * Verifica il comportamento del repository per un utente senza cartelle associate.
+     */
 
     @Test
     void shouldReturnEmptyListForUserWithoutCartelle() {
@@ -171,6 +247,10 @@ class CartellaRepositoryTest {
         assertThat(cartelle).isEmpty();
     }
 
+    /**
+     * Verifica la sensibilità al maiuscolo/minuscolo nelle query per nome.
+     */
+
     @Test
     void shouldHandleCaseInsensitiveSearch() {
        
@@ -180,6 +260,9 @@ class CartellaRepositoryTest {
         assertThat(foundCartella).isEmpty();
     }
 
+    /**
+     * Verifica l’ordinamento delle cartelle per data di modifica decrescente.
+     */
     @Test
     void shouldOrderCartelleByDataModificaDesc() {
 
