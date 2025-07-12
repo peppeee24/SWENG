@@ -119,7 +119,7 @@ Questo progetto è sviluppato per scopi educativi nel contesto del corso di Inge
 - **Giuseppe Cozza**: 0001077442
 - **Simone Magli**: 0001069295
 - **Federico Sgambelluri**: 0001068826
-- **Manuel Leotta**: 
+- **Manuel Leotta**: 0001070161
 
 ## 🔗 Link Utili
 
