@@ -59,6 +59,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v5
@@ -95,6 +96,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Frontend Docker image
         uses: docker/build-push-action@v5
@@ -131,7 +133,7 @@ jobs:
                 - postgres_data:/var/lib/postgresql/data
           
             backend:
-              image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:main
+              image: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
               ports:
                 - "8080:8080"
               environment:
@@ -142,7 +144,7 @@ jobs:
                 - postgres
           
             frontend:
-              image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:main
+              image: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
               ports:
                 - "80:80"
               depends_on:
